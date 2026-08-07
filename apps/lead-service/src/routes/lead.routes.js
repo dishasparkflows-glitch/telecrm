@@ -1,0 +1,41 @@
+const express = require('express');
+const router = express.Router();
+const leadCtrl = require('../controllers/lead.controller');
+const assignmentPolicyCtrl = require('../controllers/assignmentPolicy.controller');
+const leadSourceCtrl = require('../controllers/leadSource.controller');
+
+router.get('/stats', leadCtrl.getStats);
+router.get('/assignment-policies', assignmentPolicyCtrl.listAssignmentPolicies);
+router.get('/assignment-policy', assignmentPolicyCtrl.getAssignmentPolicy);
+router.get('/oauth/meta/start', leadSourceCtrl.startMetaOAuth);
+router.get('/oauth/meta/callback', leadSourceCtrl.completeMetaOAuth);
+router.get('/source-connections', leadSourceCtrl.listConnections);
+router.post('/source-connections', leadSourceCtrl.saveConnection);
+router.post('/source-api-connections', leadSourceCtrl.createApiConnection);
+router.post('/source-api-connections/:id/rotate-key', leadSourceCtrl.rotateApiConnectionKey);
+router.post('/webhooks/inbound/:connectionId', leadSourceCtrl.receiveInboundApiLead);
+router.post('/source-connections/:id/test', leadSourceCtrl.testConnection);
+router.get('/source-connections/:id/meta-pages', leadSourceCtrl.discoverPages);
+router.get('/source-connections/:id/meta-pages/:pageId/forms', leadSourceCtrl.discoverForms);
+router.post('/source-connections/:id/meta-pages/:pageId/subscribe', leadSourceCtrl.subscribePage);
+router.get('/source-mappings', leadSourceCtrl.listMappings);
+router.post('/source-mappings', leadSourceCtrl.saveMapping);
+router.get('/source-events', leadSourceCtrl.listInboundEvents);
+router.post('/source-events/:id/replay', leadSourceCtrl.replayInboundEvent);
+router.get('/webhooks/meta/config', leadSourceCtrl.getWebhookConfig);
+router.get('/webhooks/meta', leadSourceCtrl.verifyMetaWebhook);
+router.post('/webhooks/meta', leadSourceCtrl.receiveMetaWebhook);
+router.put('/assignment-policy', assignmentPolicyCtrl.upsertAssignmentPolicy);
+router.delete('/assignment-policies/:id', assignmentPolicyCtrl.deleteAssignmentPolicy);
+
+router.get('/', leadCtrl.getLeads);
+router.get('/:id/timeline', leadCtrl.getLeadTimeline);
+router.get('/:id', leadCtrl.getLead);
+router.post('/', leadCtrl.createLead);
+router.post('/import', leadCtrl.importLeads);
+router.put('/:id', leadCtrl.updateLead);
+router.post('/:id/notes', leadCtrl.addNote);
+router.put('/:id/assign', leadCtrl.assignLead);
+router.delete('/:id', leadCtrl.archiveLead);
+
+module.exports = router;

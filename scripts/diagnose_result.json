@@ -1,0 +1,4341 @@
+{
+  "users": [
+    {
+      "name": "Rajesh Sharma",
+      "email": "rajesh.sharma.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c3997d",
+      "roleId": "699da890815de2ba89c3996d",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bbd",
+      "branchName": "Head Office",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Vikram Singh",
+      "email": "vikram.singh.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c3997d",
+      "roleId": "699da890815de2ba89c39970",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bbe",
+      "branchName": "Head Office",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Amit Kumar",
+      "email": "amit.kumar.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3997d",
+      "roleId": "699da891815de2ba89c39973",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bbf",
+      "branchName": "Head Office",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Rahul Yadav",
+      "email": "rahul.yadav.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3997d",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bc0",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Swati Pillai",
+      "email": "swati.pillai.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3997d",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bc1",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Sachin Patil",
+      "email": "sachin.patil.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3997d",
+      "roleId": "699da891815de2ba89c3997a",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bc2",
+      "branchName": "Head Office",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Priya Kapoor",
+      "email": "priya.kapoor.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c39981",
+      "roleId": "699da890815de2ba89c3996d",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bc3",
+      "branchName": "Delhi Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 17,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Neha Reddy",
+      "email": "neha.reddy.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c39981",
+      "roleId": "699da890815de2ba89c39970",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bc7",
+      "branchName": "Delhi Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 17,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Meera Shah",
+      "email": "meera.shah.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39981",
+      "roleId": "699da891815de2ba89c39973",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bdd",
+      "branchName": "Delhi Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 17,
+      "ownLeadsObjId": 1,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Gaurav Tiwari",
+      "email": "gaurav.tiwari.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39981",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bde",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 17,
+      "ownLeadsObjId": 1,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Nisha Chauhan",
+      "email": "nisha.chauhan.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39981",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be0",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 17,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Rekha Bose",
+      "email": "rekha.bose.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39981",
+      "roleId": "699da891815de2ba89c3997a",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be1",
+      "branchName": "Delhi Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 17,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Suresh Menon",
+      "email": "suresh.menon.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c39984",
+      "roleId": "699da890815de2ba89c3996d",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be2",
+      "branchName": "Bangalore Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 16,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Rohan Patel",
+      "email": "rohan.patel.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c39984",
+      "roleId": "699da890815de2ba89c39970",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be3",
+      "branchName": "Bangalore Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 16,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Sanjay Verma",
+      "email": "sanjay.verma.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39984",
+      "roleId": "699da891815de2ba89c39973",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be4",
+      "branchName": "Bangalore Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 16,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Manish Soni",
+      "email": "manish.soni.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39984",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be5",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 16,
+      "ownLeadsObjId": 1,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Divya Saxena",
+      "email": "divya.saxena.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39984",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be6",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 16,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Vivek Chandra",
+      "email": "vivek.chandra.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39984",
+      "roleId": "699da891815de2ba89c3997a",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be7",
+      "branchName": "Bangalore Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 16,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Kavita Nair",
+      "email": "kavita.nair.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c39987",
+      "roleId": "699da890815de2ba89c3996d",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be8",
+      "branchName": "Pune Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Anita Desai",
+      "email": "anita.desai.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c39987",
+      "roleId": "699da890815de2ba89c39970",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39be9",
+      "branchName": "Pune Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Pooja Bhatt",
+      "email": "pooja.bhatt.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39987",
+      "roleId": "699da891815de2ba89c39973",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bea",
+      "branchName": "Pune Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Akash Dubey",
+      "email": "akash.dubey.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39987",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39beb",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Tanvi Agarwal",
+      "email": "tanvi.agarwal.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39987",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da897815de2ba89c39bec",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Asha Rani",
+      "email": "asha.rani.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c39987",
+      "roleId": "699da891815de2ba89c3997a",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bed",
+      "branchName": "Pune Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Arun Mehta",
+      "email": "arun.mehta.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c3998a",
+      "roleId": "699da890815de2ba89c3996d",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bee",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Karthik Iyer",
+      "email": "karthik.iyer.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c3998a",
+      "roleId": "699da890815de2ba89c39970",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bef",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Nikhil Jain",
+      "email": "nikhil.jain.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3998a",
+      "roleId": "699da891815de2ba89c39973",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf0",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Varun Mishra",
+      "email": "varun.mishra.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3998a",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf1",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Simran Kaur",
+      "email": "simran.kaur.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3998a",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf2",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Tarun Sethi",
+      "email": "tarun.sethi.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3998a",
+      "roleId": "699da891815de2ba89c3997a",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf3",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Deepa Joshi",
+      "email": "deepa.joshi.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c3998d",
+      "roleId": "699da890815de2ba89c3996d",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf4",
+      "branchName": "Chennai Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Sneha Gupta",
+      "email": "sneha.gupta.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699da891815de2ba89c3998d",
+      "roleId": "699da890815de2ba89c39970",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf5",
+      "branchName": "Chennai Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Ritika Malhotra",
+      "email": "ritika.malhotra.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3998d",
+      "roleId": "699da891815de2ba89c39973",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf6",
+      "branchName": "Chennai Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Harsh Pandey",
+      "email": "harsh.pandey.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3998d",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf7",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Komal Thakur",
+      "email": "komal.thakur.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3998d",
+      "roleId": "699da891815de2ba89c39976",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf8",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Bhavna Khurana",
+      "email": "bhavna.khurana.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699da891815de2ba89c3998d",
+      "roleId": "699da891815de2ba89c3997a",
+      "tenantId": "699da890815de2ba89c3994c",
+      "userId": "699da898815de2ba89c39bf9",
+      "branchName": "Chennai Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 93
+    },
+    {
+      "name": "Rajesh Sharma",
+      "email": "rajesh.sharma.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b11",
+      "roleId": "699dd33ab225c4c4f2251b01",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d51",
+      "branchName": "Head Office",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Vikram Singh",
+      "email": "vikram.singh.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b11",
+      "roleId": "699dd33ab225c4c4f2251b04",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d52",
+      "branchName": "Head Office",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Amit Kumar",
+      "email": "amit.kumar.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b11",
+      "roleId": "699dd33ab225c4c4f2251b07",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d53",
+      "branchName": "Head Office",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rahul Yadav",
+      "email": "rahul.yadav.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b11",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d54",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Swati Pillai",
+      "email": "swati.pillai.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b11",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d55",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sachin Patil",
+      "email": "sachin.patil.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b11",
+      "roleId": "699dd33ab225c4c4f2251b0e",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d56",
+      "branchName": "Head Office",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Priya Kapoor",
+      "email": "priya.kapoor.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b15",
+      "roleId": "699dd33ab225c4c4f2251b01",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d57",
+      "branchName": "Delhi Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Neha Reddy",
+      "email": "neha.reddy.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b15",
+      "roleId": "699dd33ab225c4c4f2251b04",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d58",
+      "branchName": "Delhi Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Meera Shah",
+      "email": "meera.shah.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b15",
+      "roleId": "699dd33ab225c4c4f2251b07",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd340b225c4c4f2251d59",
+      "branchName": "Delhi Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Gaurav Tiwari",
+      "email": "gaurav.tiwari.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b15",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d5a",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Nisha Chauhan",
+      "email": "nisha.chauhan.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b15",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d5b",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rekha Bose",
+      "email": "rekha.bose.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b15",
+      "roleId": "699dd33ab225c4c4f2251b0e",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d5c",
+      "branchName": "Delhi Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Suresh Menon",
+      "email": "suresh.menon.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b18",
+      "roleId": "699dd33ab225c4c4f2251b01",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d5d",
+      "branchName": "Bangalore Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rohan Patel",
+      "email": "rohan.patel.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b18",
+      "roleId": "699dd33ab225c4c4f2251b04",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d5e",
+      "branchName": "Bangalore Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sanjay Verma",
+      "email": "sanjay.verma.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b18",
+      "roleId": "699dd33ab225c4c4f2251b07",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d5f",
+      "branchName": "Bangalore Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Manish Soni",
+      "email": "manish.soni.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b18",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d60",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Divya Saxena",
+      "email": "divya.saxena.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b18",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d61",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Vivek Chandra",
+      "email": "vivek.chandra.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b18",
+      "roleId": "699dd33ab225c4c4f2251b0e",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d62",
+      "branchName": "Bangalore Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Kavita Nair",
+      "email": "kavita.nair.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b1b",
+      "roleId": "699dd33ab225c4c4f2251b01",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d63",
+      "branchName": "Pune Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Anita Desai",
+      "email": "anita.desai.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b1b",
+      "roleId": "699dd33ab225c4c4f2251b04",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d64",
+      "branchName": "Pune Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Pooja Bhatt",
+      "email": "pooja.bhatt.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b1b",
+      "roleId": "699dd33ab225c4c4f2251b07",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d65",
+      "branchName": "Pune Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Akash Dubey",
+      "email": "akash.dubey.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b1b",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d66",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Tanvi Agarwal",
+      "email": "tanvi.agarwal.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b1b",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d67",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Asha Rani",
+      "email": "asha.rani.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b1b",
+      "roleId": "699dd33ab225c4c4f2251b0e",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d68",
+      "branchName": "Pune Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Arun Mehta",
+      "email": "arun.mehta.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b1e",
+      "roleId": "699dd33ab225c4c4f2251b01",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d69",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Karthik Iyer",
+      "email": "karthik.iyer.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b1e",
+      "roleId": "699dd33ab225c4c4f2251b04",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d6a",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Nikhil Jain",
+      "email": "nikhil.jain.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b1e",
+      "roleId": "699dd33ab225c4c4f2251b07",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d6b",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Varun Mishra",
+      "email": "varun.mishra.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b1e",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d6c",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Simran Kaur",
+      "email": "simran.kaur.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b1e",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d6d",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Tarun Sethi",
+      "email": "tarun.sethi.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b1e",
+      "roleId": "699dd33ab225c4c4f2251b0e",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d6e",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Deepa Joshi",
+      "email": "deepa.joshi.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b21",
+      "roleId": "699dd33ab225c4c4f2251b01",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d6f",
+      "branchName": "Chennai Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sneha Gupta",
+      "email": "sneha.gupta.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd33bb225c4c4f2251b21",
+      "roleId": "699dd33ab225c4c4f2251b04",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d70",
+      "branchName": "Chennai Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Ritika Malhotra",
+      "email": "ritika.malhotra.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b21",
+      "roleId": "699dd33ab225c4c4f2251b07",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d71",
+      "branchName": "Chennai Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Harsh Pandey",
+      "email": "harsh.pandey.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b21",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d72",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Komal Thakur",
+      "email": "komal.thakur.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b21",
+      "roleId": "699dd33ab225c4c4f2251b0a",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d73",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Bhavna Khurana",
+      "email": "bhavna.khurana.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd33bb225c4c4f2251b21",
+      "roleId": "699dd33ab225c4c4f2251b0e",
+      "tenantId": "699dd33ab225c4c4f2251ae0",
+      "userId": "699dd341b225c4c4f2251d74",
+      "branchName": "Chennai Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rajesh Sharma",
+      "email": "rajesh.sharma.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d79d6cda87aa361a7e",
+      "roleId": "699dd9d79d6cda87aa361a6e",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cbe",
+      "branchName": "Head Office",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Vikram Singh",
+      "email": "vikram.singh.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d79d6cda87aa361a7e",
+      "roleId": "699dd9d79d6cda87aa361a71",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cbf",
+      "branchName": "Head Office",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Amit Kumar",
+      "email": "amit.kumar.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d79d6cda87aa361a7e",
+      "roleId": "699dd9d79d6cda87aa361a74",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc0",
+      "branchName": "Head Office",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rahul Yadav",
+      "email": "rahul.yadav.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d79d6cda87aa361a7e",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc1",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Swati Pillai",
+      "email": "swati.pillai.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d79d6cda87aa361a7e",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc2",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sachin Patil",
+      "email": "sachin.patil.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d79d6cda87aa361a7e",
+      "roleId": "699dd9d79d6cda87aa361a7b",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc3",
+      "branchName": "Head Office",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Priya Kapoor",
+      "email": "priya.kapoor.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a82",
+      "roleId": "699dd9d79d6cda87aa361a6e",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc4",
+      "branchName": "Delhi Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Neha Reddy",
+      "email": "neha.reddy.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a82",
+      "roleId": "699dd9d79d6cda87aa361a71",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc5",
+      "branchName": "Delhi Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Meera Shah",
+      "email": "meera.shah.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a82",
+      "roleId": "699dd9d79d6cda87aa361a74",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc6",
+      "branchName": "Delhi Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Gaurav Tiwari",
+      "email": "gaurav.tiwari.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a82",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc7",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Nisha Chauhan",
+      "email": "nisha.chauhan.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a82",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc8",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rekha Bose",
+      "email": "rekha.bose.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a82",
+      "roleId": "699dd9d79d6cda87aa361a7b",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cc9",
+      "branchName": "Delhi Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Suresh Menon",
+      "email": "suresh.menon.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a85",
+      "roleId": "699dd9d79d6cda87aa361a6e",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cca",
+      "branchName": "Bangalore Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rohan Patel",
+      "email": "rohan.patel.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a85",
+      "roleId": "699dd9d79d6cda87aa361a71",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361ccb",
+      "branchName": "Bangalore Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sanjay Verma",
+      "email": "sanjay.verma.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a85",
+      "roleId": "699dd9d79d6cda87aa361a74",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361ccc",
+      "branchName": "Bangalore Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Manish Soni",
+      "email": "manish.soni.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a85",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361ccd",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Divya Saxena",
+      "email": "divya.saxena.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a85",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cce",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Vivek Chandra",
+      "email": "vivek.chandra.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a85",
+      "roleId": "699dd9d79d6cda87aa361a7b",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361ccf",
+      "branchName": "Bangalore Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Kavita Nair",
+      "email": "kavita.nair.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a88",
+      "roleId": "699dd9d79d6cda87aa361a6e",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd0",
+      "branchName": "Pune Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Anita Desai",
+      "email": "anita.desai.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a88",
+      "roleId": "699dd9d79d6cda87aa361a71",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd1",
+      "branchName": "Pune Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Pooja Bhatt",
+      "email": "pooja.bhatt.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a88",
+      "roleId": "699dd9d79d6cda87aa361a74",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd2",
+      "branchName": "Pune Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Akash Dubey",
+      "email": "akash.dubey.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a88",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd3",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Tanvi Agarwal",
+      "email": "tanvi.agarwal.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a88",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd4",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Asha Rani",
+      "email": "asha.rani.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a88",
+      "roleId": "699dd9d79d6cda87aa361a7b",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd5",
+      "branchName": "Pune Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Arun Mehta",
+      "email": "arun.mehta.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a8b",
+      "roleId": "699dd9d79d6cda87aa361a6e",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd6",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Karthik Iyer",
+      "email": "karthik.iyer.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a8b",
+      "roleId": "699dd9d79d6cda87aa361a71",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd7",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Nikhil Jain",
+      "email": "nikhil.jain.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a8b",
+      "roleId": "699dd9d79d6cda87aa361a74",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd8",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Varun Mishra",
+      "email": "varun.mishra.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a8b",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cd9",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Simran Kaur",
+      "email": "simran.kaur.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a8b",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cda",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Tarun Sethi",
+      "email": "tarun.sethi.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a8b",
+      "roleId": "699dd9d79d6cda87aa361a7b",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cdb",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Deepa Joshi",
+      "email": "deepa.joshi.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a8e",
+      "roleId": "699dd9d79d6cda87aa361a6e",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cdc",
+      "branchName": "Chennai Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sneha Gupta",
+      "email": "sneha.gupta.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699dd9d89d6cda87aa361a8e",
+      "roleId": "699dd9d79d6cda87aa361a71",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cdd",
+      "branchName": "Chennai Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Ritika Malhotra",
+      "email": "ritika.malhotra.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a8e",
+      "roleId": "699dd9d79d6cda87aa361a74",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9dd9d6cda87aa361cde",
+      "branchName": "Chennai Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Harsh Pandey",
+      "email": "harsh.pandey.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a8e",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9de9d6cda87aa361cdf",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Komal Thakur",
+      "email": "komal.thakur.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a8e",
+      "roleId": "699dd9d79d6cda87aa361a77",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9de9d6cda87aa361ce0",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Bhavna Khurana",
+      "email": "bhavna.khurana.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699dd9d89d6cda87aa361a8e",
+      "roleId": "699dd9d79d6cda87aa361a7b",
+      "tenantId": "699dd9d79d6cda87aa361a4d",
+      "userId": "699dd9de9d6cda87aa361ce1",
+      "branchName": "Chennai Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rajesh Sharma",
+      "email": "rajesh.sharma.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc0033",
+      "roleId": "699ddc8034ec2d748bbc0023",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc0273",
+      "branchName": "Head Office",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Vikram Singh",
+      "email": "vikram.singh.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc0033",
+      "roleId": "699ddc8034ec2d748bbc0026",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc0277",
+      "branchName": "Head Office",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Amit Kumar",
+      "email": "amit.kumar.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0033",
+      "roleId": "699ddc8034ec2d748bbc0029",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc028d",
+      "branchName": "Head Office",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rahul Yadav",
+      "email": "rahul.yadav.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0033",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc028f",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Swati Pillai",
+      "email": "swati.pillai.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0033",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc0290",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sachin Patil",
+      "email": "sachin.patil.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0033",
+      "roleId": "699ddc8134ec2d748bbc0030",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc0291",
+      "branchName": "Head Office",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Priya Kapoor",
+      "email": "priya.kapoor.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc0037",
+      "roleId": "699ddc8034ec2d748bbc0023",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc0292",
+      "branchName": "Delhi Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Neha Reddy",
+      "email": "neha.reddy.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc0037",
+      "roleId": "699ddc8034ec2d748bbc0026",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc0293",
+      "branchName": "Delhi Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Meera Shah",
+      "email": "meera.shah.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0037",
+      "roleId": "699ddc8034ec2d748bbc0029",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8634ec2d748bbc0294",
+      "branchName": "Delhi Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Gaurav Tiwari",
+      "email": "gaurav.tiwari.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0037",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc0295",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Nisha Chauhan",
+      "email": "nisha.chauhan.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0037",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc0296",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rekha Bose",
+      "email": "rekha.bose.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0037",
+      "roleId": "699ddc8134ec2d748bbc0030",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc0297",
+      "branchName": "Delhi Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Suresh Menon",
+      "email": "suresh.menon.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc003a",
+      "roleId": "699ddc8034ec2d748bbc0023",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc0298",
+      "branchName": "Bangalore Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rohan Patel",
+      "email": "rohan.patel.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc003a",
+      "roleId": "699ddc8034ec2d748bbc0026",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc0299",
+      "branchName": "Bangalore Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sanjay Verma",
+      "email": "sanjay.verma.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc003a",
+      "roleId": "699ddc8034ec2d748bbc0029",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc029a",
+      "branchName": "Bangalore Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Manish Soni",
+      "email": "manish.soni.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc003a",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc029b",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Divya Saxena",
+      "email": "divya.saxena.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc003a",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc029c",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Vivek Chandra",
+      "email": "vivek.chandra.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc003a",
+      "roleId": "699ddc8134ec2d748bbc0030",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc029d",
+      "branchName": "Bangalore Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Kavita Nair",
+      "email": "kavita.nair.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc003d",
+      "roleId": "699ddc8034ec2d748bbc0023",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc029e",
+      "branchName": "Pune Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Anita Desai",
+      "email": "anita.desai.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc003d",
+      "roleId": "699ddc8034ec2d748bbc0026",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc029f",
+      "branchName": "Pune Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Pooja Bhatt",
+      "email": "pooja.bhatt.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc003d",
+      "roleId": "699ddc8034ec2d748bbc0029",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a0",
+      "branchName": "Pune Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Akash Dubey",
+      "email": "akash.dubey.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc003d",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a1",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Tanvi Agarwal",
+      "email": "tanvi.agarwal.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc003d",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a2",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Asha Rani",
+      "email": "asha.rani.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc003d",
+      "roleId": "699ddc8134ec2d748bbc0030",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a3",
+      "branchName": "Pune Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Arun Mehta",
+      "email": "arun.mehta.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc0040",
+      "roleId": "699ddc8034ec2d748bbc0023",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a4",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Karthik Iyer",
+      "email": "karthik.iyer.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc0040",
+      "roleId": "699ddc8034ec2d748bbc0026",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a5",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Nikhil Jain",
+      "email": "nikhil.jain.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0040",
+      "roleId": "699ddc8034ec2d748bbc0029",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a6",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Varun Mishra",
+      "email": "varun.mishra.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0040",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a7",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Simran Kaur",
+      "email": "simran.kaur.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0040",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a8",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Tarun Sethi",
+      "email": "tarun.sethi.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0040",
+      "roleId": "699ddc8134ec2d748bbc0030",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02a9",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Deepa Joshi",
+      "email": "deepa.joshi.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc0043",
+      "roleId": "699ddc8034ec2d748bbc0023",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02aa",
+      "branchName": "Chennai Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sneha Gupta",
+      "email": "sneha.gupta.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699ddc8134ec2d748bbc0043",
+      "roleId": "699ddc8034ec2d748bbc0026",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02ab",
+      "branchName": "Chennai Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Ritika Malhotra",
+      "email": "ritika.malhotra.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0043",
+      "roleId": "699ddc8034ec2d748bbc0029",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02ac",
+      "branchName": "Chennai Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Harsh Pandey",
+      "email": "harsh.pandey.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0043",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02ad",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Komal Thakur",
+      "email": "komal.thakur.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0043",
+      "roleId": "699ddc8134ec2d748bbc002c",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02ae",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Bhavna Khurana",
+      "email": "bhavna.khurana.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699ddc8134ec2d748bbc0043",
+      "roleId": "699ddc8134ec2d748bbc0030",
+      "tenantId": "699ddc8034ec2d748bbc0002",
+      "userId": "699ddc8734ec2d748bbc02af",
+      "branchName": "Chennai Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 0,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rajesh Sharma",
+      "email": "rajesh.sharma.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb53a",
+      "roleId": "699de0468f14c3b71c6cb52a",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04a8f14c3b71c6cb578",
+      "branchName": "Head Office",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Vikram Singh",
+      "email": "vikram.singh.ho@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb53a",
+      "roleId": "699de0468f14c3b71c6cb52d",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb57b",
+      "branchName": "Head Office",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Amit Kumar",
+      "email": "amit.kumar.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb53a",
+      "roleId": "699de0468f14c3b71c6cb530",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb57d",
+      "branchName": "Head Office",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rahul Yadav",
+      "email": "rahul.yadav.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb53a",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb585",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Swati Pillai",
+      "email": "swati.pillai.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb53a",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb586",
+      "branchName": "Head Office",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sachin Patil",
+      "email": "sachin.patil.ho@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb53a",
+      "roleId": "699de0478f14c3b71c6cb537",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb587",
+      "branchName": "Head Office",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Priya Kapoor",
+      "email": "priya.kapoor.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb53e",
+      "roleId": "699de0468f14c3b71c6cb52a",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb588",
+      "branchName": "Delhi Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Neha Reddy",
+      "email": "neha.reddy.del@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb53e",
+      "roleId": "699de0468f14c3b71c6cb52d",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb589",
+      "branchName": "Delhi Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Meera Shah",
+      "email": "meera.shah.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb53e",
+      "roleId": "699de0468f14c3b71c6cb530",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb58a",
+      "branchName": "Delhi Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Gaurav Tiwari",
+      "email": "gaurav.tiwari.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb53e",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb58b",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Nisha Chauhan",
+      "email": "nisha.chauhan.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb53e",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb58c",
+      "branchName": "Delhi Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rekha Bose",
+      "email": "rekha.bose.del@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb53e",
+      "roleId": "699de0478f14c3b71c6cb537",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb58d",
+      "branchName": "Delhi Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Suresh Menon",
+      "email": "suresh.menon.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb541",
+      "roleId": "699de0468f14c3b71c6cb52a",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb58e",
+      "branchName": "Bangalore Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Rohan Patel",
+      "email": "rohan.patel.blr@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb541",
+      "roleId": "699de0468f14c3b71c6cb52d",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb58f",
+      "branchName": "Bangalore Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sanjay Verma",
+      "email": "sanjay.verma.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb541",
+      "roleId": "699de0468f14c3b71c6cb530",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb590",
+      "branchName": "Bangalore Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Manish Soni",
+      "email": "manish.soni.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb541",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb591",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Divya Saxena",
+      "email": "divya.saxena.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb541",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb592",
+      "branchName": "Bangalore Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Vivek Chandra",
+      "email": "vivek.chandra.blr@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb541",
+      "roleId": "699de0478f14c3b71c6cb537",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb593",
+      "branchName": "Bangalore Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Kavita Nair",
+      "email": "kavita.nair.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb544",
+      "roleId": "699de0468f14c3b71c6cb52a",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb594",
+      "branchName": "Pune Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Anita Desai",
+      "email": "anita.desai.pun@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb544",
+      "roleId": "699de0468f14c3b71c6cb52d",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb595",
+      "branchName": "Pune Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Pooja Bhatt",
+      "email": "pooja.bhatt.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb544",
+      "roleId": "699de0468f14c3b71c6cb530",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb596",
+      "branchName": "Pune Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Akash Dubey",
+      "email": "akash.dubey.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb544",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb597",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Tanvi Agarwal",
+      "email": "tanvi.agarwal.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb544",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb598",
+      "branchName": "Pune Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Asha Rani",
+      "email": "asha.rani.pun@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb544",
+      "roleId": "699de0478f14c3b71c6cb537",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb599",
+      "branchName": "Pune Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Arun Mehta",
+      "email": "arun.mehta.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb547",
+      "roleId": "699de0468f14c3b71c6cb52a",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb59a",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Karthik Iyer",
+      "email": "karthik.iyer.hyd@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb547",
+      "roleId": "699de0468f14c3b71c6cb52d",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb59b",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Nikhil Jain",
+      "email": "nikhil.jain.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb547",
+      "roleId": "699de0468f14c3b71c6cb530",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb59c",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Varun Mishra",
+      "email": "varun.mishra.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb547",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb59d",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Simran Kaur",
+      "email": "simran.kaur.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb547",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb59e",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Tarun Sethi",
+      "email": "tarun.sethi.hyd@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb547",
+      "roleId": "699de0478f14c3b71c6cb537",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb59f",
+      "branchName": "Hyderabad Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Deepa Joshi",
+      "email": "deepa.joshi.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb54a",
+      "roleId": "699de0468f14c3b71c6cb52a",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb5a0",
+      "branchName": "Chennai Branch",
+      "roleName": "Branch Manager",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Sneha Gupta",
+      "email": "sneha.gupta.chn@sparkcrm.demo",
+      "role": "manager",
+      "branchId": "699de0478f14c3b71c6cb54a",
+      "roleId": "699de0468f14c3b71c6cb52d",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04b8f14c3b71c6cb5a1",
+      "branchName": "Chennai Branch",
+      "roleName": "Sales Lead",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": false,
+        "isGlobal": true
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Ritika Malhotra",
+      "email": "ritika.malhotra.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb54a",
+      "roleId": "699de0468f14c3b71c6cb530",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04c8f14c3b71c6cb5a2",
+      "branchName": "Chennai Branch",
+      "roleName": "Senior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Harsh Pandey",
+      "email": "harsh.pandey.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb54a",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04c8f14c3b71c6cb5a3",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Komal Thakur",
+      "email": "komal.thakur.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb54a",
+      "roleId": "699de0478f14c3b71c6cb533",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04c8f14c3b71c6cb5a4",
+      "branchName": "Chennai Branch",
+      "roleName": "Junior Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    },
+    {
+      "name": "Bhavna Khurana",
+      "email": "bhavna.khurana.chn@sparkcrm.demo",
+      "role": "agent",
+      "branchId": "699de0478f14c3b71c6cb54a",
+      "roleId": "699de0478f14c3b71c6cb537",
+      "tenantId": "699de0468f14c3b71c6cb509",
+      "userId": "699de04c8f14c3b71c6cb5a5",
+      "branchName": "Chennai Branch",
+      "roleName": "Support Agent",
+      "leadsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "callsPerm": {
+        "view": true,
+        "isOwn": true,
+        "isGlobal": false
+      },
+      "branchLeadsObjId": 15,
+      "ownLeadsObjId": 2,
+      "totalTenantLeads": 90
+    }
+  ],
+  "sampleLead": {
+    "tenantId": {
+      "value": "699da890815de2ba89c3994c",
+      "type": "object",
+      "isObjectId": true
+    },
+    "branchId": {
+      "value": "699da891815de2ba89c3997d",
+      "type": "object",
+      "isObjectId": true
+    },
+    "assignedTo": {
+      "value": "699da894815de2ba89c39992",
+      "type": "object",
+      "isObjectId": true
+    }
+  }
+}

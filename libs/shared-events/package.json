@@ -1,0 +1,9 @@
+{
+  "name": "@sparkcrm/shared-events",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.js",
+  "dependencies": {
+    "ioredis": "^5.4.0"
+  }
+}

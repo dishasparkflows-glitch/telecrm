@@ -1,0 +1,24 @@
+{
+  "name": "@sparkcrm/notification-service",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "serve": "nodemon src/main.js",
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "@sparkcrm/shared-config": "*",
+    "@sparkcrm/shared-events": "*",
+    "@sparkcrm/shared-middleware": "*",
+    "@sparkcrm/shared-utils": "*",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "helmet": "^8.0.0",
+    "mongoose": "^8.9.0",
+    "nodemailer": "9.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

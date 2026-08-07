@@ -1,0 +1,5 @@
+import { Alert, ScrollView, Text } from 'react-native';
+import { useAuth } from '@/auth/AuthProvider';
+import { Card, PrimaryButton, shared } from '@/components/Card';
+import { registerPush } from '@/services/push';
+export default function Settings() { const { user, logout } = useAuth(); return <ScrollView style={shared.screen} contentContainerStyle={shared.content}><Text style={shared.title}>Settings</Text><Card><Text style={shared.label}>Signed in as</Text><Text>{user?.name || user?.email}</Text><Text style={shared.subtitle}>{user?.role || 'User'}</Text></Card><Card><Text style={shared.label}>Push notifications</Text><Text style={shared.subtitle}>Register this physical device’s native FCM/APNs token with SparkCRM.</Text><PrimaryButton title="Enable notifications" onPress={() => void registerPush().then(r => Alert.alert('Notifications', r.registered ? 'Device registered.' : r.reason)).catch(e => Alert.alert('Registration failed', e.message))} /></Card><PrimaryButton title="Sign out" onPress={() => void logout()} /></ScrollView>; }

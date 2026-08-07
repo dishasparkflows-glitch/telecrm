@@ -1,0 +1,1220 @@
+{
+	"info": {
+		"_postman_id": "sparkcrm-full-collection",
+		"name": "SparkCRM API — Complete Collection",
+		"description": "Complete API collection for SparkCRM multi-tenant CRM platform.\n\nGateway: http://localhost:8000\n\n11 microservices, 88+ endpoints.\n\nSetup:\n1. Set `base_url` variable to your gateway URL\n2. Register a tenant or login to get tokens\n3. Tokens auto-populate via collection scripts",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+		{ "key": "access_token", "value": "", "type": "string" },
+		{ "key": "refresh_token", "value": "", "type": "string" },
+		{ "key": "tenant_id", "value": "", "type": "string" },
+		{ "key": "user_id", "value": "", "type": "string" },
+		{ "key": "lead_id", "value": "", "type": "string" },
+		{ "key": "call_id", "value": "", "type": "string" },
+		{ "key": "form_id", "value": "", "type": "string" },
+		{ "key": "meeting_id", "value": "", "type": "string" },
+		{ "key": "rule_id", "value": "", "type": "string" },
+		{ "key": "invoice_id", "value": "", "type": "string" },
+		{ "key": "notification_id", "value": "", "type": "string" },
+		{ "key": "booking_slug", "value": "", "type": "string" }
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+	},
+	"item": [
+		{
+			"name": "🔐 Auth",
+			"description": "Authentication endpoints (register, login, logout, password reset)",
+			"item": [
+				{
+					"name": "Register Tenant",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', json.data.tokens.accessToken);",
+									"    pm.collectionVariables.set('refresh_token', json.data.tokens.refreshToken);",
+									"    pm.collectionVariables.set('tenant_id', json.data.tenant._id);",
+									"    pm.collectionVariables.set('user_id', json.data.user._id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Sagar Patel\",\n    \"email\": \"sagar@sparkcrm.io\",\n    \"password\": \"Password@123\",\n    \"phone\": \"+919876543210\",\n    \"companyName\": \"SparkFlows Technologies\",\n    \"referralCode\": \"\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/auth/register-tenant", "host": ["{{base_url}}"], "path": ["api", "auth", "register-tenant"] }
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', json.data.tokens.accessToken);",
+									"    pm.collectionVariables.set('refresh_token', json.data.tokens.refreshToken);",
+									"    pm.collectionVariables.set('user_id', json.data.user._id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"sagar@sparkcrm.io\",\n    \"password\": \"Password@123\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api", "auth", "login"] }
+					}
+				},
+				{
+					"name": "Get Me (Current User)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/auth/me", "host": ["{{base_url}}"], "path": ["api", "auth", "me"] }
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var json = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', json.data.tokens.accessToken);",
+									"    pm.collectionVariables.set('refresh_token', json.data.tokens.refreshToken);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/auth/refresh-token", "host": ["{{base_url}}"], "path": ["api", "auth", "refresh-token"] }
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"sagar@sparkcrm.io\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/auth/forgot-password", "host": ["{{base_url}}"], "path": ["api", "auth", "forgot-password"] }
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"<reset_token_from_email>\",\n    \"newPassword\": \"NewPassword@456\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/auth/reset-password", "host": ["{{base_url}}"], "path": ["api", "auth", "reset-password"] }
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/auth/logout", "host": ["{{base_url}}"], "path": ["api", "auth", "logout"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "👥 Users",
+			"description": "User management (admin-only)",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users?page=1&limit=20&search=&role=&isActive=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "users"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "20" },
+								{ "key": "search", "value": "" },
+								{ "key": "role", "value": "" },
+								{ "key": "isActive", "value": "true" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["api", "users", "{{user_id}}"] }
+					}
+				},
+				{
+					"name": "Invite User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Priya Mehta\",\n    \"email\": \"priya@sparkcrm.io\",\n    \"phone\": \"+919876543211\",\n    \"role\": \"agent\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/users/invite", "host": ["{{base_url}}"], "path": ["api", "users", "invite"] }
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Priya Mehta Updated\",\n    \"phone\": \"+919876543299\",\n    \"role\": \"manager\",\n    \"isActive\": true\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["api", "users", "{{user_id}}"] }
+					}
+				},
+				{
+					"name": "Delete (Deactivate) User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["api", "users", "{{user_id}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 Leads",
+			"description": "Lead management (CRUD, notes, assign, import, stats)",
+			"item": [
+				{
+					"name": "Get Lead Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/leads/stats", "host": ["{{base_url}}"], "path": ["api", "leads", "stats"] }
+					}
+				},
+				{
+					"name": "Get All Leads",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/leads?page=1&limit=20&search=&stage=&source=&sortBy=createdAt&sortOrder=desc",
+							"host": ["{{base_url}}"],
+							"path": ["api", "leads"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "20" },
+								{ "key": "search", "value": "" },
+								{ "key": "stage", "value": "" },
+								{ "key": "source", "value": "" },
+								{ "key": "sortBy", "value": "createdAt" },
+								{ "key": "sortOrder", "value": "desc" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Lead by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/leads/{{lead_id}}", "host": ["{{base_url}}"], "path": ["api", "leads", "{{lead_id}}"] }
+					}
+				},
+				{
+					"name": "Create Lead",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    pm.collectionVariables.set('lead_id', pm.response.json().data._id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"Rajesh\",\n    \"lastName\": \"Kumar\",\n    \"email\": \"rajesh@example.com\",\n    \"phone\": \"+919876543212\",\n    \"company\": \"TechCorp India\",\n    \"source\": \"website\",\n    \"stage\": \"new\",\n    \"dealValue\": 150000,\n    \"tags\": [\"enterprise\", \"priority\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/leads", "host": ["{{base_url}}"], "path": ["api", "leads"] }
+					}
+				},
+				{
+					"name": "Update Lead",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stage\": \"qualified\",\n    \"dealValue\": 200000,\n    \"tags\": [\"enterprise\", \"hot-lead\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/leads/{{lead_id}}", "host": ["{{base_url}}"], "path": ["api", "leads", "{{lead_id}}"] }
+					}
+				},
+				{
+					"name": "Add Note to Lead",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"text\": \"Had a great call with Rajesh. He is interested in our enterprise plan. Follow up next week.\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/leads/{{lead_id}}/notes", "host": ["{{base_url}}"], "path": ["api", "leads", "{{lead_id}}", "notes"] }
+					}
+				},
+				{
+					"name": "Assign Lead",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"assignedTo\": \"{{user_id}}\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/leads/{{lead_id}}/assign", "host": ["{{base_url}}"], "path": ["api", "leads", "{{lead_id}}", "assign"] }
+					}
+				},
+				{
+					"name": "Import Leads (Bulk)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"leads\": [\n        { \"firstName\": \"Amit\", \"lastName\": \"Shah\", \"email\": \"amit@test.com\", \"phone\": \"+919000000001\", \"source\": \"referral\" },\n        { \"firstName\": \"Neha\", \"lastName\": \"Gupta\", \"email\": \"neha@test.com\", \"phone\": \"+919000000002\", \"source\": \"website\" },\n        { \"firstName\": \"Vikram\", \"lastName\": \"Singh\", \"email\": \"vikram@test.com\", \"phone\": \"+919000000003\", \"source\": \"cold_call\" }\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/leads/import", "host": ["{{base_url}}"], "path": ["api", "leads", "import"] }
+					}
+				},
+				{
+					"name": "Archive Lead",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/leads/{{lead_id}}", "host": ["{{base_url}}"], "path": ["api", "leads", "{{lead_id}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "📞 Calls",
+			"description": "Call management (initiate, logs, stats, disposition)",
+			"item": [
+				{
+					"name": "Initiate Call",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    pm.collectionVariables.set('call_id', pm.response.json().data._id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"toNumber\": \"+919876543212\",\n    \"leadId\": \"{{lead_id}}\",\n    \"fromNumber\": \"+911234567890\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/calls/initiate", "host": ["{{base_url}}"], "path": ["api", "calls", "initiate"] }
+					}
+				},
+				{
+					"name": "Get Call Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/calls/logs?page=1&limit=25&status=&direction=",
+							"host": ["{{base_url}}"],
+							"path": ["api", "calls", "logs"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "25" },
+								{ "key": "status", "value": "" },
+								{ "key": "direction", "value": "" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Call Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/calls/stats", "host": ["{{base_url}}"], "path": ["api", "calls", "stats"] }
+					}
+				},
+				{
+					"name": "Update Disposition",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"disposition\": \"interested\",\n    \"notes\": \"Client showed strong interest in enterprise plan. Schedule demo next week.\",\n    \"callbackAt\": \"2026-03-01T10:00:00.000Z\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/calls/{{call_id}}/disposition", "host": ["{{base_url}}"], "path": ["api", "calls", "{{call_id}}", "disposition"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "💬 WhatsApp",
+			"description": "WhatsApp messaging, templates, chatbot rules",
+			"item": [
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"to\": \"+919876543212\",\n    \"content\": \"Hi Rajesh! Thanks for your interest in SparkCRM. How can we help you today?\",\n    \"type\": \"text\",\n    \"leadId\": \"{{lead_id}}\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/whatsapp/send", "host": ["{{base_url}}"], "path": ["api", "whatsapp", "send"] }
+					}
+				},
+				{
+					"name": "Get Chat History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/whatsapp/chat/{{lead_id}}?page=1&limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["api", "whatsapp", "chat", "{{lead_id}}"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "50" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Team Inbox",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/whatsapp/team-inbox", "host": ["{{base_url}}"], "path": ["api", "whatsapp", "team-inbox"] }
+					}
+				},
+				{
+					"name": "Broadcast Message",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"templateName\": \"welcome_message\",\n    \"recipients\": [\"+919876543210\", \"+919876543211\", \"+919876543212\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/whatsapp/broadcast", "host": ["{{base_url}}"], "path": ["api", "whatsapp", "broadcast"] }
+					}
+				},
+				{
+					"name": "Get Templates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/whatsapp/templates", "host": ["{{base_url}}"], "path": ["api", "whatsapp", "templates"] }
+					}
+				},
+				{
+					"name": "Create Template",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"welcome_message\",\n    \"language\": \"en\",\n    \"category\": \"MARKETING\",\n    \"body\": \"Hi {{1}}, Welcome to {{2}}! We are excited to have you on board.\",\n    \"variables\": [\"customer_name\", \"company_name\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/whatsapp/templates", "host": ["{{base_url}}"], "path": ["api", "whatsapp", "templates"] }
+					}
+				},
+				{
+					"name": "Get Chatbot Rules",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/whatsapp/chatbot", "host": ["{{base_url}}"], "path": ["api", "whatsapp", "chatbot"] }
+					}
+				},
+				{
+					"name": "Create Chatbot Rule",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"keyword\": \"pricing\",\n    \"response\": \"Our plans start at ₹499/month. Visit https://sparkcrm.io/pricing for details!\",\n    \"matchType\": \"contains\",\n    \"priority\": 10,\n    \"isActive\": true\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/whatsapp/chatbot", "host": ["{{base_url}}"], "path": ["api", "whatsapp", "chatbot"] }
+					}
+				},
+				{
+					"name": "Update Chatbot Rule",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"response\": \"Updated: Our plans start at ₹499/month. Contact sales for enterprise pricing!\",\n    \"isActive\": true\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/whatsapp/chatbot/{{rule_id}}", "host": ["{{base_url}}"], "path": ["api", "whatsapp", "chatbot", "{{rule_id}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "📝 Smart Forms",
+			"description": "Form builder and submissions",
+			"item": [
+				{
+					"name": "Get All Forms",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/forms", "host": ["{{base_url}}"], "path": ["api", "forms"] }
+					}
+				},
+				{
+					"name": "Create Form",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    pm.collectionVariables.set('form_id', pm.response.json().data._id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Contact Us Form\",\n    \"description\": \"Capture leads from website\",\n    \"fields\": [\n        { \"name\": \"firstName\", \"label\": \"First Name\", \"type\": \"text\", \"required\": true },\n        { \"name\": \"email\", \"label\": \"Email\", \"type\": \"email\", \"required\": true },\n        { \"name\": \"phone\", \"label\": \"Phone\", \"type\": \"phone\", \"required\": false },\n        { \"name\": \"company\", \"label\": \"Company\", \"type\": \"text\", \"required\": false },\n        { \"name\": \"message\", \"label\": \"Message\", \"type\": \"textarea\", \"required\": false }\n    ],\n    \"settings\": {\n        \"successMessage\": \"Thank you! We will get back to you shortly.\",\n        \"notifyEmail\": \"sales@sparkcrm.io\",\n        \"autoCreateLead\": true\n    }\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/forms", "host": ["{{base_url}}"], "path": ["api", "forms"] }
+					}
+				},
+				{
+					"name": "Get Form by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/forms/{{form_id}}", "host": ["{{base_url}}"], "path": ["api", "forms", "{{form_id}}"] }
+					}
+				},
+				{
+					"name": "Update Form",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Contact Us — Updated\",\n    \"isActive\": true\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/forms/{{form_id}}", "host": ["{{base_url}}"], "path": ["api", "forms", "{{form_id}}"] }
+					}
+				},
+				{
+					"name": "Submit Form (Public)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"New Lead\",\n    \"email\": \"newlead@example.com\",\n    \"phone\": \"+919999999999\",\n    \"company\": \"Acme Corp\",\n    \"message\": \"I want to learn more about your CRM.\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/forms/{{form_id}}/submit", "host": ["{{base_url}}"], "path": ["api", "forms", "{{form_id}}", "submit"] }
+					}
+				},
+				{
+					"name": "Get Form Submissions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/forms/{{form_id}}/submissions?page=1&limit=25",
+							"host": ["{{base_url}}"],
+							"path": ["api", "forms", "{{form_id}}", "submissions"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "25" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📅 Meetings",
+			"description": "Meeting scheduling and booking links",
+			"item": [
+				{
+					"name": "Get Meetings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/meetings?status=&from=&to=",
+							"host": ["{{base_url}}"],
+							"path": ["api", "meetings"],
+							"query": [
+								{ "key": "status", "value": "" },
+								{ "key": "from", "value": "" },
+								{ "key": "to", "value": "" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Schedule Meeting",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    pm.collectionVariables.set('meeting_id', pm.response.json().data._id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Product Demo — TechCorp\",\n    \"leadId\": \"{{lead_id}}\",\n    \"scheduledAt\": \"2026-03-01T10:00:00.000Z\",\n    \"duration\": 30,\n    \"type\": \"video\",\n    \"notes\": \"Demo the enterprise features\",\n    \"attendees\": [\"rajesh@example.com\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/meetings/schedule", "host": ["{{base_url}}"], "path": ["api", "meetings", "schedule"] }
+					}
+				},
+				{
+					"name": "Update Meeting",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"completed\",\n    \"notes\": \"Demo went well. Client interested in Growth plan.\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/meetings/{{meeting_id}}", "host": ["{{base_url}}"], "path": ["api", "meetings", "{{meeting_id}}"] }
+					}
+				},
+				{
+					"name": "Get Booking Links",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/meetings/booking-links", "host": ["{{base_url}}"], "path": ["api", "meetings", "booking-links"] }
+					}
+				},
+				{
+					"name": "Create Booking Link",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    pm.collectionVariables.set('booking_slug', pm.response.json().data.slug);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"30-Min Discovery Call\",\n    \"slug\": \"discovery-call\",\n    \"duration\": 30,\n    \"description\": \"Let's discuss how SparkCRM can help your business grow.\",\n    \"availability\": {\n        \"monday\": { \"start\": \"09:00\", \"end\": \"17:00\" },\n        \"tuesday\": { \"start\": \"09:00\", \"end\": \"17:00\" },\n        \"wednesday\": { \"start\": \"09:00\", \"end\": \"17:00\" },\n        \"thursday\": { \"start\": \"09:00\", \"end\": \"17:00\" },\n        \"friday\": { \"start\": \"09:00\", \"end\": \"17:00\" }\n    }\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/meetings/booking-links", "host": ["{{base_url}}"], "path": ["api", "meetings", "booking-links"] }
+					}
+				},
+				{
+					"name": "Book Meeting (Public)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Discovery Call — External Client\",\n    \"scheduledAt\": \"2026-03-05T14:00:00.000Z\",\n    \"attendeeName\": \"External User\",\n    \"attendeeEmail\": \"external@client.com\",\n    \"notes\": \"Interested in CRM solution\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/meetings/book/{{booking_slug}}", "host": ["{{base_url}}"], "path": ["api", "meetings", "book", "{{booking_slug}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "⚡ Automations",
+			"description": "Automation rules and execution logs",
+			"item": [
+				{
+					"name": "Get All Rules",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/automations", "host": ["{{base_url}}"], "path": ["api", "automations"] }
+					}
+				},
+				{
+					"name": "Create Rule",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    pm.collectionVariables.set('rule_id', pm.response.json().data._id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Auto-assign new leads\",\n    \"trigger\": \"lead_created\",\n    \"conditions\": [\n        { \"field\": \"source\", \"operator\": \"equals\", \"value\": \"website\" }\n    ],\n    \"actions\": [\n        { \"type\": \"assign_lead\", \"config\": { \"strategy\": \"round_robin\" } },\n        { \"type\": \"send_notification\", \"config\": { \"message\": \"New website lead assigned to you!\" } }\n    ],\n    \"isActive\": true\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/automations", "host": ["{{base_url}}"], "path": ["api", "automations"] }
+					}
+				},
+				{
+					"name": "Update Rule",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Auto-assign website leads (updated)\",\n    \"isActive\": true\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/automations/{{rule_id}}", "host": ["{{base_url}}"], "path": ["api", "automations", "{{rule_id}}"] }
+					}
+				},
+				{
+					"name": "Toggle Rule",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/automations/{{rule_id}}/toggle", "host": ["{{base_url}}"], "path": ["api", "automations", "{{rule_id}}", "toggle"] }
+					}
+				},
+				{
+					"name": "Delete Rule",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/automations/{{rule_id}}", "host": ["{{base_url}}"], "path": ["api", "automations", "{{rule_id}}"] }
+					}
+				},
+				{
+					"name": "Get Execution Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/automations/logs?page=1&limit=25&ruleId=",
+							"host": ["{{base_url}}"],
+							"path": ["api", "automations", "logs"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "25" },
+								{ "key": "ruleId", "value": "" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Analytics",
+			"description": "Dashboard, lead, call, team, revenue analytics",
+			"item": [
+				{
+					"name": "Dashboard Overview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/analytics/dashboard", "host": ["{{base_url}}"], "path": ["api", "analytics", "dashboard"] }
+					}
+				},
+				{
+					"name": "Lead Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/analytics/leads?from=&to=&groupBy=day",
+							"host": ["{{base_url}}"],
+							"path": ["api", "analytics", "leads"],
+							"query": [
+								{ "key": "from", "value": "" },
+								{ "key": "to", "value": "" },
+								{ "key": "groupBy", "value": "day" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Call Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/analytics/calls", "host": ["{{base_url}}"], "path": ["api", "analytics", "calls"] }
+					}
+				},
+				{
+					"name": "Team Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/analytics/team", "host": ["{{base_url}}"], "path": ["api", "analytics", "team"] }
+					}
+				},
+				{
+					"name": "Revenue Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/analytics/revenue", "host": ["{{base_url}}"], "path": ["api", "analytics", "revenue"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "💳 Billing",
+			"description": "Subscription management, payments, invoices",
+			"item": [
+				{
+					"name": "Create Subscription",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"planSlug\": \"growth\",\n    \"billingCycle\": \"monthly\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/billing/subscribe", "host": ["{{base_url}}"], "path": ["api", "billing", "subscribe"] }
+					}
+				},
+				{
+					"name": "Verify Payment",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razorpay_order_id\": \"order_xxxxxxxxxxxx\",\n    \"razorpay_payment_id\": \"pay_xxxxxxxxxxxx\",\n    \"razorpay_signature\": \"signature_hash_here\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/billing/verify-payment", "host": ["{{base_url}}"], "path": ["api", "billing", "verify-payment"] }
+					}
+				},
+				{
+					"name": "Get Invoices",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/billing/invoices?page=1&limit=20&status=",
+							"host": ["{{base_url}}"],
+							"path": ["api", "billing", "invoices"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "20" },
+								{ "key": "status", "value": "" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Invoice by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/billing/invoices/{{invoice_id}}", "host": ["{{base_url}}"], "path": ["api", "billing", "invoices", "{{invoice_id}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "🧩 Features (Add-Ons)",
+			"description": "Feature marketplace — browse, purchase, activate, cancel",
+			"item": [
+				{
+					"name": "Get Feature Store",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/features/store", "host": ["{{base_url}}"], "path": ["api", "features", "store"] }
+					}
+				},
+				{
+					"name": "Get Purchased Features",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/features/purchased", "host": ["{{base_url}}"], "path": ["api", "features", "purchased"] }
+					}
+				},
+				{
+					"name": "Purchase Feature",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"featureSlug\": \"whatsapp_templates\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/features/purchase", "host": ["{{base_url}}"], "path": ["api", "features", "purchase"] }
+					}
+				},
+				{
+					"name": "Activate Feature",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"featureSlug\": \"whatsapp_templates\",\n    \"invoiceId\": \"{{invoice_id}}\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/features/activate", "host": ["{{base_url}}"], "path": ["api", "features", "activate"] }
+					}
+				},
+				{
+					"name": "Cancel Feature",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"featureSlug\": \"whatsapp_templates\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/features/cancel", "host": ["{{base_url}}"], "path": ["api", "features", "cancel"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "🏢 Tenant",
+			"description": "Tenant profile, settings, pipeline, custom fields, onboarding",
+			"item": [
+				{
+					"name": "Get Tenant Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/tenants/profile", "host": ["{{base_url}}"], "path": ["api", "tenants", "profile"] }
+					}
+				},
+				{
+					"name": "Update Settings",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"companyName\": \"SparkFlows Technologies Pvt. Ltd.\",\n    \"email\": \"admin@sparkflows.io\",\n    \"timezone\": \"Asia/Kolkata\",\n    \"dateFormat\": \"DD/MM/YYYY\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/tenants/settings", "host": ["{{base_url}}"], "path": ["api", "tenants", "settings"] }
+					}
+				},
+				{
+					"name": "Get Trial Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/tenants/trial-status", "host": ["{{base_url}}"], "path": ["api", "tenants", "trial-status"] }
+					}
+				},
+				{
+					"name": "Update Pipeline Stages",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stages\": [\"New\", \"Contacted\", \"Qualified\", \"Proposal\", \"Negotiation\", \"Won\", \"Lost\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/tenants/pipeline", "host": ["{{base_url}}"], "path": ["api", "tenants", "pipeline"] }
+					}
+				},
+				{
+					"name": "Add Custom Field",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Industry\",\n    \"type\": \"select\",\n    \"options\": [\"Technology\", \"Healthcare\", \"Finance\", \"Education\", \"Retail\"],\n    \"required\": false\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/tenants/custom-fields", "host": ["{{base_url}}"], "path": ["api", "tenants", "custom-fields"] }
+					}
+				},
+				{
+					"name": "Update Onboarding",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"step\": \"pipeline_setup\",\n    \"completed\": true\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/tenants/onboarding", "host": ["{{base_url}}"], "path": ["api", "tenants", "onboarding"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "📦 Plans (Public)",
+			"description": "Public plan endpoints — no auth required",
+			"item": [
+				{
+					"name": "Get All Plans",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/plans", "host": ["{{base_url}}"], "path": ["api", "plans"] }
+					}
+				},
+				{
+					"name": "Get Plan by Slug",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/plans/growth", "host": ["{{base_url}}"], "path": ["api", "plans", "growth"] }
+					}
+				},
+				{
+					"name": "Create Plan (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Starter\",\n    \"slug\": \"starter\",\n    \"price\": { \"monthly\": 499, \"yearly\": 4999 },\n    \"features\": [\"5 Users\", \"500 Leads\", \"Basic CRM\"],\n    \"limits\": { \"users\": 5, \"leads\": 500 }\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/plans", "host": ["{{base_url}}"], "path": ["api", "plans"] }
+					}
+				},
+				{
+					"name": "Update Plan (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"price\": { \"monthly\": 599, \"yearly\": 5999 },\n    \"features\": [\"5 Users\", \"1000 Leads\", \"Basic CRM\", \"Email Support\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/plans/{{plan_id}}", "host": ["{{base_url}}"], "path": ["api", "plans", "{{plan_id}}"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "🎁 Referral",
+			"description": "Referral code and stats",
+			"item": [
+				{
+					"name": "Get Referral Code",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/referral/code", "host": ["{{base_url}}"], "path": ["api", "referral", "code"] }
+					}
+				},
+				{
+					"name": "Get Referral Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/referral/stats", "host": ["{{base_url}}"], "path": ["api", "referral", "stats"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 Audit Logs",
+			"description": "Activity audit trail (admin-only)",
+			"item": [
+				{
+					"name": "Get Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/audit?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "audit"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "20" }
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔔 Notifications",
+			"description": "User notification management",
+			"item": [
+				{
+					"name": "Get Notifications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/notifications?page=1&limit=25&isRead=",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications"],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "limit", "value": "25" },
+								{ "key": "isRead", "value": "" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Mark As Read",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ids\": [\"{{notification_id}}\"]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": { "raw": "{{base_url}}/api/notifications/read", "host": ["{{base_url}}"], "path": ["api", "notifications", "read"] }
+					}
+				},
+				{
+					"name": "Mark All Read",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": { "raw": "{{base_url}}/api/notifications/read-all", "host": ["{{base_url}}"], "path": ["api", "notifications", "read-all"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "❤️ Health Check",
+			"description": "Gateway health endpoint",
+			"item": [
+				{
+					"name": "Gateway Health",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+					}
+				}
+			]
+		}
+	]
+}

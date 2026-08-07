@@ -1,0 +1,11 @@
+{
+  "name": "@sparkcrm/shared-config",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.js",
+  "dependencies": {
+    "mongoose": "^8.9.0",
+    "ioredis": "^5.4.0",
+    "dotenv": "^16.4.0"
+  }
+}

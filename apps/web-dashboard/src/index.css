@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* ─── Velzon Design System — CSS Custom Properties ─── */
+@theme {
+  /* Primary Brand Colors */
+  --color-primary: #405189;
+  --color-primary-hover: #364574;
+  --color-primary-light: #405189/10%;
+  --color-secondary: #0ab39c;
+  --color-secondary-hover: #099885;
+  --color-info: #299cdb;
+  --color-warning: #f7b84b;
+  --color-danger: #f06548;
+  --color-success: #0ab39c;
+
+  /* Sidebar */
+  --color-sidebar: #405189;
+  --color-sidebar-dark: #111827;
+
+  /* Font */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─── Light mode (default) ─── */
+:root {
+  --vz-body-bg: #f3f3f9;
+  --vz-card-bg: #f8f9fa;
+  --vz-topbar-bg: #f8f9fa;
+  --vz-border: #e9ebec;
+  --vz-heading: #495057;
+  --vz-text: #878a99;
+  --vz-text-muted: #adb5bd;
+  --vz-input-bg: #eff2f7;
+  --vz-input-border: #ced4da;
+  --vz-table-header-bg: #f3f6f9;
+  --vz-table-hover-bg: #f9f9fb;
+  --vz-sidebar-bg: #405189;
+  --vz-sidebar-text: #a6b0cf;
+  --vz-sidebar-active: #ffffff;
+  --vz-topbar-text: #495057;
+  --vz-badge-soft-bg: #daf4f0;
+  --vz-badge-soft-text: #0ab39c;
+  --vz-shadow: 0 1px 2px rgba(56, 65, 74, 0.15);
+}
+
+/* ─── Dark mode ─── */
+.dark {
+  --vz-body-bg: #1a1d21;
+  --vz-card-bg: #212529;
+  --vz-topbar-bg: #212529;
+  --vz-border: #32383e;
+  --vz-heading: #ced4da;
+  --vz-text: #adb5bd;
+  --vz-text-muted: #878a99;
+  --vz-input-bg: #2a2f34;
+  --vz-input-border: #32383e;
+  --vz-table-header-bg: #2a2f34;
+  --vz-table-hover-bg: #262b30;
+  --vz-sidebar-bg: #262b30;
+  --vz-sidebar-text: #a6b0cf;
+  --vz-sidebar-active: #ffffff;
+  --vz-topbar-text: #ced4da;
+  --vz-badge-soft-bg: #0ab39c/15%;
+  --vz-badge-soft-text: #0ab39c;
+  --vz-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Base Styles ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--vz-body-bg);
+  color: var(--vz-text);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #878a99;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #32383e;
+}

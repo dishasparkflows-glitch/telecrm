@@ -1,0 +1,246 @@
+version: '3.8'
+
+services:
+  # ─── Infrastructure ───
+  mongo:
+    image: mongo:7
+    container_name: sparkcrm-mongo
+    expose:
+      - "27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: sparkcrm-redis
+    expose:
+      - "6379"
+    restart: unless-stopped
+
+  # ─── API Gateway ───
+  api-gateway:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: api-gateway
+    container_name: sparkcrm-gateway
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - PORT_GATEWAY=8000
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - TENANT_SERVICE_URL=http://tenant-service:8002
+      - LEAD_SERVICE_URL=http://lead-service:8003
+      - CALL_SERVICE_URL=http://call-service:8004
+      - WHATSAPP_SERVICE_URL=http://whatsapp-service:8005
+      - AUTOMATION_SERVICE_URL=http://automation-service:8006
+      - ANALYTICS_SERVICE_URL=http://analytics-service:8007
+      - BILLING_SERVICE_URL=http://billing-service:8008
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8009
+      - FORM_SERVICE_URL=http://form-service:8010
+      - MEETING_SERVICE_URL=http://meeting-service:8011
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Auth Service ───
+  auth-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: auth-service
+    container_name: sparkcrm-auth
+    expose:
+      - "8001"
+    env_file: .env
+    environment:
+      - PORT_AUTH=8001
+      - TENANT_SERVICE_URL=http://tenant-service:8002
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Tenant Service ───
+  tenant-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: tenant-service
+    container_name: sparkcrm-tenant
+    expose:
+      - "8002"
+    env_file: .env
+    environment:
+      - PORT_TENANT=8002
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - LEAD_SERVICE_URL=http://lead-service:8003
+      - CALL_SERVICE_URL=http://call-service:8004
+      - WHATSAPP_SERVICE_URL=http://whatsapp-service:8005
+      - MEETING_SERVICE_URL=http://meeting-service:8011
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Lead Service ───
+  lead-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: lead-service
+    container_name: sparkcrm-lead
+    expose:
+      - "8003"
+    env_file: .env
+    environment:
+      - PORT_LEAD=8003
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Call Service ───
+  call-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: call-service
+    container_name: sparkcrm-call
+    expose:
+      - "8004"
+    env_file: .env
+    environment:
+      - PORT_CALL=8004
+      - TENANT_SERVICE_URL=http://tenant-service:8002
+      - LEAD_SERVICE_URL=http://lead-service:8003
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── WhatsApp Service ───
+  whatsapp-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: whatsapp-service
+    container_name: sparkcrm-whatsapp
+    expose:
+      - "8005"
+    env_file: .env
+    environment:
+      - PORT_WHATSAPP=8005
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Automation Service ───
+  automation-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: automation-service
+    container_name: sparkcrm-automation
+    expose:
+      - "8006"
+    env_file: .env
+    environment:
+      - PORT_AUTOMATION=8006
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Analytics Service ───
+  analytics-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: analytics-service
+    container_name: sparkcrm-analytics
+    expose:
+      - "8007"
+    env_file: .env
+    environment:
+      - PORT_ANALYTICS=8007
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Billing Service ───
+  billing-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: billing-service
+    container_name: sparkcrm-billing
+    expose:
+      - "8008"
+    env_file: .env
+    environment:
+      - PORT_BILLING=8008
+      - TENANT_SERVICE_URL=http://tenant-service:8002
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Notification Service ───
+  notification-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: notification-service
+    container_name: sparkcrm-notification
+    expose:
+      - "8009"
+    env_file: .env
+    environment:
+      - PORT_NOTIFICATION=8009
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Form Service ───
+  form-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: form-service
+    container_name: sparkcrm-form
+    expose:
+      - "8010"
+    env_file: .env
+    environment:
+      - PORT_FORM=8010
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  # ─── Meeting Service ───
+  meeting-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: meeting-service
+    container_name: sparkcrm-meeting
+    expose:
+      - "8011"
+    env_file: .env
+    environment:
+      - PORT_MEETING=8011
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

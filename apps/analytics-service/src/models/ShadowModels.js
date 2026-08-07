@@ -1,0 +1,64 @@
+const mongoose = require('mongoose');
+const { env } = require('@sparkcrm/shared-config');
+
+// Create separate connections for different services
+const leadConn = mongoose.createConnection(env.MONGO.LEAD);
+const callConn = mongoose.createConnection(env.MONGO.CALL);
+const whatsappConn = mongoose.createConnection(env.MONGO.WHATSAPP);
+const authConn = mongoose.createConnection(env.MONGO.AUTH);
+
+// Shadow Lead Model
+const Lead = leadConn.model('Lead', new mongoose.Schema({
+    tenantId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    branchId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    stage: String,
+    source: String,
+    score: Number,
+    assignedTo: mongoose.Schema.Types.ObjectId,
+    expectedValue: Number,
+    currency: String,
+    firstTouch: {
+        campaignId: String,
+        campaignName: String,
+        adId: String,
+        adName: String,
+        formId: String,
+        formName: String,
+    },
+    isArchived: { type: Boolean, default: false },
+    createdAt: Date
+}, { timestamps: true }));
+
+// Shadow CallLog Model
+const CallLog = callConn.model('CallLog', new mongoose.Schema({
+    tenantId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    branchId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    status: String,
+    duration: Number,
+    callerId: mongoose.Schema.Types.ObjectId,
+    disposition: String,
+    direction: String,
+    startedAt: Date
+}, { timestamps: true }));
+
+// Shadow WhatsappMessage Model
+const WhatsappMessage = whatsappConn.model('WhatsappMessage', new mongoose.Schema({
+    tenantId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    branchId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    direction: String,
+    status: String,
+    createdAt: Date
+}, { timestamps: true }));
+
+// Shadow User Model
+const User = authConn.model('User', new mongoose.Schema({
+    tenantId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    branchId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    name: String,
+    firstName: String,
+    lastName: String,
+    email: String,
+    isActive: Boolean
+}, { timestamps: true }));
+
+module.exports = { Lead, CallLog, WhatsappMessage, User };

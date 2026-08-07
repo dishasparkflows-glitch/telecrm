@@ -1,0 +1,13 @@
+--- Tenant Details ---
+ID: 69a1303a8d8106eb0017d97d
+Status: active
+
+--- Plan Details ---
+Plan ID: 69a020eb73f6b1827948ae38
+Plan Name: Basic
+Plan Features Count: 10
+Includes analytics_basic? true
+All Features: ["lead_management","calling_basic","call_reminders","whatsapp_templates","automation_basic","analytics_basic","analytics_standard","custom_fields","smart_forms","notifications"]
+
+--- Purchased Add-ons ---
+[]

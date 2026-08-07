@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SparkCRM</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header><strong>⚡ SparkCRM</strong><button id="settingsToggle" class="link">Settings</button></header>
+  <main>
+    <div id="message" class="message hidden"></div>
+    <section id="settings" class="card hidden">
+      <label>API URL<input id="apiUrl" placeholder="https://crm.example.com/api" /></label>
+      <label>Dashboard URL<input id="dashboardUrl" placeholder="https://crm.example.com" /></label>
+      <button id="saveSettings">Save settings</button>
+    </section>
+    <section id="login" class="card hidden">
+      <h3>Sign in</h3>
+      <label>Email<input id="email" type="email" /></label>
+      <label>Password<input id="password" type="password" /></label>
+      <button id="loginButton">Sign in</button>
+    </section>
+    <section id="workspace" class="hidden">
+      <div class="row"><input id="phone" placeholder="Lead phone number" /><button id="detectButton" class="secondary">Detect</button></div>
+      <button id="findButton">Find lead</button>
+      <div id="leadCard" class="card hidden">
+        <div class="between"><h3 id="leadName"></h3><span id="leadStage" class="badge"></span></div>
+        <p id="leadContact" class="muted"></p>
+        <label>Stage<select id="stageSelect"></select></label>
+        <label>Assign to<select id="assigneeSelect"></select></label>
+        <div class="row"><input id="note" placeholder="Add note" /><button id="addNoteButton" class="secondary">Add</button></div>
+        <button id="openLeadButton" class="secondary">Open full lead</button>
+      </div>
+      <div id="createCard" class="card hidden">
+        <h3>Create WhatsApp lead</h3>
+        <label>First name<input id="firstName" /></label>
+        <label>Last name<input id="lastName" /></label>
+        <label>Company<input id="company" /></label>
+        <button id="createButton">Create lead</button>
+      </div>
+      <button id="logoutButton" class="link danger">Sign out</button>
+    </section>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

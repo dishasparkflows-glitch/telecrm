@@ -1,0 +1,44 @@
+{
+  "name": "@sparkcrm/source",
+  "version": "0.0.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev:gateway": "nx serve api-gateway",
+    "dev:auth": "nx serve auth-service",
+    "dev:tenant": "nx serve tenant-service",
+    "dev:lead": "nx serve lead-service",
+    "dev:call": "nx serve call-service",
+    "dev:whatsapp": "nx serve whatsapp-service",
+    "dev:automation": "nx serve automation-service",
+    "dev:analytics": "nx serve analytics-service",
+    "dev:billing": "nx serve billing-service",
+    "dev:notification": "nx serve notification-service",
+    "dev:form": "nx serve form-service",
+    "dev:meeting": "nx serve meeting-service",
+    "dev:landing": "nx serve web-landing",
+    "dev:dashboard": "nx serve web-dashboard",
+    "dev:backend": "node scripts/startAll.js",
+    "dev:all": "node scripts/startAll.js & nx serve web-dashboard",
+    "owner:bootstrap": "node scripts/bootstrap_owner.js",
+    "migrate:meta-mapping-index": "node scripts/migrate_meta_mapping_uniqueness.js",
+    "migrate:feature-entitlements": "node scripts/migrate_feature_entitlement_constraints.js",
+    "build:all": "nx run-many --target=build --all",
+    "test:all": "nx run-many --target=test --all",
+    "graph": "nx graph"
+  },
+  "dependencies": {
+    "@aws-sdk/s3-request-presigner": "^3.998.0",
+    "axios": "^1.13.5",
+    "node-cron": "^4.2.1"
+  },
+  "devDependencies": {
+    "@nx/js": "22.5.1",
+    "eslint-plugin-react": "^7.37.5",
+    "nx": "22.5.1"
+  },
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ]
+}

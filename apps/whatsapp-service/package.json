@@ -1,0 +1,29 @@
+{
+  "name": "@sparkcrm/whatsapp-service",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "serve": "nodemon src/main.js",
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "@sparkcrm/shared-config": "*",
+    "@sparkcrm/shared-events": "*",
+    "@sparkcrm/shared-middleware": "*",
+    "@sparkcrm/shared-utils": "*",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "axios": "^1.18.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^8.9.0",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

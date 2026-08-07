@@ -1,0 +1,9 @@
+{
+  "success": false,
+  "status": 500,
+  "data": {
+    "success": false,
+    "message": "input must be a 24 character hex string, 12 byte Uint8Array, or an integer",
+    "stack": "BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer\n    at new ObjectId (D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\node_modules\\bson\\lib\\bson.cjs:2538:23)\n    at buildAnalyticsFilter (D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\apps\\analytics-service\\src\\controllers\\analytics.controller.js:69:30)\n    at D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\apps\\analytics-service\\src\\controllers\\analytics.controller.js:84:24\n    at D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\libs\\shared-utils\\src\\asyncHandler.js:8:25\n    at Layer.handle [as handle_request] (D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at next (D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\node_modules\\express\\lib\\router\\route.js:149:13)\n    at Route.dispatch (D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\node_modules\\express\\lib\\router\\route.js:119:3)\n    at Layer.handle [as handle_request] (D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\node_modules\\express\\lib\\router\\index.js:284:15\n    at Function.process_params (D:\\SparkFlows\\Freelancing\\Sagarbhai\\SparkCRM\\node_modules\\express\\lib\\router\\index.js:346:12)"
+  }
+}

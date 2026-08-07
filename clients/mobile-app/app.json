@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "SparkCRM",
+    "slug": "sparkcrm-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "sparkcrm",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sparkcrm.mobile",
+      "infoPlist": {
+        "UIBackgroundModes": ["fetch", "remote-notification"]
+      }
+    },
+    "android": {
+      "package": "com.sparkcrm.mobile",
+      "permissions": ["READ_CALL_LOG", "READ_PHONE_STATE", "READ_PHONE_NUMBERS", "POST_NOTIFICATIONS"],
+      "adaptiveIcon": { "backgroundColor": "#0F172A" }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      ["expo-notifications", { "defaultChannel": "default" }]
+    ],
+    "experiments": { "typedRoutes": true },
+    "extra": {
+      "eas": { "projectId": "YOUR_EAS_PROJECT_ID" }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "SparkCRM for WhatsApp Web",
+  "version": "1.0.0",
+  "description": "Create and manage SparkCRM leads from WhatsApp Web.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "host_permissions": ["https://web.whatsapp.com/*"],
+  "action": {
+    "default_title": "SparkCRM",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

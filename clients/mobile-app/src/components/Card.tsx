@@ -1,0 +1,6 @@
+import { Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
+import { colors } from '@/theme';
+export function Card({ children, ...props }: ViewProps) { return <View style={s.card} {...props}>{children}</View>; }
+export function PrimaryButton({ title, onPress, disabled }: { title: string; onPress(): void; disabled?: boolean }) { return <Pressable disabled={disabled} onPress={onPress} style={[s.button, disabled && s.disabled]}><Text style={s.buttonText}>{title}</Text></Pressable>; }
+export const shared = StyleSheet.create({ screen: { flex: 1, backgroundColor: colors.bg }, content: { padding: 16, gap: 12 }, title: { fontSize: 24, fontWeight: '800', color: colors.ink }, subtitle: { color: colors.muted }, input: { borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', borderRadius: 10, padding: 12, color: colors.ink }, row: { flexDirection: 'row', alignItems: 'center', gap: 8 }, label: { color: colors.muted, fontSize: 12, textTransform: 'uppercase' } });
+const s = StyleSheet.create({ card: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 6 }, button: { backgroundColor: colors.primary, borderRadius: 9, paddingVertical: 12, paddingHorizontal: 14, alignItems: 'center' }, buttonText: { color: 'white', fontWeight: '700' }, disabled: { opacity: 0.5 } });

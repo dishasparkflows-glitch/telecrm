@@ -1,0 +1,7 @@
+{
+  "name": "spark-call-log",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "peerDependencies": { "expo": "*", "react-native": "*" }
+}
