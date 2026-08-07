@@ -25,7 +25,7 @@ const assignmentPolicySchema = new mongoose.Schema(
         createdBy: { type: mongoose.Schema.Types.ObjectId, default: null },
         updatedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 assignmentPolicySchema.index(

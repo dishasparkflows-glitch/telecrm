@@ -52,7 +52,7 @@ const featureSchema = new mongoose.Schema(
             default: 0,
         },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 featureSchema.index({ category: 1, isActive: 1 });

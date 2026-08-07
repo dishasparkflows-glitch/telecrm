@@ -23,7 +23,7 @@ const customFieldDefinitionSchema = new mongoose.Schema(
         order: { type: Number, default: 0 },
         isActive: { type: Boolean, default: true },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 // Ensure unique field names per entity within a tenant

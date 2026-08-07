@@ -55,6 +55,7 @@ import {
   useDeleteWhatsAppConfigMutation,
   useManagePhonePoolMutation,
 } from '../../features/whatsapp/whatsappApi'
+import { useUpdatePasswordMutation } from '../../features/auth/authApi'
 
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -155,6 +156,7 @@ export default function Settings() {
   // Mutations
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
   const [updatePipeline, { isLoading: savingPipeline }] = useUpdatePipelineMutation()
+  const [updatePassword, { isLoading: updatingPassword }] = useUpdatePasswordMutation()
   const { data: customFieldsResp, isLoading: fieldsLoading } = useGetCustomFieldsQuery()
   const [createCustomField] = useCreateCustomFieldMutation()
   const [deleteCustomField] = useDeleteCustomFieldMutation()
@@ -188,6 +190,12 @@ export default function Settings() {
     address: '',
     timezone: 'Asia/Kolkata',
     website: ''
+  })
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   })
 
   const [showInvite, setShowInvite] = useState(false)
@@ -458,6 +466,25 @@ export default function Settings() {
     }
   }
 
+  const handleUpdatePassword = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+        return toast('All password fields are required', 'error')
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+        return toast('New passwords do not match', 'error')
+    }
+    try {
+        await updatePassword({
+            currentPassword: passwordForm.currentPassword,
+            newPassword: passwordForm.newPassword
+        }).unwrap()
+        toast('Password updated successfully', 'success')
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    } catch (err) {
+        toast(err.data?.message || 'Failed to update password', 'error')
+    }
+  }
+
   const handleInvite = async () => {
     if (!inviteForm.name || !inviteForm.email) return toast('Name and email required', 'error')
     try {
@@ -593,7 +620,7 @@ export default function Settings() {
 
               <div className="border-t border-[var(--vz-border)] p-2">
                 <TabItem icon={Building2} label="Company Details" active={activeTab === 'company'} onClick={() => setActiveTab('company')} />
-                <TabItem icon={Users} label="Team Management" active={activeTab === 'users'} onClick={() => setActiveTab('users')} count={users.length} />
+                {/* <TabItem icon={Users} label="Team Management" active={activeTab === 'users'} onClick={() => setActiveTab('users')} count={users.length} /> */}
                 <TabItem icon={GitBranch} label="Pipeline Stages" active={activeTab === 'pipeline'} onClick={() => setActiveTab('pipeline')} />
                 <TabItem icon={Megaphone} label="Lead Sources" active={activeTab === 'lead_sources'} onClick={() => setActiveTab('lead_sources')} count={leadSourceMappingsResp?.data?.length} />
                 <TabItem icon={Shuffle} label="Lead Assignment" active={activeTab === 'assignment'} onClick={() => setActiveTab('assignment')} />
@@ -658,7 +685,7 @@ export default function Settings() {
             )}
 
             {/* 2. Team Management */}
-            {activeTab === 'users' && (
+            {/* {activeTab === 'users' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h5 className="text-base font-bold text-[var(--vz-heading)]">Team Members</h5>
@@ -735,7 +762,7 @@ export default function Settings() {
                   </div>
                 </Card>
               </div>
-            )}
+            )} */}
 
             {/* 3. Pipeline Stages */}
             {activeTab === 'pipeline' && (
@@ -1227,11 +1254,13 @@ export default function Settings() {
                    <div>
                     <h6 className="text-sm font-bold text-[var(--vz-heading)] mb-3">Change Password</h6>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                       <Input label="Current Password" type="password" />
-                       <Input label="New Password" type="password" />
-                       <Input label="Confirm Password" type="password" />
+                       <Input label="Current Password" type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} />
+                       <Input label="New Password" type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} />
+                       <Input label="Confirm Password" type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} />
                        <div className="md:col-span-3">
-                          <Button size="sm">Update Password</Button>
+                          <Button size="sm" onClick={handleUpdatePassword} disabled={updatingPassword}>
+                              {updatingPassword ? 'Updating...' : 'Update Password'}
+                          </Button>
                        </div>
                     </div>
                   </div>

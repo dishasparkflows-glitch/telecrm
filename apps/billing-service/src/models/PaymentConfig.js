@@ -41,7 +41,7 @@ const paymentConfigSchema = new mongoose.Schema({
         ref: 'User'
     }
 }, {
-    timestamps: true,
+    timestamps: true, versionKey: false,
     toJSON: { flattenMaps: true }
 });
 

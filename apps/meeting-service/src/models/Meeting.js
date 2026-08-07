@@ -55,7 +55,7 @@ const meetingSchema = new mongoose.Schema(
         notes: { type: String, default: '' },
         reminderSent: { type: Boolean, default: false },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 meetingSchema.index({ tenantId: 1, hostId: 1, scheduledAt: 1 });
@@ -78,7 +78,7 @@ const bookingLinkSchema = new mongoose.Schema(
         },
         isActive: { type: Boolean, default: true },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 const Meeting = mongoose.model('Meeting', meetingSchema);

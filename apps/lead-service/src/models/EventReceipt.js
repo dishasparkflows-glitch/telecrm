@@ -4,7 +4,7 @@ const eventReceiptSchema = new mongoose.Schema({
     eventId: { type: String, required: true, unique: true, index: true },
     event: { type: String, required: true },
     processedAt: { type: Date, default: Date.now },
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
 
 eventReceiptSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 

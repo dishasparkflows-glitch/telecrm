@@ -416,7 +416,7 @@ const getLeadTimeline = asyncHandler(async (req, res) => {
     const leadFilter = { _id: req.params.id, tenantId };
     if (branchId && branchId !== 'all') leadFilter.branchId = branchId;
 
-    const lead = await Lead.findOne(leadFilter).select('_id branchId assignedTo');
+    const lead = await Lead.findOne(leadFilter).select('_id tenantId branchId assignedTo');
     if (!lead) throw ApiError.notFound('Lead not found');
 
     if (!canAccessRecord(req, lead, { ownerField: 'assignedTo', module: 'leads' })) {

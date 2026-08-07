@@ -56,7 +56,7 @@ const featureTransactionSchema = new mongoose.Schema(
             default: true,
         },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 featureTransactionSchema.index({ tenantId: 1, featureSlug: 1 });

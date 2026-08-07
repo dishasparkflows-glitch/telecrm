@@ -5,7 +5,7 @@ const bookingLockSchema = new mongoose.Schema({
     key: { type: String, required: true, unique: true },
     owner: { type: String, required: true },
     expiresAt: { type: Date, required: true },
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
 bookingLockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const BookingLock = mongoose.model('BookingLock', bookingLockSchema);
 

@@ -55,7 +55,7 @@ const tenantWhatsAppConfigSchema = new mongoose.Schema(
         testMessage:  { type: String, default: '' },
         lastTestedAt: { type: Date, default: null },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 // ── Encrypt / Decrypt helpers ─────────────────────────────────────────────────

@@ -28,7 +28,7 @@ const automationRuleSchema = new mongoose.Schema(
         lastExecutedAt: { type: Date, default: null },
         createdBy: { type: mongoose.Schema.Types.ObjectId },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 automationRuleSchema.index({ tenantId: 1, isActive: 1, 'trigger.event': 1 });
@@ -51,7 +51,7 @@ const automationLogSchema = new mongoose.Schema(
         ],
         status: { type: String, enum: ['success', 'partial', 'failed'], default: 'success' },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 automationLogSchema.index({ tenantId: 1, createdAt: -1 });

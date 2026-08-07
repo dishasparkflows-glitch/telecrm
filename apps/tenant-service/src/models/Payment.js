@@ -61,7 +61,7 @@ const paymentSchema = new mongoose.Schema(
         receiptUrl: { type: String, default: '' },
     },
     {
-        timestamps: true,
+        timestamps: true, versionKey: false
     }
 );
 

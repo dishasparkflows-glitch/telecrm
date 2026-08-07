@@ -20,7 +20,7 @@ const leadActivitySchema = new mongoose.Schema(
         description: { type: String, default: '', trim: true },
         metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 leadActivitySchema.index({ tenantId: 1, leadId: 1, createdAt: -1 });

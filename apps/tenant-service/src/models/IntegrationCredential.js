@@ -98,7 +98,7 @@ const integrationCredentialSchema = new mongoose.Schema(
             default: null,
         },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 integrationCredentialSchema.index({ tenantId: 1, provider: 1 }, { unique: true });

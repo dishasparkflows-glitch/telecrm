@@ -26,7 +26,7 @@ const leadSourceConnectionSchema = new mongoose.Schema(
         createdBy: { type: mongoose.Schema.Types.ObjectId, default: null },
         updatedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 const leadSourceMappingSchema = new mongoose.Schema(
@@ -57,7 +57,7 @@ const leadSourceMappingSchema = new mongoose.Schema(
         createdBy: { type: mongoose.Schema.Types.ObjectId, default: null },
         updatedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 const metaOAuthStateSchema = new mongoose.Schema(
@@ -69,7 +69,7 @@ const metaOAuthStateSchema = new mongoose.Schema(
         expiresAt: { type: Date, required: true, index: { expires: 0 } },
         usedAt: { type: Date, default: null },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 const inboundLeadEventSchema = new mongoose.Schema(
@@ -98,7 +98,7 @@ const inboundLeadEventSchema = new mongoose.Schema(
         normalizedPayload: { type: mongoose.Schema.Types.Mixed, default: {} },
         processedAt: { type: Date, default: null },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 leadSourceConnectionSchema.index({ tenantId: 1, provider: 1, externalAccountId: 1 });

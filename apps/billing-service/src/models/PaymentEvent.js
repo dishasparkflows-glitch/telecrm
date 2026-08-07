@@ -9,7 +9,7 @@ const paymentEventSchema = new mongoose.Schema({
     attempts: { type: Number, default: 1 },
     lastError: { type: String, default: null },
     processedAt: { type: Date, default: null },
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false });
 
 paymentEventSchema.index({ provider: 1, eventId: 1 }, { unique: true });
 paymentEventSchema.index({ status: 1, updatedAt: 1 });

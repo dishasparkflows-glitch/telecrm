@@ -12,7 +12,7 @@ const deviceTokenSchema = new mongoose.Schema(
         lastSeenAt: { type: Date, default: Date.now },
         lastError: { type: String, default: '' },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 deviceTokenSchema.index({ tenantId: 1, userId: 1, deviceId: 1 }, { unique: true });

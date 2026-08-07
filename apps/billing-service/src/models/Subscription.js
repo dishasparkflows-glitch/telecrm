@@ -19,7 +19,7 @@ const subscriptionSchema = new mongoose.Schema(
         amountMinor: { type: Number, default: null },
         currency: { type: String, default: 'INR' },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 subscriptionSchema.index({ tenantId: 1, status: 1 });

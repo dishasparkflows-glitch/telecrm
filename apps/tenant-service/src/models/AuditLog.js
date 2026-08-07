@@ -32,7 +32,7 @@ const auditLogSchema = new mongoose.Schema(
         userAgent: { type: String, default: '' },
         severity: { type: String, enum: ['info', 'warning', 'critical'], default: 'info' },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 auditLogSchema.index({ tenantId: 1, createdAt: -1 });

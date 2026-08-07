@@ -35,6 +35,10 @@ const tenantSchema = new mongoose.Schema(
             type: String,
             default: '',
         },
+        address: {
+            type: String,
+            trim: true,
+        },
 
         // ─── Plan & Subscription ───
         planId: {
@@ -211,7 +215,7 @@ const tenantSchema = new mongoose.Schema(
         },
     },
     {
-        timestamps: true,
+        timestamps: true, versionKey: false
     }
 );
 

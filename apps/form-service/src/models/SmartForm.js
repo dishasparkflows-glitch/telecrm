@@ -35,7 +35,7 @@ const smartFormSchema = new mongoose.Schema(
         isActive: { type: Boolean, default: true },
         submissionCount: { type: Number, default: 0 },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 const formSubmissionSchema = new mongoose.Schema(
@@ -48,7 +48,7 @@ const formSubmissionSchema = new mongoose.Schema(
         ipAddress: { type: String, default: '' },
         userAgent: { type: String, default: '' },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 const SmartForm = mongoose.model('SmartForm', smartFormSchema);

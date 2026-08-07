@@ -86,6 +86,13 @@ export const authApi = baseApi.injectEndpoints({
                 body: { branchId },
             }),
         }),
+        updatePassword: builder.mutation({
+            query: (data) => ({
+                url: '/auth/update-password',
+                method: 'PUT',
+                body: data,
+            }),
+        }),
         getUsers: builder.query({
             query: (params) => ({
                 url: '/users',
@@ -107,5 +114,6 @@ export const {
     useResetPasswordMutation,
     useLogoutMutation,
     useSwitchBranchMutation,
+    useUpdatePasswordMutation,
     useGetUsersQuery,
 } = authApi

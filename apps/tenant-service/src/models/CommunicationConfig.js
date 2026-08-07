@@ -59,7 +59,7 @@ const communicationConfigSchema = new mongoose.Schema(
             default: '',
         },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 const CommunicationConfig = mongoose.model('CommunicationConfig', communicationConfigSchema);

@@ -17,7 +17,7 @@ const reminderSchema = new mongoose.Schema(
         attempts: { type: Number, default: 0 },
         lastError: { type: String, default: '' },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 reminderSchema.index({ tenantId: 1, leadId: 1, type: 1 }, { unique: true });

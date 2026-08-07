@@ -23,5 +23,6 @@ router.use(requireGatewayUser);
 router.post('/logout', authCtrl.logout);
 router.get('/me', authCtrl.getMe);
 router.put('/active-branch', authCtrl.switchBranch);
+router.put('/update-password', authCtrl.updatePassword);
 
 module.exports = router;

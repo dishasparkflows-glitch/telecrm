@@ -16,7 +16,7 @@ const notificationSchema = new mongoose.Schema(
         sentAt: { type: Date, default: Date.now },
         expiresAt: { type: Date, default: null },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 notificationSchema.index({ tenantId: 1, userId: 1, isRead: 1, createdAt: -1 });

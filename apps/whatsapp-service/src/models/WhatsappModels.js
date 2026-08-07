@@ -82,7 +82,7 @@ const whatsappMessageSchema = new mongoose.Schema(
         readAt: { type: Date, default: null },
     },
     {
-        timestamps: true,
+        timestamps: true, versionKey: false,
         toJSON: { transform: removePrivateMediaKey },
         toObject: { transform: removePrivateMediaKey },
     }
@@ -114,7 +114,7 @@ const templateSchema = new mongoose.Schema(
         status: { type: String, enum: ['draft', 'pending', 'approved', 'rejected'], default: 'draft' },
         isActive: { type: Boolean, default: true },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 templateSchema.index({ tenantId: 1, name: 1 });
@@ -131,7 +131,7 @@ const chatbotRuleSchema = new mongoose.Schema(
         isActive: { type: Boolean, default: true },
         priority: { type: Number, default: 0 },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 chatbotRuleSchema.index({ tenantId: 1, isActive: 1, priority: -1 });

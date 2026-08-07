@@ -224,7 +224,7 @@ const invoiceSchema = new mongoose.Schema(
             default: null,
         },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 invoiceSchema.index({ tenantId: 1, createdAt: -1 });

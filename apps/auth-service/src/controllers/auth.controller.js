@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const OTP = require('../models/OTP');
-const { ApiResponse, ApiError, asyncHandler, ROLES, validateEmail, validatePhone } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, validateEmail, validatePhone } = require('@sparkcrm/shared-utils');
 const { generateTokenPair, verifyRefreshToken, generateAccessToken, generateRefreshToken } = require('../services/jwt.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const axios = require('axios');
@@ -625,6 +625,32 @@ const ownerLogin = asyncHandler(async (req, res) => {
     }, 'Owner login successful');
 });
 
+/**
+ * PUT /api/auth/update-password
+ * Update current user's password
+ */
+const updatePassword = asyncHandler(async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        throw ApiError.badRequest('Current password and new password are required');
+    }
+
+    const user = await User.findById(userId).select('+password');
+    if (!user) throw ApiError.notFound('User not found');
+
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+        throw ApiError.unauthorized('Invalid current password');
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    ApiResponse.success(res, null, 'Password updated successfully');
+});
+
 module.exports = {
     sendOtp,
     verifyOtp,
@@ -637,4 +663,5 @@ module.exports = {
     getMe,
     switchBranch,
     ownerLogin,
+    updatePassword,
 };

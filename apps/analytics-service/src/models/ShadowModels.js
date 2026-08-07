@@ -27,7 +27,7 @@ const Lead = leadConn.model('Lead', new mongoose.Schema({
     },
     isArchived: { type: Boolean, default: false },
     createdAt: Date
-}, { timestamps: true }));
+}, { timestamps: true, versionKey: false }));
 
 // Shadow CallLog Model
 const CallLog = callConn.model('CallLog', new mongoose.Schema({
@@ -39,7 +39,7 @@ const CallLog = callConn.model('CallLog', new mongoose.Schema({
     disposition: String,
     direction: String,
     startedAt: Date
-}, { timestamps: true }));
+}, { timestamps: true, versionKey: false }));
 
 // Shadow WhatsappMessage Model
 const WhatsappMessage = whatsappConn.model('WhatsappMessage', new mongoose.Schema({
@@ -48,7 +48,7 @@ const WhatsappMessage = whatsappConn.model('WhatsappMessage', new mongoose.Schem
     direction: String,
     status: String,
     createdAt: Date
-}, { timestamps: true }));
+}, { timestamps: true, versionKey: false }));
 
 // Shadow User Model
 const User = authConn.model('User', new mongoose.Schema({
@@ -59,6 +59,6 @@ const User = authConn.model('User', new mongoose.Schema({
     lastName: String,
     email: String,
     isActive: Boolean
-}, { timestamps: true }));
+}, { timestamps: true, versionKey: false }));
 
 module.exports = { Lead, CallLog, WhatsappMessage, User };

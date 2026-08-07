@@ -25,7 +25,7 @@ const getProfile = asyncHandler(async (req, res) => {
  */
 const updateSettings = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const { companyName, phone, logo, website, settings } = req.body;
+    const { companyName, phone, logo, website, address, settings } = req.body;
 
     const tenant = await Tenant.findById(tenantId);
     if (!tenant) throw ApiError.notFound('Tenant not found');
@@ -34,6 +34,7 @@ const updateSettings = asyncHandler(async (req, res) => {
     if (phone) tenant.phone = phone;
     if (logo) tenant.logo = logo;
     if (website) tenant.website = website;
+    if (address) tenant.address = address;
     if (settings) {
         if (settings.timezone) tenant.settings.timezone = settings.timezone;
         if (settings.workingHours) tenant.settings.workingHours = settings.workingHours;

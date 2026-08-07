@@ -38,7 +38,7 @@ const branchSchema = new mongoose.Schema(
             default: {},
         },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 // Unique branch code per tenant

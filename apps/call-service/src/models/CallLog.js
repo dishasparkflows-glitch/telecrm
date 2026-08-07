@@ -34,7 +34,7 @@ const callLogSchema = new mongoose.Schema(
         startedAt: { type: Date, default: null },
         endedAt: { type: Date, default: null },
     },
-    { timestamps: true }
+    { timestamps: true, versionKey: false }
 );
 
 callLogSchema.index({ tenantId: 1, callerId: 1, createdAt: -1 });
