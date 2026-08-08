@@ -471,7 +471,7 @@ export default function WhatsApp() {
       const matchedLead = incoming.leadId
         ? String(incoming.leadId)
         : leads.find((lead) => {
-            const leadPhone = String(lead.phone || '').replace(/\D/g, '')
+            const leadPhone = String(lead.contact?.phone || '').replace(/\D/g, '')
             return leadPhone && (leadPhone === incomingPhone || leadPhone.endsWith(incomingPhone) || incomingPhone.endsWith(leadPhone))
           })?._id
 
@@ -499,7 +499,7 @@ export default function WhatsApp() {
   const displayedMessages = chatSearch.trim()
     ? messages.filter((item) => `${item.content || ''} ${item.mediaName || ''}`.toLowerCase().includes(chatSearch.trim().toLowerCase()))
     : messages
-  const actionContacts = leads.map((lead) => ({ id: lead._id, name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim(), phone: lead.phone }))
+  const actionContacts = leads.map((lead) => ({ id: lead._id, name: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim(), phone: lead.contact?.phone }))
 
   const filteredLeads = contactSearch
     ? leads.filter((l) => `${l.firstName} ${l.lastName}`.toLowerCase().includes(contactSearch.toLowerCase()))
@@ -522,8 +522,8 @@ export default function WhatsApp() {
     if (!lead?.phone) return toast('This lead has no phone number on record', 'error')
     try {
       const result = replyingTo
-        ? await replyToMessage({ id: replyingTo._id, to: lead.phone, leadId: selectedLead, type: 'text', content: message }).unwrap()
-        : await sendMessage({ leadId: selectedLead, to: lead.phone, content: message }).unwrap()
+        ? await replyToMessage({ id: replyingTo._id, to: lead.contact?.phone, leadId: selectedLead, type: 'text', content: message }).unwrap()
+        : await sendMessage({ leadId: selectedLead, to: lead.contact?.phone, content: message }).unwrap()
       setMessage('')
       setReplyingTo(null)
       // Show warning if message was queued (config not set up)
@@ -540,8 +540,8 @@ export default function WhatsApp() {
     const lead = leads.find((item) => item._id === selectedLead)
     if (!lead?.phone) throw new Error('This lead has no phone number')
     const result = replyingTo
-      ? await replyToMessage({ id: replyingTo._id, to: lead.phone, leadId: selectedLead, ...media }).unwrap()
-      : await sendMessage({ leadId: selectedLead, to: lead.phone, ...media }).unwrap()
+      ? await replyToMessage({ id: replyingTo._id, to: lead.contact?.phone, leadId: selectedLead, ...media }).unwrap()
+      : await sendMessage({ leadId: selectedLead, to: lead.contact?.phone, ...media }).unwrap()
     setReplyingTo(null)
     if (result?.data?.status === 'failed') throw new Error(result?.data?.lastError || 'Media delivery failed')
   }
@@ -553,7 +553,7 @@ export default function WhatsApp() {
     try {
       const result = await sendMessage({
         leadId: selectedLead,
-        to: lead.phone,
+        to: lead.contact?.phone,
         content: resolvedBody,
         type: 'template',
         templateName: template.name,
@@ -718,15 +718,15 @@ export default function WhatsApp() {
                   className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-[var(--vz-border)] text-left transition-colors
                     ${selectedLead === lead._id ? 'bg-primary/10' : 'hover:bg-[var(--vz-input-bg)]'}`}>
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                    {lead.firstName?.[0]}{lead.lastName?.[0]}
+                    {lead.contact?.firstName?.[0]}{lead.contact?.lastName?.[0]}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[var(--vz-heading)] truncate">{lead.firstName} {lead.lastName}</p>
+                    <p className="text-sm font-medium text-[var(--vz-heading)] truncate">{lead.contact?.firstName} {lead.contact?.lastName}</p>
                     <p className="text-xs text-[var(--vz-text-muted)] truncate flex items-center gap-1">
-                      <Phone size={9} />{lead.phone || 'No phone'}
+                      <Phone size={9} />{lead.contact?.phone || 'No phone'}
                     </p>
                   </div>
-                  {!lead.phone && <AlertCircle size={12} className="text-warning shrink-0" />}
+                  {!lead.contact?.phone && <AlertCircle size={12} className="text-warning shrink-0" />}
                 </button>
               ))}
             </div>

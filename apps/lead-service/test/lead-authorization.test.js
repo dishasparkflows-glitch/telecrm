@@ -41,7 +41,7 @@ function invokeExpectingError(handler, req) {
 test('create and import DTOs reject protected lead fields', () => {
     for (const field of ['tenantId', 'branchId', 'assignedTo', 'score', 'externalIdentities', 'notes', 'isArchived']) {
         assert.throws(
-            () => pickLeadCreateInput({ firstName: 'Safe', [field]: 'attacker-controlled' }),
+            () => pickLeadCreateInput({ contact: { firstName: 'Safe' }, [field]: 'attacker-controlled' }),
             (error) => error.statusCode === 400 && error.message.includes(field)
         );
     }
@@ -50,7 +50,7 @@ test('create and import DTOs reject protected lead fields', () => {
 test('update DTO rejects assignment, provenance, and system-managed fields', () => {
     for (const field of ['assignedTo', 'branchId', 'source', 'sourceDetails', 'score', 'scoreBreakdown', 'lastActivityAt', 'isArchived']) {
         assert.throws(
-            () => pickLeadUpdateInput({ firstName: 'Safe', [field]: 'attacker-controlled' }),
+            () => pickLeadUpdateInput({ contact: { firstName: 'Safe' }, [field]: 'attacker-controlled' }),
             (error) => error.statusCode === 400 && error.message.includes(field)
         );
     }
@@ -58,11 +58,13 @@ test('update DTO rejects assignment, provenance, and system-managed fields', () 
 
 test('lead DTOs preserve fields used by the dashboard and validate nested input', () => {
     const update = {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        email: 'ada@example.test',
-        phone: '919876543210',
-        company: 'Analytical Engines',
+        contact: {
+            firstName: 'Ada',
+            lastName: 'Lovelace',
+            email: 'ada@example.test',
+            phone: '919876543210',
+            company: 'Analytical Engines',
+        },
         expectedValue: 5000,
         followUpAt: '2026-08-05T10:00:00.000Z',
         customFields: { segment: 'enterprise' },

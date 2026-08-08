@@ -17,10 +17,12 @@ const { env }  = require('@sparkcrm/shared-config');
 const leadSchema = new mongoose.Schema(
     {
         tenantId: mongoose.Schema.Types.ObjectId,
-        phone:    String,
-        phoneNormalized: String,
-        firstName: String,
-        lastName:  String,
+        contact: {
+            phone:    String,
+            phoneNormalized: String,
+            firstName: String,
+            lastName:  String,
+        },
         isActive: Boolean,
     },
     { strict: false }   // ignore extra fields; we don't own this schema
@@ -67,16 +69,23 @@ async function findLeadByPhone(tenantId, phone) {
         const variants = phoneVariants(phone);
         if (!variants.length) return null;
 
-        const lead = await Lead.findOne({
+        const rawLead = await Lead.findOne({
             tenantId: new mongoose.Types.ObjectId(String(tenantId)),
             isActive: { $ne: false },
             $or: [
-                { phone: { $in: variants } },
-                { phoneNormalized: { $in: variants } },
+                { 'contact.phone': { $in: variants } },
+                { 'contact.phoneNormalized': { $in: variants } },
             ],
-        }).select('_id firstName lastName phone phoneNormalized').lean();
+        }).select('_id contact.firstName contact.lastName contact.phone contact.phoneNormalized').lean();
 
-        return lead || null;
+        if (!rawLead) return null;
+        return {
+            _id: rawLead._id,
+            firstName: rawLead.contact?.firstName,
+            lastName: rawLead.contact?.lastName,
+            phone: rawLead.contact?.phone,
+            phoneNormalized: rawLead.contact?.phoneNormalized,
+        };
     } catch (err) {
         console.error('[leadLookup] findLeadByPhone error:', err.message);
         return null;
@@ -90,12 +99,18 @@ async function findLeadByPhone(tenantId, phone) {
 async function findLeadById(tenantId, leadId) {
     try {
         const Lead = await _getModel();
-        const lead = await Lead.findOne({
+        const rawLead = await Lead.findOne({
             _id:      new mongoose.Types.ObjectId(String(leadId)),
             tenantId: new mongoose.Types.ObjectId(String(tenantId)),
-        }).select('_id firstName lastName phone').lean();
+        }).select('_id contact.firstName contact.lastName contact.phone').lean();
 
-        return lead || null;
+        if (!rawLead) return null;
+        return {
+            _id: rawLead._id,
+            firstName: rawLead.contact?.firstName,
+            lastName: rawLead.contact?.lastName,
+            phone: rawLead.contact?.phone,
+        };
     } catch (err) {
         console.error('[leadLookup] findLeadById error:', err.message);
         return null;

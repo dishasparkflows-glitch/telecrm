@@ -1,13 +1,7 @@
 const { ApiError } = require('@sparkcrm/shared-utils');
 
 const LEAD_CREATE_FIELDS = Object.freeze([
-    'firstName',
-    'lastName',
-    'email',
-    'phone',
-    'alternatePhone',
-    'company',
-    'designation',
+    'contact',
     'stage',
     'source',
     'sourceDetails',
@@ -26,6 +20,18 @@ const LEAD_UPDATE_FIELDS = Object.freeze(
 );
 
 const ADDRESS_FIELDS = Object.freeze(['city', 'state', 'country', 'pincode']);
+
+const CONTACT_FIELDS = Object.freeze([
+    'firstName',
+    'lastName',
+    'email',
+    'emailNormalized',
+    'phone',
+    'phoneNormalized',
+    'alternatePhone',
+    'company',
+    'designation'
+]);
 
 function isPlainObject(value) {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -60,6 +66,9 @@ function sanitizeLeadInput(input, allowedFields, label) {
             .map((field) => [field, input[field]])
     );
 
+    if (sanitized.contact !== undefined) {
+        sanitized.contact = sanitizeNestedFields(sanitized.contact, CONTACT_FIELDS, 'contact');
+    }
     if (sanitized.address !== undefined) {
         sanitized.address = sanitizeNestedFields(sanitized.address, ADDRESS_FIELDS, 'address');
     }

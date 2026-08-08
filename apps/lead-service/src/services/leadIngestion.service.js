@@ -9,10 +9,10 @@ const normalizePhone = (phone) => String(phone || '').replace(/[^0-9]/g, '');
 
 const buildDuplicateFilter = ({ tenantId, emailNormalized, phoneNormalized, email, phone }) => {
     const orConditions = [];
-    if (emailNormalized) orConditions.push({ emailNormalized });
-    if (phoneNormalized) orConditions.push({ phoneNormalized });
-    if (email) orConditions.push({ email: normalizeEmail(email) });
-    if (phone) orConditions.push({ phone });
+    if (emailNormalized) orConditions.push({ 'contact.emailNormalized': emailNormalized });
+    if (phoneNormalized) orConditions.push({ 'contact.phoneNormalized': phoneNormalized });
+    if (email) orConditions.push({ 'contact.email': normalizeEmail(email) });
+    if (phone) orConditions.push({ 'contact.phone': phone });
 
     if (!orConditions.length) return null;
     return { tenantId, $or: orConditions };
@@ -40,8 +40,8 @@ const createOrUpdateLeadFromSource = async ({
     rawPayload = null,
     publishCreatedEvent = true,
 }) => {
-    const emailNormalized = normalizeEmail(leadData.email);
-    const phoneNormalized = normalizePhone(leadData.phone);
+    const emailNormalized = normalizeEmail(leadData.contact?.email || leadData.email);
+    const phoneNormalized = normalizePhone(leadData.contact?.phone || leadData.phone);
 
     if (externalIdentity?.provider && externalIdentity?.externalId) {
         const existingByExternalIdentity = await Lead.findOne({
@@ -79,8 +79,8 @@ const createOrUpdateLeadFromSource = async ({
         tenantId,
         emailNormalized,
         phoneNormalized,
-        email: leadData.email,
-        phone: leadData.phone,
+        email: leadData.contact?.email || leadData.email,
+        phone: leadData.contact?.phone || leadData.phone,
     });
 
     if (duplicateFilter) {
@@ -125,9 +125,11 @@ const createOrUpdateLeadFromSource = async ({
         ...leadData,
         tenantId,
         branchId: branchId || leadData.branchId || null,
-        email: emailNormalized,
-        emailNormalized,
-        phoneNormalized,
+        contact: {
+            ...(leadData.contact || {}),
+            emailNormalized,
+            phoneNormalized,
+        },
         source,
         sourceDetails,
         assignedTo: resolvedAssignedTo,

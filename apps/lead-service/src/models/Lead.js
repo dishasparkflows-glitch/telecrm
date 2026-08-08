@@ -20,54 +20,56 @@ const leadSchema = new mongoose.Schema(
         },
 
         // ─── Contact Info ───
-        firstName: {
-            type: String,
-            required: [true, 'First name is required'],
-            trim: true,
-        },
-        lastName: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-        email: {
-            type: String,
-            lowercase: true,
-            trim: true,
-            default: '',
-        },
-        emailNormalized: {
-            type: String,
-            lowercase: true,
-            trim: true,
-            default: '',
-            index: true,
-        },
-        phone: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-        phoneNormalized: {
-            type: String,
-            trim: true,
-            default: '',
-            index: true,
-        },
-        alternatePhone: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-        company: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-        designation: {
-            type: String,
-            trim: true,
-            default: '',
+        contact: {
+            firstName: {
+                type: String,
+                required: [true, 'First name is required'],
+                trim: true,
+            },
+            lastName: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+            email: {
+                type: String,
+                lowercase: true,
+                trim: true,
+                default: '',
+            },
+            emailNormalized: {
+                type: String,
+                lowercase: true,
+                trim: true,
+                default: '',
+                index: true,
+            },
+            phone: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+            phoneNormalized: {
+                type: String,
+                trim: true,
+                default: '',
+                index: true,
+            },
+            alternatePhone: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+            company: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+            designation: {
+                type: String,
+                trim: true,
+                default: '',
+            },
         },
 
         // ─── Pipeline ───
@@ -247,15 +249,15 @@ leadSchema.index({ tenantId: 1, score: -1 });
 leadSchema.index({ tenantId: 1, createdAt: -1 });
 leadSchema.index({ tenantId: 1, followUpAt: 1 });
 leadSchema.index({ tenantId: 1, tags: 1 });
-leadSchema.index({ tenantId: 1, email: 1 });
-leadSchema.index({ tenantId: 1, phone: 1 });
-leadSchema.index({ tenantId: 1, emailNormalized: 1 });
-leadSchema.index({ tenantId: 1, phoneNormalized: 1 });
+leadSchema.index({ tenantId: 1, 'contact.email': 1 });
+leadSchema.index({ tenantId: 1, 'contact.phone': 1 });
+leadSchema.index({ tenantId: 1, 'contact.emailNormalized': 1 });
+leadSchema.index({ tenantId: 1, 'contact.phoneNormalized': 1 });
 leadSchema.index({ tenantId: 1, 'externalIdentities.provider': 1, 'externalIdentities.externalId': 1 });
 
 // ─── Full name virtual ───
 leadSchema.virtual('fullName').get(function () {
-    return `${this.firstName} ${this.lastName}`.trim();
+    return `${this.contact?.firstName || ''} ${this.contact?.lastName || ''}`.trim();
 });
 
 leadSchema.set('toJSON', { virtuals: true });

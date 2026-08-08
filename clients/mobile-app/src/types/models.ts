@@ -1,10 +1,10 @@
 export type ApiEnvelope<T> = { success: boolean; data: T; message?: string; pagination?: Pagination };
 export type Pagination = { page: number; limit: number; total: number; totalPages: number; unreadCount?: number };
 export type Tokens = { accessToken: string; refreshToken: string };
-export type User = { _id: string; name?: string; email: string; role?: string; tenantId?: string | { _id: string }; mobile?: string };
+export type User = { _id: string; name?: string;  role?: string; tenantId?: string | { _id: string }; mobile?: string };
 export type Session = { user: User; tokens: Tokens };
 export type Note = { _id?: string; text: string; createdAt?: string };
-export type Lead = { _id: string; firstName?: string; lastName?: string; email?: string; phone?: string; company?: string; stage?: string; priority?: string; source?: string; score?: number; assignedTo?: string; followUpAt?: string; notes?: Note[]; createdAt?: string };
+export type Lead = { _id: string; contact?: { firstName?: string;     };     stage?: string; priority?: string; source?: string; score?: number; assignedTo?: string; followUpAt?: string; notes?: Note[]; createdAt?: string };
 export type Notification = { _id: string; title?: string; message?: string; body?: string; type?: string; isRead: boolean; createdAt?: string };
 export type Call = { _id: string; fromNumber?: string; toNumber?: string; direction?: string; status?: string; duration?: number; startedAt?: string; createdAt?: string };
-export type NativeCall = { deviceCallId: string; phone: string; type: 'incoming' | 'outgoing' | 'missed' | 'rejected' | 'blocked'; startedAt: string; duration: number; simSlot?: number; simLabel?: string; simPhoneNumber?: string; hasRecording?: boolean };
+export type NativeCall = { deviceCallId: string;  type: 'incoming' | 'outgoing' | 'missed' | 'rejected' | 'blocked'; startedAt: string; duration: number; simSlot?: number; simLabel?: string; simPhoneNumber?: string; hasRecording?: boolean };

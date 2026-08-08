@@ -15,11 +15,11 @@ const calculateLeadScore = (lead) => {
 
     // 1. Profile Completeness (0-20)
     let profilePoints = 0;
-    if (lead.firstName) profilePoints += 3;
-    if (lead.email) profilePoints += 4;
-    if (lead.phone) profilePoints += 4;
-    if (lead.company) profilePoints += 3;
-    if (lead.designation) profilePoints += 2;
+    if (lead.contact?.firstName) profilePoints += 3;
+    if (lead.contact?.email) profilePoints += 4;
+    if (lead.contact?.phone) profilePoints += 4;
+    if (lead.contact?.company) profilePoints += 3;
+    if (lead.contact?.designation) profilePoints += 2;
     if (lead.address?.city) profilePoints += 2;
     if (lead.tags?.length > 0) profilePoints += 2;
     breakdown.profileCompleteness = Math.min(20, profilePoints);

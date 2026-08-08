@@ -148,11 +148,13 @@ const normalizeMetaLead = ({ graphLead = {}, mapping, change }) => {
 
     return {
         leadData: {
-            firstName: firstName || 'Unknown',
-            lastName: lastName || '',
-            email,
-            phone,
-            company,
+            contact: {
+                firstName: firstName || 'Unknown',
+                lastName: lastName || '',
+                email,
+                phone,
+                company,
+            },
             source: mapping.source || 'facebook',
             sourceDetails: `${mapping.externalPageName || 'Meta Page'} / ${mapping.externalFormName || 'Lead Form'}`,
             customFields: fields,

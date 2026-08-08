@@ -66,17 +66,19 @@ const getLeads = asyncHandler(async (req, res) => {
     if (search) {
         const escapedSearch = escapeRegex(search);
         filter.$or = [
-            { firstName: { $regex: escapedSearch, $options: 'i' } },
-            { lastName: { $regex: escapedSearch, $options: 'i' } },
-            { email: { $regex: escapedSearch, $options: 'i' } },
-            { phone: { $regex: escapedSearch, $options: 'i' } },
-            { company: { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.firstName': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.lastName': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.email': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.phone': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.company': { $regex: escapedSearch, $options: 'i' } },
         ];
     }
 
     if (!LEAD_SORT_FIELDS.has(sortBy)) throw ApiError.badRequest('Unsupported lead sort field');
     if (!['asc', 'desc'].includes(sortOrder)) throw ApiError.badRequest('sortOrder must be asc or desc');
-    const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+    let dbSortBy = sortBy;
+    if (['firstName', 'lastName'].includes(sortBy)) dbSortBy = `contact.${sortBy}`;
+    const sort = { [dbSortBy]: sortOrder === 'asc' ? 1 : -1 };
 
     const [leads, total] = await Promise.all([
         Lead.find(filter).sort(sort).skip(skip).limit(limit),
@@ -126,8 +128,13 @@ const updateLead = asyncHandler(async (req, res) => {
     const oldStage = lead.stage;
     const oldFollowUpAt = lead.followUpAt ? new Date(lead.followUpAt).getTime() : null;
     const changedFields = Object.keys(changes);
-    if (changes.email !== undefined) changes.emailNormalized = normalizeEmail(changes.email);
-    if (changes.phone !== undefined) changes.phoneNormalized = normalizePhone(changes.phone);
+    if (changes.contact) {
+        if (changes.contact.email !== undefined) changes.contact.emailNormalized = normalizeEmail(changes.contact.email);
+        if (changes.contact.phone !== undefined) changes.contact.phoneNormalized = normalizePhone(changes.contact.phone);
+        // Deep merge contact object so we don't overwrite unspecified properties
+        lead.contact = { ...(lead.contact || {}), ...changes.contact };
+        delete changes.contact;
+    }
     Object.assign(lead, changes);
 
     // Track stage changes
@@ -174,7 +181,7 @@ const updateLead = asyncHandler(async (req, res) => {
                 leadId: lead._id,
                 assignedTo: lead.assignedTo,
                 followUpAt: lead.followUpAt,
-                leadName: `${lead.firstName || ''} ${lead.lastName || ''}`.trim(),
+                leadName: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim(),
             });
         }
     }
@@ -301,16 +308,16 @@ const importLeads = asyncHandler(async (req, res) => {
     for (const [index, sourceRow] of leadsData.entries()) {
         try {
             const data = pickLeadCreateInput(sourceRow);
-            if (!data.firstName) {
+            if (!data.contact?.firstName) {
                 results.errors.push({ row: index + 1, error: 'First name is required' });
                 continue;
             }
 
             // Dedup check
-            if (data.email || data.phone) {
+            if (data.contact?.email || data.contact?.phone) {
                 const orConds = [];
-                if (data.email) orConds.push({ email: data.email.toLowerCase() });
-                if (data.phone) orConds.push({ phone: data.phone });
+                if (data.contact.email) orConds.push({ 'contact.email': data.contact.email.toLowerCase() });
+                if (data.contact.phone) orConds.push({ 'contact.phone': data.contact.phone });
                 const existing = await Lead.findOne({ tenantId, $or: orConds });
                 if (existing) {
                     results.duplicates++;
@@ -455,9 +462,9 @@ const getLeadByPhone = asyncHandler(async (req, res) => {
 
     const lead = await Lead.findOne({
         tenantId,
-        phone: { $in: variants },
+        'contact.phone': { $in: variants },
         isActive: { $ne: false },
-    }).select('_id firstName lastName phone').lean();
+    }).select('_id contact.firstName contact.lastName contact.phone').lean();
 
     if (!lead) {
         return ApiResponse.success(res, null, 'No lead found for this phone number', 404);

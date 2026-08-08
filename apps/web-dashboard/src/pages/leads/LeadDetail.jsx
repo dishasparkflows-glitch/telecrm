@@ -96,11 +96,13 @@ export default function LeadDetail() {
 
   const handleEditOpen = () => {
     setEditForm({
-      firstName: lead.firstName,
-      lastName: lead.lastName,
-      email: lead.email || '',
-      phone: lead.phone || '',
-      company: lead.company || '',
+      contact: {
+        firstName: lead.contact?.firstName || '',
+        lastName: lead.contact?.lastName || '',
+        email: lead.contact?.email || '',
+        phone: lead.contact?.phone || '',
+        company: lead.contact?.company || '',
+      },
       expectedValue: lead.expectedValue || 0,
       followUpAt: lead.followUpAt ? new Date(new Date(lead.followUpAt).getTime() - new Date(lead.followUpAt).getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '',
       customFields: lead.customFields || {}
@@ -125,8 +127,8 @@ export default function LeadDetail() {
   }
 
   const handleCall = () => {
-    if (lead.phone) {
-      dispatch(openDialer(lead.phone))
+    if (lead.contact?.phone) {
+      dispatch(openDialer(lead.contact?.phone))
     }
   }
 
@@ -152,11 +154,11 @@ export default function LeadDetail() {
   return (
     <>
       <PageHeader
-        title={`${lead.firstName} ${lead.lastName}`}
+        title={`${lead.contact?.firstName} ${lead.contact?.lastName}`}
         breadcrumbs={[
           { label: 'CRM', path: '/dashboard' },
           { label: 'Leads', path: '/leads' },
-          { label: `${lead.firstName} ${lead.lastName}` },
+          { label: `${lead.contact?.firstName} ${lead.contact?.lastName}` },
         ]}
       />
 
@@ -166,12 +168,12 @@ export default function LeadDetail() {
           <Card>
             <div className="text-center pb-4 border-b border-[var(--vz-border)]">
               <div className="w-16 h-16 mx-auto rounded-full bg-primary/20 flex items-center justify-center text-xl font-bold text-primary mb-3">
-                {lead.firstName?.[0]}{lead.lastName?.[0]}
+                {lead.contact?.firstName?.[0]}{lead.contact?.lastName?.[0]}
               </div>
               <h4 className="text-lg font-semibold text-[var(--vz-heading)]">
-                {lead.firstName} {lead.lastName}
+                {lead.contact?.firstName} {lead.contact?.lastName}
               </h4>
-              {lead.company && <p className="text-sm text-[var(--vz-text-muted)]">{lead.company}</p>}
+              {lead.contact?.company && <p className="text-sm text-[var(--vz-text-muted)]">{lead.contact?.company}</p>}
               <div className="flex items-center justify-center gap-2 mt-2">
                 <Badge color={stageColors[lead.stage]}>{lead.stage?.toUpperCase()}</Badge>
                 <span className={`text-sm font-semibold ${scoreColor}`}>
@@ -184,22 +186,22 @@ export default function LeadDetail() {
             </div>
 
             <div className="space-y-3 pt-4">
-              {lead.email && (
+              {lead.contact?.email && (
                 <div className="flex items-center gap-3 text-sm">
                   <Mail size={15} className="text-[var(--vz-text-muted)] shrink-0" />
-                  <span className="text-[var(--vz-text)] truncate">{lead.email}</span>
+                  <span className="text-[var(--vz-text)] truncate">{lead.contact?.email}</span>
                 </div>
               )}
-              {lead.phone && (
+              {lead.contact?.phone && (
                 <div className="flex items-center gap-3 text-sm">
                   <Phone size={15} className="text-[var(--vz-text-muted)] shrink-0" />
-                  <span className="text-[var(--vz-text)]">{lead.phone}</span>
+                  <span className="text-[var(--vz-text)]">{lead.contact?.phone}</span>
                 </div>
               )}
-              {lead.company && (
+              {lead.contact?.company && (
                 <div className="flex items-center gap-3 text-sm">
                   <Building2 size={15} className="text-[var(--vz-text-muted)] shrink-0" />
-                  <span className="text-[var(--vz-text)]">{lead.company}</span>
+                  <span className="text-[var(--vz-text)]">{lead.contact?.company}</span>
                 </div>
               )}
               {lead.source && (
@@ -216,7 +218,7 @@ export default function LeadDetail() {
 
             {/* Actions */}
             <div className="flex gap-2 mt-4 pt-4 border-t border-[var(--vz-border)]">
-              <Button variant="soft-primary" size="sm" className="flex-1" onClick={handleCall} disabled={!lead.phone}>
+              <Button variant="soft-primary" size="sm" className="flex-1" onClick={handleCall} disabled={!lead.contact?.phone}>
                 <Phone size={14} /> Call
               </Button>
               <Button variant="soft-success" size="sm" className="flex-1" onClick={() => navigate(`/whatsapp?lead=${id}`)}>
@@ -438,7 +440,7 @@ export default function LeadDetail() {
                           <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"><Phone size={15} /></div>
                           <div>
                             <p className="text-sm font-medium text-[var(--vz-heading)] capitalize">{call.direction || 'outbound'} call · {call.status}</p>
-                            <p className="text-xs text-[var(--vz-text-muted)]">{call.toNumber || lead.phone} · {call.duration ? `${call.duration}s` : 'No duration'}</p>
+                            <p className="text-xs text-[var(--vz-text-muted)]">{call.toNumber || lead.contact?.phone} · {call.duration ? `${call.duration}s` : 'No duration'}</p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -487,13 +489,13 @@ export default function LeadDetail() {
         {editForm && (
           <form onSubmit={handleUpdateLead} className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
-              <Input label="First Name" value={editForm.firstName} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} />
-              <Input label="Last Name" value={editForm.lastName} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} />
+              <Input label="First Name" value={editForm.contact.firstName} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, firstName: e.target.value } })} />
+              <Input label="Last Name" value={editForm.contact.lastName} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, lastName: e.target.value } })} />
             </div>
-            <Input label="Email Address" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+            <Input label="Email Address" type="email" value={editForm.contact.email} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, email: e.target.value } })} />
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Phone Number" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-              <Input label="Company" value={editForm.company} onChange={(e) => setEditForm({ ...editForm, company: e.target.value })} />
+              <Input label="Phone Number" value={editForm.contact.phone} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, phone: e.target.value } })} />
+              <Input label="Company" value={editForm.contact.company} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, company: e.target.value } })} />
             </div>
             <Input label="Expected Deal Value (₹)" type="number" value={editForm.expectedValue} onChange={(e) => setEditForm({ ...editForm, expectedValue: Number(e.target.value) })} />
             <Input label="Follow-up Reminder" type="datetime-local" value={editForm.followUpAt} onChange={(e) => setEditForm({ ...editForm, followUpAt: e.target.value })} />

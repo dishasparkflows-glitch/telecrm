@@ -38,21 +38,21 @@ const PAGE_SIZE = 15
 
 const IMPORT_FIELDS = [
   { value: '', label: 'Do not import' },
-  { value: 'firstName', label: 'First Name' },
-  { value: 'lastName', label: 'Last Name' },
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'company', label: 'Company' },
+  { value: 'contact.firstName', label: 'First Name' },
+  { value: 'contact.lastName', label: 'Last Name' },
+  { value: 'contact.email', label: 'Email' },
+  { value: 'contact.phone', label: 'Phone' },
+  { value: 'contact.company', label: 'Company' },
   { value: 'stage', label: 'Stage' },
   { value: 'sourceDetails', label: 'Source Details' },
 ]
 
 const IMPORT_ALIASES = {
-  firstname: 'firstName', first_name: 'firstName', name: 'firstName',
-  lastname: 'lastName', last_name: 'lastName', surname: 'lastName',
-  email: 'email', emailaddress: 'email', email_address: 'email',
-  phone: 'phone', phonenumber: 'phone', phone_number: 'phone', mobile: 'phone', mobilenumber: 'phone',
-  company: 'company', companyname: 'company', company_name: 'company',
+  firstname: 'contact.firstName', first_name: 'contact.firstName', name: 'contact.firstName',
+  lastname: 'contact.lastName', last_name: 'contact.lastName', surname: 'contact.lastName',
+  email: 'contact.email', emailaddress: 'contact.email', email_address: 'contact.email',
+  phone: 'contact.phone', phonenumber: 'contact.phone', phone_number: 'contact.phone', mobile: 'contact.phone', mobilenumber: 'contact.phone',
+  company: 'contact.company', companyname: 'contact.company', company_name: 'contact.company',
   stage: 'stage', status: 'stage', source: 'sourceDetails', sourcedetails: 'sourceDetails',
 }
 
@@ -105,7 +105,7 @@ export default function LeadsList() {
   }
 
   const [newLead, setNewLead] = useState({
-    firstName: '', lastName: '', email: '', phone: '', company: '', stage: 'new', source: 'manual',
+    contact: { firstName: '', lastName: '', email: '', phone: '', company: '' }, stage: 'new', source: 'manual',
     customFields: {}
   })
 
@@ -114,7 +114,7 @@ export default function LeadsList() {
       await createLead(newLead).unwrap()
       toast('Lead created successfully', 'success')
       setShowAdd(false)
-      setNewLead({ firstName: '', lastName: '', email: '', phone: '', company: '', stage: 'new', source: 'manual' })
+      setNewLead({ contact: { firstName: '', lastName: '', email: '', phone: '', company: '' }, stage: 'new', source: 'manual', customFields: {} })
     } catch (err) {
       toast(err.data?.message || 'Failed to create lead', 'error')
     }
@@ -174,13 +174,21 @@ export default function LeadsList() {
   }
 
   const handleMappedImport = async () => {
-    if (!Object.values(importMapping).includes('firstName')) return toast('Map one column to First Name', 'error')
+    if (!Object.values(importMapping).includes('contact.firstName')) return toast('Map one column to First Name', 'error')
     const duplicateTargets = Object.values(importMapping).filter(Boolean)
     if (new Set(duplicateTargets).size !== duplicateTargets.length) return toast('Each CRM field can only be mapped once', 'error')
 
     const leadsToImport = importRows.map((row) => importHeaders.reduce((lead, header) => {
       const target = importMapping[header]
-      if (target) lead[target] = row[header]
+      if (target) {
+        if (target.startsWith('contact.')) {
+            const field = target.split('.')[1]
+            if (!lead.contact) lead.contact = {}
+            lead.contact[field] = row[header]
+        } else {
+            lead[target] = row[header]
+        }
+      }
       return lead
     }, { source: 'csv' }))
 
@@ -321,29 +329,29 @@ export default function LeadsList() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary shrink-0">
-                            {(lead.firstName?.[0] || '')}{(lead.lastName?.[0] || '')}
+                            {(lead.contact?.firstName?.[0] || '')}{(lead.contact?.lastName?.[0] || '')}
                           </div>
                           <div>
                             <p className="font-medium text-[var(--vz-heading)] leading-tight">
-                              {lead.firstName} {lead.lastName}
+                              {lead.contact?.firstName} {lead.contact?.lastName}
                             </p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)]">
                         <div className="flex flex-col gap-0.5">
-                          {lead.email && <span className="flex items-center gap-1 text-xs"><MailIcon size={11} /> {lead.email}</span>}
-                          {lead.phone && (
+                          {lead.contact?.email && <span className="flex items-center gap-1 text-xs"><MailIcon size={11} /> {lead.contact?.email}</span>}
+                          {lead.contact?.phone && (
                             <button 
-                              onClick={(e) => { e.stopPropagation(); dispatch(openDialer(lead.phone)) }}
+                              onClick={(e) => { e.stopPropagation(); dispatch(openDialer(lead.contact?.phone)) }}
                               className="flex items-center gap-1 text-xs text-primary hover:underline"
                             >
-                              <Phone size={11} /> {lead.phone}
+                              <Phone size={11} /> {lead.contact?.phone}
                             </button>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-[var(--vz-text)]">{lead.company || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">{lead.contact?.company || '—'}</td>
                       <td className="px-4 py-3">
                         <Badge color={stageColors[lead.stage] || 'primary'}>
                           {stageLabelMap[lead.stage] || lead.stage?.charAt(0).toUpperCase() + lead.stage?.slice(1)}
@@ -452,17 +460,17 @@ export default function LeadsList() {
       <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add New Lead" size="md">
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="First Name" placeholder="First name" value={newLead.firstName}
-              onChange={(e) => setNewLead({ ...newLead, firstName: e.target.value })} />
-            <Input label="Last Name" placeholder="Last name" value={newLead.lastName}
-              onChange={(e) => setNewLead({ ...newLead, lastName: e.target.value })} />
+            <Input label="First Name" placeholder="First name" value={newLead.contact.firstName}
+              onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, firstName: e.target.value } })} />
+            <Input label="Last Name" placeholder="Last name" value={newLead.contact.lastName}
+              onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, lastName: e.target.value } })} />
           </div>
-          <Input label="Email" type="email" placeholder="Email address" icon={MailIcon} value={newLead.email}
-            onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} />
-          <Input label="Phone" placeholder="Phone number" icon={Phone} value={newLead.phone}
-            onChange={(e) => setNewLead({ ...newLead, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
-          <Input label="Company" placeholder="Company name" value={newLead.company}
-            onChange={(e) => setNewLead({ ...newLead, company: e.target.value })} />
+          <Input label="Email" type="email" placeholder="Email address" icon={MailIcon} value={newLead.contact.email}
+            onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, email: e.target.value } })} />
+          <Input label="Phone" placeholder="Phone number" icon={Phone} value={newLead.contact.phone}
+            onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') } })} />
+          <Input label="Company" placeholder="Company name" value={newLead.contact.company}
+            onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, company: e.target.value } })} />
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Stage</label>
@@ -512,7 +520,7 @@ export default function LeadsList() {
         </div>
         <Modal.Footer>
           <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>Cancel</Button>
-          <Button size="sm" onClick={handleCreate} disabled={creating || !newLead.firstName}>
+          <Button size="sm" onClick={handleCreate} disabled={creating || !newLead.contact?.firstName}>
             {creating ? 'Creating...' : 'Create Lead'}
           </Button>
         </Modal.Footer>
