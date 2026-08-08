@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSelector } from 'react-redux'
 import { ROLES } from '../../utils/constants'
 import {
@@ -6,15 +6,13 @@ import {
   useUpdateSettingsMutation,
   useUpdatePipelineMutation,
   useGetReferralCodeQuery,
-  useGetReferralStatsQuery
+  useGetReferralStatsQuery,
 } from '../../features/tenant/tenantApi'
+import { useGetUploadUrlMutation } from '../../features/uploads/uploadApi'
 import {
   useListUsersQuery,
   useInviteUserMutation,
-  useUpdateUserMutation,
-  useDeleteUserMutation,
-  useUpdateUserRoleMutation,
-  useUpdateUserStatusMutation
+  useUpdateUserMutation
 } from '../../features/users/userApi'
 import { useListRolesQuery } from '../../features/roles/roleApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
@@ -146,6 +144,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('company')
   const { user: currentUser, activeBranchId } = useSelector((s) => s.auth)
   const [show2FAModal, setShow2FAModal] = useState(false)
+  const fileInputRef = useRef(null)
 
   // Queries
   const { data: profileData, refetch: refetchProfile } = useGetProfileQuery()
@@ -162,6 +161,7 @@ export default function Settings() {
 
   // Mutations
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
+  const [getUploadUrl, { isLoading: isUploadingLogo }] = useGetUploadUrlMutation()
   const [updatePipeline, { isLoading: savingPipeline }] = useUpdatePipelineMutation()
   const [updatePassword, { isLoading: updatingPassword }] = useUpdatePasswordMutation()
   const [disable2FA, { isLoading: disabling2FA }] = useDisable2FAMutation()
@@ -174,10 +174,7 @@ export default function Settings() {
   const [createCustomField] = useCreateCustomFieldMutation()
   const [deleteCustomField] = useDeleteCustomFieldMutation()
   const [inviteUser, { isLoading: inviting }] = useInviteUserMutation()
-  const [updateUser, { isLoading: updatingUser }] = useUpdateUserMutation() // Destructure isLoading here
-  const [deleteUser] = useDeleteUserMutation()
-  const [updateRole] = useUpdateUserRoleMutation()
-  const [updateStatus] = useUpdateUserStatusMutation()
+  const [updateUser, { isLoading: updatingUser }] = useUpdateUserMutation()
   const [saveAssignmentPolicy, { isLoading: savingAssignment }] = useSaveAssignmentPolicyMutation()
   const [getMetaOAuthUrl, { isFetching: startingMetaOAuth }] = useLazyGetMetaOAuthUrlQuery()
   const [saveLeadSourceConnection, { isLoading: savingLeadSourceConnection }] = useSaveLeadSourceConnectionMutation()
@@ -227,7 +224,6 @@ export default function Settings() {
   const [showAddField, setShowAddField] = useState(false)
   const [fieldForm, setFieldForm] = useState({ name: '', type: 'text', required: false, entity: 'Lead' })
   const [fieldFilter, setFieldFilter] = useState('Lead')
-  const [roleChanging, setRoleChanging] = useState(null)
   const [pipelineDraft, setPipelineDraft] = useState([])
   const [assignmentForm, setAssignmentForm] = useState({
     strategy: 'manual',
@@ -292,6 +288,7 @@ export default function Settings() {
         companyName: profileData.data.companyName || '',
         email: profileData.data.email || '',
         phone: profileData.data.phone || '',
+        logo: profileData.data.logo || '',
         address: profileData.data.address || '',
         timezone: profileData.data.timezone || 'Asia/Kolkata',
         website: profileData.data.website || ''
@@ -480,6 +477,41 @@ export default function Settings() {
     }
   }
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const res = await getUploadUrl({ 
+        uploadType: 'profile', 
+        fileType: file.type,
+        fileSize: file.size
+      }).unwrap()
+      const { uploadUrl, key } = res.data
+
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file
+      })
+
+      const updatedForm = { ...companyForm, logo: key }
+      setCompanyForm(updatedForm)
+      
+      // Update the settings with the key, not the downloadUrl
+      await updateSettings({ ...companyForm, logo: key }).unwrap()
+      toast('Company logo updated successfully', 'success')
+      refetchProfile()
+    } catch (err) {
+      toast('Failed to upload image', 'error')
+    } finally {
+      // Clear the input so the same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   const handleDisable2FA = async () => {
     if (!passwordForm.currentPassword) return toast('Please enter your current password below to disable 2FA', 'error')
     
@@ -524,22 +556,6 @@ export default function Settings() {
     }
   }
 
-  const handleEditUser = (user) => {
-    setEditUserForm({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone || '',
-        role: user.role,
-        roleId: user.roleId,
-        branchId: user.branchId,
-        isActive: user.isActive,
-        password: '',
-        customFields: user.customFields || {}
-    })
-    setShowEditUser(true)
-  }
-
   const handleUpdateUser = async () => {
     try {
         const { id, ...data } = editUserForm
@@ -554,34 +570,6 @@ export default function Settings() {
     }
   }
 
-  const handleRoleChange = async (userId, roleId) => {
-    try {
-      await updateRole({ id: userId, roleId }).unwrap()
-      toast('User role updated', 'success')
-      setRoleChanging(null)
-    } catch (err) {
-      toast(err.data?.message || 'Failed to update role', 'error')
-    }
-  }
-
-  const handleStatusToggle = async (userId, currentStatus) => {
-    try {
-      await updateStatus({ id: userId, isActive: !currentStatus }).unwrap()
-      toast(`User ${!currentStatus ? 'activated' : 'deactivated'}`, 'success')
-    } catch (_err) {
-      toast('Failed to update status', 'error')
-    }
-  }
-
-  const handleDeleteUser = async (id) => {
-    if (!confirm('Are you sure you want to remove this user?')) return
-    try {
-      await deleteUser(id).unwrap()
-      toast('User removed', 'success')
-    } catch {
-      toast('Failed to remove user', 'error')
-    }
-  }
 
   const handleAddField = async () => {
     try {
@@ -630,11 +618,19 @@ export default function Settings() {
             <Card className="!p-0 overflow-hidden text-center">
               <div className="pt-8 pb-6 px-4">
                 <div className="relative inline-block mb-3">
-                  <div className="w-24 h-24 rounded-full border-4 border-[var(--vz-card-bg)] bg-primary/10 flex items-center justify-center text-3xl font-bold text-primary shadow-lg mx-auto">
-                    {companyForm.companyName?.charAt(0) || 'C'}
-                  </div>
-                  <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[var(--vz-card-bg)] border border-[var(--vz-border)] flex items-center justify-center text-primary shadow hover:bg-primary/5 transition-colors">
-                    <Camera size={14} />
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                  {companyForm.logo ? (
+                    <img src={companyForm.logo} alt="Company Logo" className="w-24 h-24 rounded-full border-4 border-[var(--vz-card-bg)] shadow-lg mx-auto object-cover" />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full border-4 border-[var(--vz-card-bg)] bg-primary/10 flex items-center justify-center text-3xl font-bold text-primary shadow-lg mx-auto">
+                      {companyForm.companyName?.charAt(0)?.toUpperCase() || 'C'}
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingLogo}
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[var(--vz-card-bg)] border border-[var(--vz-border)] flex items-center justify-center text-primary shadow hover:bg-primary/5 transition-colors disabled:opacity-50">
+                    {isUploadingLogo ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
                   </button>
                 </div>
                 <h4 className="text-base font-bold text-[var(--vz-heading)]">{companyForm.companyName || 'Company Name'}</h4>

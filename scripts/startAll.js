@@ -13,6 +13,7 @@ const services = [
     'notification-service',
     'form-service',
     'meeting-service',
+    'upload-service',
 ];
 
 console.log('Starting all SparkCRM services in watch mode...\n');
@@ -59,8 +60,8 @@ process.on('SIGINT', () => {
 setTimeout(async () => {
     console.log('\n--- Checking service status after 30s ---\n');
     const net = require('net');
-    const ports = [8000, 8001, 8002, 8003, 8004, 8005, 8006, 8007, 8008, 8009, 8010, 8011];
-    const names = ['gateway', 'auth', 'tenant', 'lead', 'call', 'whatsapp', 'automation', 'analytics', 'billing', 'notification', 'form', 'meeting'];
+    const ports = [8000, 8001, 8002, 8003, 8004, 8005, 8006, 8007, 8008, 8009, 8010, 8011, 8012];
+    const names = ['gateway', 'auth', 'tenant', 'lead', 'call', 'whatsapp', 'automation', 'analytics', 'billing', 'notification', 'form', 'meeting', 'upload'];
 
     for (let i = 0; i < ports.length; i++) {
         await new Promise((resolve) => {

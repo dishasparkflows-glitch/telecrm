@@ -185,12 +185,16 @@ export default function Topbar() {
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[var(--vz-input-bg)] transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold">
-              {user?.firstName?.[0] || user?.name?.[0] || 'A'}
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                user?.name?.[0] || 'A'
+              )}
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-[var(--vz-heading)] leading-tight">
-                {user?.firstName || user?.name || 'Admin'}
+                {user?.name || 'Admin'}
               </p>
               <p className="text-[11px] text-[var(--vz-text-muted)] leading-tight">
                 {user?.role || 'Founder'}
@@ -203,7 +207,7 @@ export default function Topbar() {
             <div className="absolute right-0 top-12 w-[180px] bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-lg shadow-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-[var(--vz-border)]">
                 <p className="text-sm font-semibold text-[var(--vz-heading)]">
-                  Welcome {user?.firstName || user?.name || 'Admin'}!
+                  Welcome {user?.name || 'Admin'}!
                 </p>
               </div>
               <div className="py-1">

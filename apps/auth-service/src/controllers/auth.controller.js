@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 const TrustedDevice = require('../models/TrustedDevice');
-const { ApiResponse, ApiError, asyncHandler, validateEmail, validatePhone, ROLES  } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, validateEmail, validatePhone, ROLES, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
 const { generateTokenPair, verifyRefreshToken, generateAccessToken, generateRefreshToken } = require('../services/jwt.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const axios = require('axios');
@@ -571,8 +571,11 @@ const getMe = asyncHandler(async (req, res) => {
     // Fetch permissions, modules, branches, and features (same as login)
     const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
 
+    const userObj = user.toJSON();
+    userObj.avatar = await getPresignedDownloadUrl(userObj.avatar);
+
     ApiResponse.success(res, {
-        user: { ...user.toJSON(), role: roleSlug },
+        user: { ...userObj, role: roleSlug },
         permissions,
         modules,
         branches,
@@ -865,8 +868,11 @@ const login2FA = asyncHandler(async (req, res) => {
         ip: user.lastLoginIp
     });
 
+    const userObj = user.toJSON();
+    userObj.avatar = await getPresignedDownloadUrl(userObj.avatar);
+
     ApiResponse.success(res, {
-        user: { ...user.toJSON(), role: roleSlug || 'agent' },
+        user: { ...userObj, role: roleSlug || 'agent' },
         tokens,
         permissions,
         modules,

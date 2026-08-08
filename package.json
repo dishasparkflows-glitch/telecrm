@@ -16,6 +16,7 @@
     "dev:notification": "nx serve notification-service",
     "dev:form": "nx serve form-service",
     "dev:meeting": "nx serve meeting-service",
+    "dev:upload": "nx serve upload-service",
     "dev:landing": "nx serve web-landing",
     "dev:dashboard": "nx serve web-dashboard",
     "dev:backend": "node scripts/startAll.js",

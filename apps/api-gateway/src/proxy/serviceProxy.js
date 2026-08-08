@@ -132,6 +132,9 @@ const SERVICE_ROUTES = {
         target: env.SERVICES.TENANT,
         module: 'branches',
     },
+    '/api/uploads': {
+        target: env.SERVICES.UPLOAD,
+    },
     '/api/custom-fields': {
         target: env.SERVICES.TENANT,
     },
@@ -174,6 +177,7 @@ const TARGET_AUDIENCES = new Map([
     [env.SERVICES.NOTIFICATION, 'notification-service'],
     [env.SERVICES.FORM, 'form-service'],
     [env.SERVICES.MEETING, 'meeting-service'],
+    [env.SERVICES.UPLOAD, 'upload-service'],
 ]);
 
 /**

@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useGetProfileQuery } from '../../features/tenant/tenantApi'
+import { useGetMeQuery } from '../../features/auth/authApi'
+import { useUpdateUserMutation } from '../../features/users/userApi'
+import { useGetUploadUrlMutation } from '../../features/uploads/uploadApi'
+import { useToast } from '../../components/ui/Toast'
+import { useRef } from 'react'
 import Card from '../../components/ui/Card'
 import { ROLES } from '../../utils/constants'
 import Badge from '../../components/ui/Badge'
@@ -12,12 +17,49 @@ import {
 export default function Profile() {
   const { user, branches, activeBranchId } = useSelector((s) => s.auth)
   const { data: profileData } = useGetProfileQuery()
+  const { refetch: refetchMe } = useGetMeQuery()
+  const [updateUser] = useUpdateUserMutation()
+  const [getUploadUrl] = useGetUploadUrlMutation()
+  const fileInputRef = useRef(null)
+  const toast = useToast()
+
   const tenant = profileData?.data || {}
   const [activeTab, setActiveTab] = useState('overview')
 
   const activeBranch = branches?.find(b => b._id === activeBranchId)
   const joinDate = user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'
   const lastLogin = user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Just now'
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const res = await getUploadUrl({ 
+        uploadType: 'avatar',
+        fileType: file.type,
+        fileSize: file.size
+      }).unwrap()
+      const { uploadUrl, key } = res.data
+
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file
+      })
+
+      // Update the user profile with the new avatar key
+      await updateUser({ id: user._id, avatar: key }).unwrap()
+      toast('Profile photo updated successfully', 'success')
+      refetchMe()
+    } catch (err) {
+      toast('Failed to upload image', 'error')
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
 
   const tabs = [
     { key: 'overview', label: 'Overview' },
@@ -42,10 +84,24 @@ export default function Profile() {
           <div className="flex flex-col md:flex-row items-start md:items-end gap-4 pb-4">
             {/* Avatar */}
             <div className="relative -mt-[60px] ml-2">
-              <div className="w-[120px] h-[120px] rounded-full border-4 border-[var(--vz-card-bg)] shadow-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white text-4xl font-bold">
-                {user?.name?.[0] || user?.firstName?.[0] || 'A'}
+              <div className="w-[120px] h-[120px] rounded-full border-4 border-[var(--vz-card-bg)] shadow-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white text-4xl font-bold overflow-hidden">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  user?.name?.[0] || 'A'
+                )}
               </div>
-              <button className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-colors">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/jpeg, image/png, image/webp" 
+                onChange={handleAvatarUpload}
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-colors"
+              >
                 <Camera size={14} />
               </button>
             </div>
@@ -53,7 +109,7 @@ export default function Profile() {
             {/* Info */}
             <div className="flex-1 md:pb-1">
               <h4 className="text-xl font-bold text-[var(--vz-heading)]">
-                {user?.name || user?.firstName || 'Admin User'}
+                {user?.name || 'Admin User'}
               </h4>
               <p className="text-sm text-[var(--vz-text-muted)] mt-0.5">
                 {user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Team Member'} at {tenant.companyName || 'SparkCRM'}
@@ -139,7 +195,7 @@ export default function Profile() {
                 </Card.Header>
                 <div className="space-y-3.5">
                   {[
-                    { icon: User, label: 'Full Name', value: user?.name || user?.firstName || 'N/A' },
+                    { icon: User, label: 'Full Name', value: user?.name || 'N/A' },
                     { icon: Mail, label: 'Email', value: user?.email || 'N/A' },
                     { icon: Phone, label: 'Phone', value: user?.phone || 'Not added' },
                     { icon: Shield, label: 'Role', value: user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Agent', badge: true },

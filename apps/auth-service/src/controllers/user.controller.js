@@ -1,6 +1,5 @@
 const User = require('../models/User');
-const { ApiResponse, ApiError, asyncHandler, ROLES, buildScopeFilter } = require('@sparkcrm/shared-utils');
-
+const { ApiResponse, ApiError, asyncHandler, ROLES, buildScopeFilter, getPresignedDownloadUrl, deleteMedia } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const crypto = require('crypto');
 const axios = require('axios');
@@ -139,7 +138,17 @@ const getUsers = asyncHandler(async (req, res) => {
         User.countDocuments(filter),
     ]);
 
-    ApiResponse.paginated(res, users, {
+    const usersWithUrls = await Promise.all(
+        users.map(async (u) => {
+            const userObj = u.toJSON();
+            if (userObj.avatar) {
+                userObj.avatar = await getPresignedDownloadUrl(userObj.avatar);
+            }
+            return userObj;
+        })
+    );
+
+    ApiResponse.paginated(res, usersWithUrls, {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
@@ -155,7 +164,9 @@ const getUserById = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const user = await User.findOne({ _id: req.params.id, tenantId });
     if (!user) throw ApiError.notFound('User not found');
-    ApiResponse.success(res, user);
+    const userObj = user.toJSON();
+    userObj.avatar = await getPresignedDownloadUrl(userObj.avatar);
+    ApiResponse.success(res, userObj);
 });
 
 /**
@@ -164,7 +175,7 @@ const getUserById = asyncHandler(async (req, res) => {
  */
 const updateUser = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const { name, phone, roleId, isActive, branchId, password } = req.body;
+    const { name, phone, roleId, isActive, branchId, password, avatar } = req.body;
 
     const user = await User.findOne({ _id: req.params.id, tenantId });
     if (!user) throw ApiError.notFound('User not found');
@@ -181,7 +192,13 @@ const updateUser = asyncHandler(async (req, res) => {
     if (roleId) user.roleId = roleId;
     if (branchId !== undefined) user.branchId = branchId;
     if (isActive !== undefined) user.isActive = isActive;
-    if (password) user.password = password; // User model handles hashing on save
+    if (password) user.password = password;
+    if (avatar && avatar !== user.avatar) {
+        if (user.avatar) {
+            await deleteMedia(user.avatar)
+        }
+        user.avatar = avatar;
+    }
 
     await user.save();
     ApiResponse.success(res, user.toJSON(), 'User updated');

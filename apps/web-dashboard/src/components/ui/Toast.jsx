@@ -10,11 +10,18 @@ const icons = {
   info: Info,
 }
 
-const colors = {
-  success: 'bg-secondary/10 text-secondary border-secondary/20',
-  error: 'bg-danger/10 text-danger border-danger/20',
-  warning: 'bg-warning/10 text-warning border-warning/20',
-  info: 'bg-info/10 text-info border-info/20',
+const styles = {
+  success: 'border-l-secondary',
+  error: 'border-l-danger',
+  warning: 'border-l-warning',
+  info: 'border-l-info',
+}
+
+const iconColors = {
+  success: 'text-secondary',
+  error: 'text-danger',
+  warning: 'text-warning',
+  info: 'text-info',
 }
 
 export function ToastProvider({ children }) {
@@ -44,20 +51,20 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={toast}>
       {children}
       {/* Toast Container */}
-      <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
+      <div className="fixed top-6 right-6 z-[9999] flex flex-col gap-3 max-w-sm w-full md:w-auto">
         {toasts.map((toast) => {
           const Icon = icons[toast.type]
           return (
             <div
               key={toast.id}
-              className={`flex items-start gap-3 px-4 py-3 rounded-lg border shadow-lg
-                transform transition-all duration-300 animate-in slide-in-from-right
-                ${colors[toast.type]}`}
+              className={`flex items-start gap-3 px-4 py-3.5 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-[var(--vz-border)] border-l-[4px]
+                transform transition-all duration-300 animate-in slide-in-from-right fade-in bg-[var(--vz-card-bg)] text-[var(--vz-heading)] pointer-events-auto
+                ${styles[toast.type]}`}
             >
-              <Icon size={18} className="shrink-0 mt-0.5" />
-              <p className="text-sm flex-1">{toast.message}</p>
-              <button onClick={() => removeToast(toast.id)} className="shrink-0 opacity-60 hover:opacity-100">
-                <X size={14} />
+              <Icon size={20} className={`shrink-0 mt-0.5 ${iconColors[toast.type]}`} />
+              <p className="text-sm font-medium flex-1 pt-[1px] leading-relaxed">{toast.message}</p>
+              <button onClick={() => removeToast(toast.id)} className="shrink-0 text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] transition-colors mt-0.5">
+                <X size={16} />
               </button>
             </div>
           )

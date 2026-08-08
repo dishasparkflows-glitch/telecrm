@@ -1,4 +1,5 @@
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { env } = require('@sparkcrm/shared-config');
 
 /**
@@ -55,7 +56,95 @@ const uploadBufferToR2 = async (buffer, fileName, contentType = 'application/pdf
     }
 };
 
+/**
+ * Generates a presigned URL for direct file upload to Cloudflare R2.
+ * @param {string} fileName - Destination file path/name inside the bucket.
+ * @param {string} contentType - MIME type of the file.
+ * @param {number} expiresIn - Expiration time in seconds (default 1 hour).
+ * @returns {Promise<{uploadUrl: string, publicUrl: string, key: string}>}
+ */
+const getPresignedUploadUrl = async (fileName, contentType, expiresIn = 3600) => {
+    try {
+        const client = getR2Client();
+        const command = new PutObjectCommand({
+            Bucket: env.CLOUDFLARE_BUCKET_NAME,
+            Key: fileName,
+            ContentType: contentType,
+        });
+
+        const uploadUrl = await getSignedUrl(client, command, { expiresIn });
+        const base = (env.CLOUDFLARE_URL || '').replace(/\/+$/, '');
+        const publicUrl = `${base}/${fileName}`;
+
+        return { uploadUrl, publicUrl, key: fileName };
+    } catch (error) {
+        console.error('❌ Error generating presigned URL:', error.message);
+        throw new Error('Failed to generate upload URL');
+    }
+};
+
+/**
+ * Generates a presigned URL for downloading a file from Cloudflare R2.
+ * @param {string} fileName - Destination file path/name inside the bucket.
+ * @param {number} expiresIn - Expiration time in seconds (default 24 hours).
+ * @returns {Promise<string>}
+ */
+const getPresignedDownloadUrl = async (fileName) => {
+    if (!fileName || fileName.startsWith('http')) return fileName;
+
+    try {
+        const client = getR2Client();
+
+        const command = new GetObjectCommand({
+            Bucket: env.CLOUDFLARE_BUCKET_NAME,
+            Key: fileName,
+        });
+
+        const downloadUrl = await getSignedUrl(client, command, { expiresIn: 86400 });
+        return downloadUrl;
+    } catch (error) {
+        console.error('❌ Error generating presigned download URL:', error.message);
+        throw new Error('Failed to generate download URL');
+    }
+};
+
+/**
+ * Deletes a file/object from Cloudflare R2 / AWS S3 storage.
+ * @param {string} keyOrUrl - Key or URL of the file to delete.
+ * @returns {Promise<boolean>}
+ */
+const deleteMedia = async (keyOrUrl) => {
+    if (!keyOrUrl) return false;
+
+    let key = keyOrUrl;
+    if (keyOrUrl.startsWith('http')) {
+        try {
+            const parsed = new URL(keyOrUrl);
+            key = parsed.pathname.startsWith('/') ? parsed.pathname.substring(1) : parsed.pathname;
+        } catch (e) {
+            console.error('Failed to parse key from URL:', e.message);
+        }
+    }
+
+    try {
+        const client = getR2Client();
+        const command = new DeleteObjectCommand({
+            Bucket: env.CLOUDFLARE_BUCKET_NAME,
+            Key: key,
+        });
+
+        await client.send(command);
+        return true;
+    } catch (error) {
+        console.error('❌ Error deleting file from R2:', error.message);
+        return false;
+    }
+};
+
 module.exports = {
     getR2Client,
     uploadBufferToR2,
+    getPresignedUploadUrl,
+    getPresignedDownloadUrl,
+    deleteMedia,
 };

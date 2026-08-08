@@ -48,6 +48,7 @@ const env = {
         NOTIFICATION: parseInt(process.env.PORT_NOTIFICATION || '8009', 10),
         FORM: parseInt(process.env.PORT_FORM || '8010', 10),
         MEETING: parseInt(process.env.PORT_MEETING || '8011', 10),
+        UPLOAD: parseInt(process.env.PORT_UPLOAD || '8012', 10),
     },
 
     // Service URLs (for gateway proxy)
@@ -63,6 +64,7 @@ const env = {
         NOTIFICATION: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:8009',
         FORM: process.env.FORM_SERVICE_URL || 'http://localhost:8010',
         MEETING: process.env.MEETING_SERVICE_URL || 'http://localhost:8011',
+        UPLOAD: process.env.UPLOAD_SERVICE_URL || 'http://localhost:8012',
     },
 
     // MongoDB URIs

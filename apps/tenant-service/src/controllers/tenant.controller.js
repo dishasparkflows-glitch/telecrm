@@ -1,7 +1,7 @@
 const Tenant = require('../models/Tenant');
 const Plan = require('../models/Plan');
 const Payment = require('../models/Payment');
-const { ApiResponse, ApiError, asyncHandler } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, getPresignedDownloadUrl, deleteMedia } = require('@sparkcrm/shared-utils');
 
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 
@@ -16,7 +16,9 @@ const getProfile = asyncHandler(async (req, res) => {
     const tenant = await Tenant.findById(tenantId).populate('planId');
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
-    ApiResponse.success(res, tenant, 'Tenant profile fetched');
+    const tenantObj = tenant.toObject();
+    tenantObj.logo = await getPresignedDownloadUrl(tenantObj.logo);
+    ApiResponse.success(res, tenantObj, 'Tenant profile fetched');
 });
 
 /**
@@ -32,7 +34,12 @@ const updateSettings = asyncHandler(async (req, res) => {
 
     if (companyName) tenant.companyName = companyName;
     if (phone) tenant.phone = phone;
-    if (logo) tenant.logo = logo;
+    if (logo && logo !== tenant.logo) {
+        if (tenant.logo) {
+            await deleteMedia(tenant.logo)
+        }
+        tenant.logo = logo;
+    }
     if (website) tenant.website = website;
     if (address) tenant.address = address;
     if (settings) {

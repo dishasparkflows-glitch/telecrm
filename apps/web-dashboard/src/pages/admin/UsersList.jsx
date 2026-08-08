@@ -95,6 +95,7 @@ export default function UsersList() {
         roleId: user.roleId,
         branchId: user.branchId,
         isActive: user.isActive,
+        avatar: user.avatar,
         password: ''
     })
     setShowEdit(true)
@@ -178,8 +179,12 @@ export default function UsersList() {
               <tr key={user._id} className="hover:bg-[var(--vz-body-bg)]/50 transition-colors">
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
-                      {user.name?.charAt(0)?.toUpperCase() || '?'}
+                    <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold overflow-hidden shrink-0">
+                      {user.avatar ? (
+                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        user.name?.charAt(0)?.toUpperCase() || '?'
+                      )}
                     </div>
                     <div>
                       <div className="font-medium text-[var(--vz-heading)]">{user.name}</div>
@@ -319,6 +324,19 @@ export default function UsersList() {
       <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Edit User" size="md">
         {editUserForm && (
           <form onSubmit={handleUpdate} className="space-y-4 py-2">
+            <div className="flex items-center gap-3 p-3 bg-[var(--vz-body-bg)] rounded-lg border border-[var(--vz-border)]">
+              <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-semibold overflow-hidden shrink-0 border border-primary/20">
+                {editUserForm.avatar ? (
+                  <img src={editUserForm.avatar} alt={editUserForm.name} className="w-full h-full object-cover" />
+                ) : (
+                  editUserForm.name?.charAt(0)?.toUpperCase() || '?'
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-[var(--vz-heading)] text-sm truncate">{editUserForm.name}</h4>
+                <p className="text-xs text-[var(--vz-text-muted)] truncate">{editUserForm.email}</p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
                <Input label="Full Name" placeholder="John Doe" value={editUserForm.name} onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })} />
                <Input label="Email Address" type="email" readOnly value={editUserForm.email} className="bg-[var(--vz-body-bg)]" />
