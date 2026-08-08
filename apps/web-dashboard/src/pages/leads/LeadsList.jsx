@@ -13,6 +13,7 @@ import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 import Select from '../../components/ui/Select'
 import Pagination from '../../components/ui/Pagination'
 import EmptyState from '../../components/ui/EmptyState'
@@ -69,6 +70,7 @@ export default function LeadsList() {
   const [importHeaders, setImportHeaders] = useState([])
   const [importRows, setImportRows] = useState([])
   const [importMapping, setImportMapping] = useState({})
+  const [leadToArchive, setLeadToArchive] = useState(null)
   const fileInputRef = useRef(null)
 
   const debouncedSearch = useDebounce(search)
@@ -85,7 +87,7 @@ export default function LeadsList() {
   const { data: profileData } = useGetProfileQuery()
   const [createLead, { isLoading: creating }] = useCreateLeadMutation()
   const [importLeads, { isLoading: importing }] = useImportLeadsMutation()
-  const [archiveLead] = useArchiveLeadMutation()
+  const [archiveLead, { isLoading: isArchiving }] = useArchiveLeadMutation()
 
   const leads = data?.data || []
   const pagination = data?.pagination || {}
@@ -191,12 +193,16 @@ export default function LeadsList() {
     }
   }
 
-  const handleArchive = async (id, e) => {
+  const handleArchive = (id, e) => {
     e.stopPropagation()
-    if (!confirm('Archive this lead?')) return
+    setLeadToArchive(id)
+  }
+
+  const confirmArchive = async () => {
     try {
-      await archiveLead(id).unwrap()
+      await archiveLead(leadToArchive).unwrap()
       toast('Lead archived', 'success')
+      setLeadToArchive(null)
     } catch {
       toast('Failed to archive lead', 'error')
     }
@@ -511,6 +517,17 @@ export default function LeadsList() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!leadToArchive}
+        title="Archive Lead?"
+        message="Are you sure you want to archive this lead? It will be removed from your active leads view."
+        confirmText="Archive"
+        variant="danger"
+        loading={isArchiving}
+        onConfirm={confirmArchive}
+        onCancel={() => setLeadToArchive(null)}
+      />
     </>
   )
 }

@@ -20,6 +20,7 @@ const SERVICE_ROUTES = {
         rateLimiter: authLimiter,
         publicPaths: [
             /\/api\/auth\/login$/,
+            /\/api\/auth\/login-2fa$/,
             /\/api\/auth\/register-tenant$/,
             /\/api\/auth\/send-otp$/,
             /\/api\/auth\/verify-otp$/,

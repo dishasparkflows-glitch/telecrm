@@ -72,6 +72,11 @@ const userSchema = new mongoose.Schema(
             type: String,
             select: false,
         },
+        twoFactorBackupCodes: {
+            type: [String],
+            select: false,
+            default: [],
+        },
         loginAttempts: {
             type: Number,
             default: 0,
@@ -187,6 +192,7 @@ userSchema.methods.toJSON = function () {
     delete obj.passwordResetToken;
     delete obj.passwordResetExpires;
     delete obj.twoFactorSecret;
+    delete obj.twoFactorBackupCodes;
     return obj;
 };
 

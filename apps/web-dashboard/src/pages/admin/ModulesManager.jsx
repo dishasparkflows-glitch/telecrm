@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { LayoutList, GripVertical, Eye, EyeOff, Trash2, Plus, Loader2, X } from 'lucide-react'
+import { LayoutList, GripVertical, Eye, EyeOff, Trash2, Plus, Loader2, X, Edit3 } from 'lucide-react'
 import {
   useListAllModulesQuery, useUpdateModuleMutation, useDeleteModuleMutation,
   useCreateModuleMutation, useReorderModulesMutation,
@@ -227,7 +227,7 @@ export default function ModulesManager() {
                       className="p-1.5 rounded text-[var(--vz-text-muted)] hover:text-primary hover:bg-primary/10 transition-colors"
                       title="Edit labels and icons"
                     >
-                      <Plus size={15} className="rotate-45" /> {/* Use Plus rotated for now or Pencil if I have it */}
+                      <Edit3 size={15} />
                     </button>
                     {!mod.isSystem && (
                       <button

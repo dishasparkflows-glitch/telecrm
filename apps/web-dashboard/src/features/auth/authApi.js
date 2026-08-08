@@ -24,6 +24,13 @@ export const authApi = baseApi.injectEndpoints({
                 body: credentials,
             }),
         }),
+        login2FA: builder.mutation({
+            query: (data) => ({
+                url: '/auth/login-2fa',
+                method: 'POST',
+                body: data,
+            }),
+        }),
         registerTenant: builder.mutation({
             query: (data) => ({
                 url: '/auth/register-tenant',
@@ -93,12 +100,50 @@ export const authApi = baseApi.injectEndpoints({
                 body: data,
             }),
         }),
+        generate2FA: builder.mutation({
+            query: () => ({
+                url: '/auth/2fa/generate',
+                method: 'POST',
+            }),
+        }),
+        verify2FA: builder.mutation({
+            query: (data) => ({
+                url: '/auth/2fa/verify',
+                method: 'POST',
+                body: data,
+            }),
+        }),
+        disable2FA: builder.mutation({
+            query: (data) => ({
+                url: '/auth/2fa/disable',
+                method: 'POST',
+                body: data,
+            }),
+        }),
         getUsers: builder.query({
             query: (params) => ({
                 url: '/users',
                 params,
             }),
             providesTags: ['User'],
+        }),
+        getTrustedDevices: builder.query({
+            query: () => '/auth/trusted-devices',
+            providesTags: ['TrustedDevices'],
+        }),
+        revokeTrustedDevice: builder.mutation({
+            query: (id) => ({
+                url: `/auth/trusted-devices/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['TrustedDevices'],
+        }),
+        revokeAllTrustedDevices: builder.mutation({
+            query: () => ({
+                url: '/auth/trusted-devices/revoke-all',
+                method: 'POST',
+            }),
+            invalidatesTags: ['TrustedDevices'],
         }),
     }),
 })
@@ -107,6 +152,7 @@ export const {
     useSendOtpMutation,
     useVerifyOtpMutation,
     useLoginMutation,
+    useLogin2FAMutation,
     useRegisterTenantMutation,
     useGetMeQuery,
     useRefreshTokenMutation,
@@ -115,5 +161,11 @@ export const {
     useLogoutMutation,
     useSwitchBranchMutation,
     useUpdatePasswordMutation,
+    useGenerate2FAMutation,
+    useVerify2FAMutation,
+    useDisable2FAMutation,
     useGetUsersQuery,
+    useGetTrustedDevicesQuery,
+    useRevokeTrustedDeviceMutation,
+    useRevokeAllTrustedDevicesMutation,
 } = authApi

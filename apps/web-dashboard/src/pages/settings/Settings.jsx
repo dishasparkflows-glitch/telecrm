@@ -56,7 +56,14 @@ import {
   useDeleteWhatsAppConfigMutation,
   useManagePhonePoolMutation,
 } from '../../features/whatsapp/whatsappApi'
-import { useUpdatePasswordMutation } from '../../features/auth/authApi'
+import { 
+  useUpdatePasswordMutation, 
+  useDisable2FAMutation,
+  useGetTrustedDevicesQuery,
+  useRevokeTrustedDeviceMutation,
+  useRevokeAllTrustedDevicesMutation
+} from '../../features/auth/authApi'
+import TwoFactorSetupModal from './TwoFactorSetupModal'
 
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -76,12 +83,9 @@ import {
   Trash2,
   Copy,
   Mail,
-  UserPlus,
-  Shield,
   Clock,
   Briefcase,
   Camera,
-  ChevronRight,
 
   LayoutGrid,
   Lock,
@@ -141,9 +145,10 @@ export default function Settings() {
   const toast = useToast()
   const [activeTab, setActiveTab] = useState('company')
   const { user: currentUser, activeBranchId } = useSelector((s) => s.auth)
+  const [show2FAModal, setShow2FAModal] = useState(false)
 
   // Queries
-  const { data: profileData } = useGetProfileQuery()
+  const { data: profileData, refetch: refetchProfile } = useGetProfileQuery()
   const { data: usersResp, isLoading: usersLoading } = useListUsersQuery({ branchId: activeBranchId })
   const { data: rolesResp } = useListRolesQuery()
   const { data: branchesResp } = useListBranchesQuery()
@@ -159,6 +164,12 @@ export default function Settings() {
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
   const [updatePipeline, { isLoading: savingPipeline }] = useUpdatePipelineMutation()
   const [updatePassword, { isLoading: updatingPassword }] = useUpdatePasswordMutation()
+  const [disable2FA, { isLoading: disabling2FA }] = useDisable2FAMutation()
+  
+  const { data: trustedDevicesResp, isLoading: trustedDevicesLoading } = useGetTrustedDevicesQuery(undefined, { skip: activeTab !== 'security' })
+  const [revokeTrustedDevice] = useRevokeTrustedDeviceMutation()
+  const [revokeAllTrustedDevices, { isLoading: revokingAllDevices }] = useRevokeAllTrustedDevicesMutation()
+  
   const { data: customFieldsResp, isLoading: fieldsLoading } = useGetCustomFieldsQuery()
   const [createCustomField] = useCreateCustomFieldMutation()
   const [deleteCustomField] = useDeleteCustomFieldMutation()
@@ -463,8 +474,22 @@ export default function Settings() {
     try {
       await updateSettings(companyForm).unwrap()
       toast('Company settings updated', 'success')
+      refetchProfile()
     } catch {
       toast('Failed to update settings', 'error')
+    }
+  }
+
+  const handleDisable2FA = async () => {
+    if (!passwordForm.currentPassword) return toast('Please enter your current password below to disable 2FA', 'error')
+    
+    try {
+      await disable2FA({ password: passwordForm.currentPassword }).unwrap()
+      toast('Two-Factor Authentication Disabled', 'success')
+      refetchProfile()
+      setPasswordForm(prev => ({ ...prev, currentPassword: '' }))
+    } catch (error) {
+      toast(error.data?.message || 'Failed to disable 2FA', 'error')
     }
   }
 
@@ -1182,10 +1207,22 @@ export default function Settings() {
                         <Smartphone className="text-primary mt-0.5" />
                         <div>
                            <p className="text-sm font-semibold text-[var(--vz-heading)]">Authenticator App</p>
-                           <p className="text-xs text-[var(--vz-text-muted)]">Use Google Authenticator or Microsoft Authenticator</p>
+                           <p className="text-xs text-[var(--vz-text-muted)]">
+                             {profile?.twoFactorEnabled 
+                               ? '2FA is currently enabled for your account.' 
+                               : 'Use Google Authenticator or Microsoft Authenticator'}
+                           </p>
                         </div>
                       </div>
-                      <Button variant="soft-primary" size="sm">Enable</Button>
+                      {profile?.twoFactorEnabled ? (
+                        <Button variant="soft-danger" size="sm" onClick={handleDisable2FA} disabled={disabling2FA}>
+                          {disabling2FA ? 'Disabling...' : 'Disable'}
+                        </Button>
+                      ) : (
+                        <Button variant="soft-primary" size="sm" onClick={() => setShow2FAModal(true)}>
+                          Enable
+                        </Button>
+                      )}
                     </div>
                   </div>
                    <div>
@@ -1201,6 +1238,46 @@ export default function Settings() {
                        </div>
                     </div>
                   </div>
+
+                  {/* Trusted Devices Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h6 className="text-sm font-bold text-[var(--vz-heading)]">Trusted Devices</h6>
+                      <Button variant="soft-danger" size="sm" onClick={() => revokeAllTrustedDevices().unwrap().then(() => toast('All trusted devices revoked', 'success'))} disabled={revokingAllDevices}>
+                        Revoke All
+                      </Button>
+                    </div>
+                    {trustedDevicesLoading ? (
+                      <div className="py-8 text-center text-[var(--vz-text-muted)] text-sm">Loading trusted devices...</div>
+                    ) : (!trustedDevicesResp?.data || trustedDevicesResp.data.length === 0) ? (
+                      <EmptyState icon={Lock} title="No Trusted Devices" description="You don't have any trusted devices yet." />
+                    ) : (
+                      <div className="space-y-2">
+                        {trustedDevicesResp.data.map((device) => (
+                          <div key={device._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-[var(--vz-body-bg)] border border-[var(--vz-border)]">
+                            <div>
+                              <p className="text-sm font-semibold text-[var(--vz-heading)]">{device.deviceName}</p>
+                              <p className="text-xs text-[var(--vz-text-muted)]">
+                                IP: {device.ipAddress} · Last used: {new Date(device.lastUsedAt).toLocaleDateString()}
+                              </p>
+                              <p className="text-[10px] text-[var(--vz-text-muted)] mt-1 opacity-70">
+                                Expires: {new Date(device.expiresAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-danger hover:bg-danger/10" 
+                              onClick={() => revokeTrustedDevice(device._id).unwrap().then(() => toast('Device revoked', 'success'))}
+                            >
+                              Revoke
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </Card>
             )}
@@ -1249,6 +1326,14 @@ export default function Settings() {
       </div>
 
       {/* Modals */}
+      <TwoFactorSetupModal 
+        isOpen={show2FAModal} 
+        onClose={(success) => {
+          setShow2FAModal(false)
+          if (success) refetchProfile()
+        }} 
+      />
+      
       <Modal isOpen={showInvite} onClose={() => setShowInvite(false)} title="Invite Team Member" size="md">
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-3">

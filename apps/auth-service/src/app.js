@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const {
     createCorsOptions,
     errorHandler,
@@ -14,6 +15,7 @@ const userRoutes = require('./routes/user.routes');
 const app = express();
 
 app.use(helmet());
+app.use(cookieParser());
 app.use(cors(createCorsOptions()));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

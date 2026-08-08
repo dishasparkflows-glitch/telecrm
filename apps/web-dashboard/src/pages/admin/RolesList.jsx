@@ -6,18 +6,20 @@ import {
 } from '../../features/roles/roleApi'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/Toast'
 
 export default function RolesList() {
   const toast = useToast()
   const { data: rolesResp, isLoading } = useListRolesQuery()
   const [createRole, { isLoading: creating }] = useCreateRoleMutation()
-  const [deleteRole] = useDeleteRoleMutation()
+  const [deleteRole, { isLoading: deleting }] = useDeleteRoleMutation()
   const [updateRole, { isLoading: updating }] = useUpdateRoleMutation()
   const [showCreate, setShowCreate] = useState(false)
   const [newRole, setNewRole] = useState({ name: '', description: '' })
   const [showEdit, setShowEdit] = useState(false)
   const [editRoleForm, setEditRoleForm] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, role: null })
 
   const roles = rolesResp?.data || []
 
@@ -32,10 +34,11 @@ export default function RolesList() {
       toast(err.data?.message || 'Failed to create role', 'error')
     }
   }
-  const handleDelete = async (id, name) => {
-    if (!confirm(`Delete role "${name}"? Users with this role will lose their permissions.`)) return
+  const handleDelete = async () => {
+    if (!confirmDelete.role) return
     try {
-      await deleteRole(id).unwrap()
+      await deleteRole(confirmDelete.role._id).unwrap()
+      setConfirmDelete({ isOpen: false, role: null })
     } catch (err) {
       toast(err.data?.message || 'Failed to delete role', 'error')
     }
@@ -171,7 +174,7 @@ export default function RolesList() {
                     </button>
                     {!role.isSystem && (
                       <button
-                        onClick={() => handleDelete(role._id, role.name)}
+                        onClick={() => setConfirmDelete({ isOpen: true, role })}
                         className="p-1.5 rounded hover:bg-danger/10 text-[var(--vz-text-muted)] hover:text-danger transition-colors"
                       >
                         <Trash2 size={15} />
@@ -214,6 +217,18 @@ export default function RolesList() {
             </div>
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        isOpen={confirmDelete.isOpen}
+        title={`Delete Role "${confirmDelete.role?.name}"?`}
+        message="Users with this role will lose their permissions. This action cannot be undone."
+        confirmText="Delete Role"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete({ isOpen: false, role: null })}
+      />
     </div>
   )
 }

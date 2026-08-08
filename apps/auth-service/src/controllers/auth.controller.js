@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const OTP = require('../models/OTP');
+const TrustedDevice = require('../models/TrustedDevice');
 const { ApiResponse, ApiError, asyncHandler, validateEmail, validatePhone, ROLES  } = require('@sparkcrm/shared-utils');
 const { generateTokenPair, verifyRefreshToken, generateAccessToken, generateRefreshToken } = require('../services/jwt.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
@@ -8,6 +9,9 @@ const { env } = require('@sparkcrm/shared-config');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { createServiceHeaders } = require('@sparkcrm/shared-middleware');
+const { generateSecret, verify, generateURI } = require('otplib');
+const qrcode = require('qrcode');
+const bcrypt = require('bcryptjs');
 
 const tenantServiceHeaders = (method, path, identity = {}) => createServiceHeaders({
     issuer: 'auth-service',
@@ -347,6 +351,41 @@ const login = asyncHandler(async (req, res) => {
     // Reset login attempts on successful login
     await user.resetLoginAttempts();
 
+    // Check if 2FA is enabled
+    if (user.twoFactorEnabled) {
+        // Check trusted device first
+        let isTrusted = false;
+        if (req.cookies && req.cookies.trusted_device) {
+            const rawToken = req.cookies.trusted_device;
+            const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+            
+            const trustedRecord = await TrustedDevice.findOne({
+                userId: user._id,
+                tokenHash: tokenHash
+            });
+
+            if (trustedRecord && trustedRecord.isActive()) {
+                // Device is trusted, skip 2FA
+                isTrusted = true;
+                
+                // Update lastUsedAt
+                trustedRecord.lastUsedAt = new Date();
+                trustedRecord.ipAddress = req.ip || req.headers['x-forwarded-for'] || '';
+                await trustedRecord.save();
+            }
+        }
+
+        if (!isTrusted) {
+            // Generate a temporary token to pass to the 2FA verification step
+            const tempToken = jwt.sign(
+                { id: user._id, tenantId: user.tenantId },
+                process.env.JWT_SECRET || 'dev-secret-key',
+                { expiresIn: '5m' }
+            );
+            return ApiResponse.success(res, { requires2FA: true, tempToken }, '2FA verification required');
+        }
+    }
+
     // Fetch permissions, modules, branches, and features
     const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
 
@@ -458,6 +497,12 @@ const resetPassword = asyncHandler(async (req, res) => {
     user.loginAttempts = 0;
     user.lockUntil = null;
     await user.save();
+
+    // Revoke all trusted devices
+    await TrustedDevice.updateMany(
+        { userId: user._id, revokedAt: null },
+        { revokedAt: new Date() }
+    );
 
     ApiResponse.success(res, null, 'Password reset successful. Please login with your new password.');
 });
@@ -648,7 +693,237 @@ const updatePassword = asyncHandler(async (req, res) => {
     user.password = newPassword;
     await user.save();
 
+    // Revoke all trusted devices
+    await TrustedDevice.updateMany(
+        { userId: user._id, revokedAt: null },
+        { revokedAt: new Date() }
+    );
+
     ApiResponse.success(res, null, 'Password updated successfully');
+});
+
+/**
+ * POST /api/auth/2fa/generate
+ * Generate 2FA secret and QR code for the current user
+ */
+const generate2FA = asyncHandler(async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    const user = await User.findById(userId);
+    if (!user) throw ApiError.notFound('User not found');
+
+    const secret = generateSecret();
+    const otpauth = generateURI({ label: user.email, issuer: 'SparkCRM', secret });
+    const qrCodeUrl = await qrcode.toDataURL(otpauth);
+
+    // Generate 10 backup codes
+    const backupCodes = Array.from({ length: 10 }, () => crypto.randomBytes(4).toString('hex'));
+    const hashedBackupCodes = await Promise.all(backupCodes.map(code => bcrypt.hash(code, 10)));
+
+    // Temporarily save the secret and backup codes in the user document (not yet enabled)
+    user.twoFactorSecret = secret;
+    user.twoFactorBackupCodes = hashedBackupCodes;
+    await user.save();
+
+    ApiResponse.success(res, { qrCodeUrl, secret, backupCodes }, '2FA secret generated');
+});
+
+/**
+ * POST /api/auth/2fa/verify
+ * Verify the 2FA code and enable 2FA for the current user
+ */
+const verify2FA = asyncHandler(async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    const { token } = req.body;
+
+    if (!token) throw ApiError.badRequest('Token is required');
+
+    const user = await User.findById(userId).select('+twoFactorSecret');
+    if (!user) throw ApiError.notFound('User not found');
+    if (!user.twoFactorSecret) throw ApiError.badRequest('2FA secret not generated');
+
+    const { valid } = await verify({ token, secret: user.twoFactorSecret });
+    if (!valid) throw ApiError.badRequest('Invalid 2FA code');
+
+    user.twoFactorEnabled = true;
+    await user.save();
+
+    ApiResponse.success(res, null, 'Two-Factor Authentication enabled successfully');
+});
+
+/**
+ * POST /api/auth/2fa/disable
+ * Disable 2FA for the current user
+ */
+const disable2FA = asyncHandler(async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    const { password } = req.body;
+
+    if (!password) throw ApiError.badRequest('Password is required to disable 2FA');
+
+    const user = await User.findById(userId).select('+password');
+    if (!user) throw ApiError.notFound('User not found');
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) throw ApiError.unauthorized('Invalid password');
+
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = undefined;
+    user.twoFactorBackupCodes = [];
+    await user.save();
+
+    // Revoke all trusted devices
+    await TrustedDevice.updateMany(
+        { userId: user._id, revokedAt: null },
+        { revokedAt: new Date() }
+    );
+
+    ApiResponse.success(res, null, 'Two-Factor Authentication disabled successfully');
+});
+
+/**
+ * POST /api/auth/login-2fa
+ * Verify 2FA code during login
+ */
+const login2FA = asyncHandler(async (req, res) => {
+    const { tempToken, token, backupCode } = req.body;
+
+    if (!tempToken || (!token && !backupCode)) {
+        throw ApiError.badRequest('Temporary token and either 2FA code or backup code are required');
+    }
+
+    let decoded;
+    try {
+        decoded = jwt.verify(tempToken, process.env.JWT_SECRET || 'dev-secret-key');
+    } catch (err) {
+        throw ApiError.unauthorized('Invalid or expired temporary token');
+    }
+
+    const user = await User.findById(decoded.id).select('+twoFactorSecret +twoFactorBackupCodes');
+    if (!user) throw ApiError.notFound('User not found');
+    if (!user.twoFactorEnabled) throw ApiError.badRequest('2FA is not enabled for this account');
+
+    if (backupCode) {
+        let validBackupCode = false;
+        if (user.twoFactorBackupCodes && user.twoFactorBackupCodes.length > 0) {
+            for (let i = 0; i < user.twoFactorBackupCodes.length; i++) {
+                const isValid = await bcrypt.compare(backupCode, user.twoFactorBackupCodes[i]);
+                if (isValid) {
+                    validBackupCode = true;
+                    user.twoFactorBackupCodes.splice(i, 1);
+                    break;
+                }
+            }
+        }
+        if (!validBackupCode) {
+            throw ApiError.unauthorized('Invalid backup code');
+        }
+    } else {
+        if (!user.twoFactorSecret) {
+            throw ApiError.badRequest('2FA secret is missing. Please contact support to reset your 2FA.');
+        }
+        const { valid } = await verify({ token, secret: user.twoFactorSecret });
+        if (!valid) throw ApiError.unauthorized('Invalid 2FA code');
+    }
+
+    // Handle Trusted Device
+    const { trustDevice } = req.body;
+    if (trustDevice) {
+        const TRUSTED_DEVICE_DAYS = Number(process.env.TRUSTED_DEVICE_DAYS) || 30;
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const expiresAt = new Date(Date.now() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000);
+
+        await TrustedDevice.create({
+            userId: user._id,
+            tokenHash,
+            deviceName: req.headers['user-agent'] || 'Unknown Device',
+            userAgent: req.headers['user-agent'] || '',
+            ipAddress: req.ip || req.headers['x-forwarded-for'] || '',
+            expiresAt
+        });
+
+        res.cookie('trusted_device', rawToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
+            maxAge: TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000,
+        });
+    }
+
+    // Fetch permissions, modules, branches, and features
+    const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
+
+    const tokens = generateTokenPair(user, roleSlug);
+    user.refreshToken = tokens.refreshToken;
+    user.lastLoginAt = new Date();
+    user.lastLoginIp = req.ip || req.headers['x-forwarded-for'] || '';
+    await user.save();
+
+    publishEvent(EVENTS.USER_LOGGED_IN, {
+        userId: user._id,
+        tenantId: user.tenantId,
+        ip: user.lastLoginIp
+    });
+
+    ApiResponse.success(res, {
+        user: { ...user.toJSON(), role: roleSlug || 'agent' },
+        tokens,
+        permissions,
+        modules,
+        branches,
+        features,
+        plan,
+        subscription,
+    }, 'Login successful');
+});
+
+/**
+ * GET /api/auth/trusted-devices
+ * List all active trusted devices for the user
+ */
+const getTrustedDevices = asyncHandler(async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    
+    const devices = await TrustedDevice.find({
+        userId,
+        revokedAt: null,
+        expiresAt: { $gt: new Date() }
+    }).select('-tokenHash').sort({ lastUsedAt: -1 });
+
+    ApiResponse.success(res, devices, 'Trusted devices fetched');
+});
+
+/**
+ * DELETE /api/auth/trusted-devices/:id
+ * Revoke a specific trusted device
+ */
+const revokeTrustedDevice = asyncHandler(async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    const deviceId = req.params.id;
+
+    const device = await TrustedDevice.findOneAndUpdate(
+        { _id: deviceId, userId, revokedAt: null },
+        { revokedAt: new Date() }
+    );
+
+    if (!device) throw ApiError.notFound('Trusted device not found or already revoked');
+
+    ApiResponse.success(res, null, 'Trusted device revoked successfully');
+});
+
+/**
+ * POST /api/auth/trusted-devices/revoke-all
+ * Revoke all trusted devices for the user
+ */
+const revokeAllTrustedDevices = asyncHandler(async (req, res) => {
+    const userId = req.headers['x-user-id'];
+
+    await TrustedDevice.updateMany(
+        { userId, revokedAt: null },
+        { revokedAt: new Date() }
+    );
+
+    ApiResponse.success(res, null, 'All trusted devices revoked successfully');
 });
 
 module.exports = {
@@ -664,4 +939,11 @@ module.exports = {
     switchBranch,
     ownerLogin,
     updatePassword,
+    generate2FA,
+    verify2FA,
+    disable2FA,
+    login2FA,
+    getTrustedDevices,
+    revokeTrustedDevice,
+    revokeAllTrustedDevices,
 };

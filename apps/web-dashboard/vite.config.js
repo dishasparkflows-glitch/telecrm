@@ -23,6 +23,9 @@ export default defineConfig({
         ws: true,
       },
     },
+    allowedHosts: [
+      'stopper-thyself-rancidity.ngrok-free.dev',
+    ],
   },
   build: {
     rollupOptions: {

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { UserCog, Search, Shield, Loader2, ChevronDown, UserPlus, Building2, Trash2, Edit3, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { UserCog, Search, Shield, Loader2, ChevronDown, UserPlus, Building2, Trash2, Edit3, X, UserCheck, UserX } from 'lucide-react'
 import { useListUsersQuery, useUpdateUserRoleMutation, useUpdateUserStatusMutation, useInviteUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../features/users/userApi'
 import { useListRolesQuery } from '../../features/roles/roleApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
@@ -7,6 +7,7 @@ import { useSelector } from 'react-redux'
 import Button from '../../components/ui/Button'
 
 import Modal from '../../components/ui/Modal'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import Pagination from '../../components/ui/Pagination'
@@ -16,32 +17,52 @@ export default function UsersList() {
   const toast = useToast()
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
-  const { data: usersResp, isLoading } = useListUsersQuery({ page, limit: PAGE_SIZE })
+  
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [search])
+
   const { data: rolesResp } = useListRolesQuery()
+  const roles = rolesResp?.data || []
+  
+  // Find roles that match the search term
+  const matchedRoles = debouncedSearch 
+    ? roles.filter(r => r.name.toLowerCase().includes(debouncedSearch.toLowerCase())).map(r => r._id).join(',')
+    : ''
+
+  const { data: usersResp, isLoading } = useListUsersQuery({ 
+    page, 
+    limit: PAGE_SIZE, 
+    search: debouncedSearch,
+    matchedRoles: matchedRoles || undefined
+  })
+  
   const { data: branchesResp } = useListBranchesQuery()
   const [updateRole] = useUpdateUserRoleMutation()
   const [updateStatus] = useUpdateUserStatusMutation()
   const [inviteUser, { isLoading: inviting }] = useInviteUserMutation()
   const [updateUser, { isLoading: updatingUser }] = useUpdateUserMutation()
-  const [deleteUser] = useDeleteUserMutation()
-  const [search, setSearch] = useState('')
+  const [deleteUser, { isLoading: deletingUser }] = useDeleteUserMutation()
   const [roleChanging, setRoleChanging] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
   const [inviteForm, setInviteForm] = useState({ name: '', email: '', phone: '', roleId: '', branchId: '', password: '' })
   const [showEdit, setShowEdit] = useState(false)
   const [editUserForm, setEditUserForm] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, user: null })
   const { user: currentUser } = useSelector((s) => s.auth)
 
   const users = usersResp?.data || []
   const usersPagination = usersResp?.pagination || {}
-  const roles = rolesResp?.data || []
   const branches = branchesResp?.data || []
 
-  const filteredUsers = users.filter((u) =>
-    u.name?.toLowerCase().includes(search.toLowerCase()) ||
-    u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.role?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredUsers = users
 
   const handleRoleChange = async (userId, roleId) => {
     try {
@@ -89,10 +110,13 @@ export default function UsersList() {
     } catch (err) { toast(err.data?.message || 'Failed to update user', 'error') }
   }
 
-  const handleDelete = async (userId) => {
-    if (!confirm('Remove this user?')) return
-    try { await deleteUser(userId).unwrap() }
-    catch (err) { toast(err.data?.message || 'Failed', 'error') }
+  const handleDelete = async () => {
+    if (!confirmDelete.user) return
+    try { 
+      await deleteUser(confirmDelete.user._id).unwrap() 
+      setConfirmDelete({ isOpen: false, user: null })
+    }
+    catch (err) { toast(err.data?.message || 'Failed to remove user', 'error') }
   }
 
   const getBranchName = (branchId) => branches.find(b => b._id === branchId)?.name || '—'
@@ -165,13 +189,16 @@ export default function UsersList() {
                 </td>
                 <td className="px-5 py-4">
                   {roleChanging === user._id ? (
-                    <div className="w-40" onClick={(e) => e.stopPropagation()}>
-                      <Select
-                        value={user.roleId || ''}
-                        onChange={(val) => handleRoleChange(user._id, val)}
-                        options={roles.map(r => ({ value: r._id, label: r.name }))}
-                      />
-                    </div>
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setRoleChanging(null)} />
+                      <div className="w-40 relative z-50" onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={user.roleId || ''}
+                          onChange={(val) => handleRoleChange(user._id, val)}
+                          options={roles.map(r => ({ value: r._id, label: r.name }))}
+                        />
+                      </div>
+                    </>
                   ) : (
                     <button onClick={() => setRoleChanging(user._id)}
                       className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors">
@@ -200,17 +227,28 @@ export default function UsersList() {
                 </td>
                 <td className="px-5 py-4 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <button onClick={() => handleEdit(user)} className="p-1.5 rounded text-primary hover:bg-primary/10 transition-colors" title="Edit User">
-                        <Edit3 size={14} />
+                    <button onClick={() => handleEdit(user)} className="p-1.5 rounded text-[var(--vz-primary)] hover:bg-[var(--vz-primary)]/10 transition-colors" title="Edit User">
+                        <Edit3 size={16} />
                     </button>
-                    <Button variant={user.isActive ? 'ghost' : 'primary'} size="sm"
-                      onClick={() => handleStatusToggle(user._id, user.isActive)} className="text-xs">
-                      {user.isActive ? 'Suspend' : 'Activate'}
-                    </Button>
+                    <button 
+                      onClick={() => handleStatusToggle(user._id, user.isActive)} 
+                      className={`p-1.5 rounded transition-colors ${
+                        user.isActive 
+                          ? 'text-[var(--vz-warning)] hover:bg-[var(--vz-warning)]/10' 
+                          : 'text-[var(--vz-success)] hover:bg-[var(--vz-success)]/10'
+                      }`}
+                      title={user.isActive ? 'Suspend User' : 'Activate User'}
+                    >
+                      {user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
+                    </button>
                     {user._id !== currentUser?._id && (
-                      <Button variant="ghost" size="sm" className="text-danger text-xs" onClick={() => handleDelete(user._id)}>
-                        <Trash2 size={12} />
-                      </Button>
+                      <button 
+                        onClick={() => setConfirmDelete({ isOpen: true, user })} 
+                        className="p-1.5 rounded text-[var(--vz-danger)] hover:bg-[var(--vz-danger)]/10 transition-colors" 
+                        title="Delete User"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     )}
                   </div>
                 </td>
@@ -326,6 +364,18 @@ export default function UsersList() {
           </form>
         )}
       </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        isOpen={confirmDelete.isOpen}
+        title={`Remove User "${confirmDelete.user?.name}"?`}
+        message="This user will lose access to the CRM. This action cannot be undone."
+        confirmText="Remove User"
+        variant="danger"
+        loading={deletingUser}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete({ isOpen: false, user: null })}
+      />
     </div>
   )
 }

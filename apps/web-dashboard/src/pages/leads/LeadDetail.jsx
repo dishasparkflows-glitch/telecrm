@@ -119,7 +119,7 @@ export default function LeadDetail() {
 
   const handleAssign = async (userId) => {
     try {
-      await assignLead({ id, assignedTo: userId }).unwrap()
+      await assignLead({ id, assignedTo: userId === '' ? null : userId }).unwrap()
       toast('Lead assigned', 'success')
     } catch { toast('Failed to assign', 'error') }
   }

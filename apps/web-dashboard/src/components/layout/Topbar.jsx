@@ -76,9 +76,10 @@ export default function Topbar() {
 
         {/* Search */}
         <div className="hidden sm:flex items-center gap-2 bg-[var(--vz-input-bg)] rounded-lg px-3 py-2 w-[240px]">
-          <Search size={16} className="text-[var(--vz-text-muted)]" />
           <input
-            type="text"
+            type="search"
+            name="topbar_search_query"
+            autoComplete="new-password"
             placeholder="Search..."
             className="bg-transparent outline-none text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] w-full"
           />

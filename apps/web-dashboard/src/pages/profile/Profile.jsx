@@ -6,7 +6,7 @@ import { ROLES } from '../../utils/constants'
 import Badge from '../../components/ui/Badge'
 import {
   User, Mail, Phone, Calendar, Briefcase, Shield, Building2,
-  Activity, Globe, Award, Edit3, Camera
+  Activity, Globe, Award, Camera
 } from 'lucide-react'
 
 export default function Profile() {
@@ -135,12 +135,7 @@ export default function Profile() {
               {/* Personal Information */}
               <Card>
                 <Card.Header>
-                  <div className="flex items-center justify-between">
-                    <Card.Title>Personal Information</Card.Title>
-                    <button className="p-1.5 rounded text-[var(--vz-text-muted)] hover:text-primary hover:bg-primary/10 transition-colors">
-                      <Edit3 size={14} />
-                    </button>
-                  </div>
+                  <Card.Title>Personal Information</Card.Title>
                 </Card.Header>
                 <div className="space-y-3.5">
                   {[

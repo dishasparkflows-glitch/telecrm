@@ -5,6 +5,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 import Input from '../../components/ui/Input'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
@@ -21,7 +22,8 @@ export default function BranchManager() {
   const { data, isLoading } = useListBranchesQuery()
   const [createBranch, { isLoading: creating }] = useCreateBranchMutation()
   const [updateBranch, { isLoading: updating }] = useUpdateBranchMutation()
-  const [deleteBranch] = useDeleteBranchMutation()
+  const [deleteBranch, { isLoading: deletingBranch }] = useDeleteBranchMutation()
+  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, branch: null })
 
   const branches = data?.data || []
 
@@ -45,9 +47,13 @@ export default function BranchManager() {
     } catch (err) { toast(err.data?.message || 'Failed', 'error') }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Deactivate this branch?')) return
-    try { await deleteBranch(id).unwrap(); toast('Branch deactivated', 'success') }
+  const handleDelete = async () => {
+    if (!confirmDelete.branch) return
+    try { 
+      await deleteBranch(confirmDelete.branch._id).unwrap()
+      toast('Branch deactivated', 'success')
+      setConfirmDelete({ isOpen: false, branch: null })
+    }
     catch { toast('Failed', 'error') }
   }
 
@@ -100,7 +106,7 @@ export default function BranchManager() {
               <div className="flex items-center gap-2 pt-3 border-t border-[var(--vz-border)]">
                 <Button variant="ghost" size="sm" onClick={() => openEdit(b)}><Edit3 size={12} /> Edit</Button>
                 {!b.isDefault && (
-                  <Button variant="ghost" size="sm" className="text-danger" onClick={() => handleDelete(b._id)}><Trash2 size={12} /> Remove</Button>
+                  <Button variant="ghost" size="sm" className="text-danger" onClick={() => setConfirmDelete({ isOpen: true, branch: b })}><Trash2 size={12} /> Remove</Button>
                 )}
               </div>
             </Card>
@@ -133,6 +139,18 @@ export default function BranchManager() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Deactivate Confirmation */}
+      <ConfirmModal
+        isOpen={confirmDelete.isOpen}
+        title={`Deactivate Branch "${confirmDelete.branch?.name}"?`}
+        message="This branch will be deactivated. You can reactivate it later."
+        confirmText="Deactivate"
+        variant="danger"
+        loading={deletingBranch}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete({ isOpen: false, branch: null })}
+      />
     </>
   )
 }

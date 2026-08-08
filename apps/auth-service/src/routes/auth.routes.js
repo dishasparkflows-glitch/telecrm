@@ -17,6 +17,7 @@ router.post('/refresh-token', authCtrl.refreshToken);
 router.post('/forgot-password', authCtrl.forgotPassword);
 router.post('/reset-password', authCtrl.resetPassword);
 router.post('/owner-login', authCtrl.ownerLogin);
+router.post('/login-2fa', authCtrl.login2FA);
 
 // Protected routes
 router.use(requireGatewayUser);
@@ -24,5 +25,15 @@ router.post('/logout', authCtrl.logout);
 router.get('/me', authCtrl.getMe);
 router.put('/active-branch', authCtrl.switchBranch);
 router.put('/update-password', authCtrl.updatePassword);
+
+// 2FA Routes
+router.post('/2fa/generate', authCtrl.generate2FA);
+router.post('/2fa/verify', authCtrl.verify2FA);
+router.post('/2fa/disable', authCtrl.disable2FA);
+
+// Trusted Devices Routes
+router.get('/trusted-devices', authCtrl.getTrustedDevices);
+router.post('/trusted-devices/revoke-all', authCtrl.revokeAllTrustedDevices);
+router.delete('/trusted-devices/:id', authCtrl.revokeTrustedDevice);
 
 module.exports = router;
