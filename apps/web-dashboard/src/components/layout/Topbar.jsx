@@ -4,6 +4,7 @@ import { logout, setActiveBranch } from '../../slices/authSlice'
 import { useLogoutMutation, useSwitchBranchMutation } from '../../features/auth/authApi'
 import { baseApi } from '../../features/api/baseApi'
 import { useToast } from '../../components/ui/Toast'
+import { ROLES } from '../../utils/constants'
 import { useGetNotificationsQuery } from '../../features/notifications/notificationApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
 import { useNavigate } from 'react-router-dom'
@@ -16,7 +17,7 @@ export default function Topbar() {
   const toast = useToast()
   const { theme, sidebarCollapsed } = useSelector((s) => s.ui)
   const { user, activeBranchId } = useSelector((s) => s.auth)
-  const { data: branchesData } = useListBranchesQuery(undefined, { skip: user?.role !== 'superadmin' })
+  const { data: branchesData } = useListBranchesQuery(undefined, { skip: user?.role !== ROLES.SUPER_ADMIN })
   const [logoutApi] = useLogoutMutation()
   const [switchBranchApi] = useSwitchBranchMutation()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -26,7 +27,7 @@ export default function Topbar() {
   const notifRef = useRef(null)
   const branchRef = useRef(null)
 
-  const isSuperAdmin = user?.role === 'superadmin'
+  const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN
   const isImpersonating = user?.isImpersonating === true
   const branches = branchesData?.data || []
   const activeBranch = branches.find(b => b._id === activeBranchId)

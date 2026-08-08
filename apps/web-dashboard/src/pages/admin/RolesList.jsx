@@ -118,7 +118,7 @@ export default function RolesList() {
       )}
 
       {/* Roles Table */}
-      <div className="bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-lg overflow-hidden" style={{ boxShadow: 'var(--vz-shadow)' }}>
+      <div className="bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-lg overflow-x-auto" style={{ boxShadow: 'var(--vz-shadow)' }}>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--vz-border)]">

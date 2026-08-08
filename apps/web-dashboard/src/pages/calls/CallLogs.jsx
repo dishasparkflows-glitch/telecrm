@@ -6,6 +6,7 @@ import KPICard from '../../components/ui/KPICard'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
+import Select from '../../components/ui/Select'
 
 import Pagination from '../../components/ui/Pagination'
 import EmptyState from '../../components/ui/EmptyState'
@@ -69,7 +70,7 @@ export default function CallLogs() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr className="bg-[var(--vz-table-header-bg)]">
                     {['Lead', 'Phone', 'Agent', 'Duration', 'Status', 'Disposition', 'Date', 'Actions'].map((h) => (
@@ -108,13 +109,17 @@ export default function CallLogs() {
 
       {/* Disposition Modal */}
       <Modal isOpen={!!showDisp} onClose={() => setShowDisp(null)} title="Update Disposition" size="sm">
-        <select value={disposition} onChange={(e) => setDisposition(e.target.value)}
-          className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-          <option value="">Select disposition</option>
-          {['interested', 'not_interested', 'callback', 'converted', 'wrong_number', 'voicemail'].map((d) => (
-            <option key={d} value={d}>{d.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
-          ))}
-        </select>
+        <Select
+          value={disposition}
+          onChange={(val) => setDisposition(val)}
+          options={[
+            { value: '', label: 'Select disposition' },
+            ...['interested', 'not_interested', 'callback', 'converted', 'wrong_number', 'voicemail'].map((d) => ({
+              value: d,
+              label: d.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+            }))
+          ]}
+        />
         <Modal.Footer>
           <Button variant="ghost" size="sm" onClick={() => setShowDisp(null)}>Cancel</Button>
           <Button size="sm" onClick={handleDisposition}>Save</Button>

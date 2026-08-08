@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { ROLES } = require('@sparkcrm/shared-utils');
 
 const userSchema = new mongoose.Schema(
     {
@@ -32,11 +31,7 @@ const userSchema = new mongoose.Schema(
             minlength: [8, 'Password must be at least 8 characters'],
             select: false,
         },
-        role: {
-            type: String,
-            enum: Object.values(ROLES),
-            default: ROLES.AGENT,
-        },
+
         roleId: {
             type: mongoose.Schema.Types.ObjectId,
             default: null,

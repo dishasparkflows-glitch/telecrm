@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const ctrl    = require('../controllers/whatsappConfig.controller');
+const { ROLES } = require('@sparkcrm/shared-utils');
 
 /**
  * Middleware: only tenant Super Admin can manage WhatsApp configuration.
@@ -8,7 +9,7 @@ const ctrl    = require('../controllers/whatsappConfig.controller');
  */
 const requireSuperAdmin = (req, res, next) => {
     const role = req.headers['x-user-role'];
-    if (role !== 'superadmin') {
+    if (role !== ROLES.SUPER_ADMIN) {
         return res.status(403).json({
             success: false,
             message: 'Only the tenant Super Admin can manage WhatsApp configuration.',

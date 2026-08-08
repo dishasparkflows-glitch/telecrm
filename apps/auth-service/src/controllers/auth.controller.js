@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const OTP = require('../models/OTP');
-const { ApiResponse, ApiError, asyncHandler, validateEmail, validatePhone } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, validateEmail, validatePhone, ROLES  } = require('@sparkcrm/shared-utils');
 const { generateTokenPair, verifyRefreshToken, generateAccessToken, generateRefreshToken } = require('../services/jwt.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const axios = require('axios');
@@ -33,6 +33,7 @@ async function fetchUserPermissions(user) {
     let features = [];
     let plan = null;
     let subscription = null;
+    let roleSlug = '';
 
     try {
         // Fetch role permissions if user has roleId
@@ -43,6 +44,7 @@ async function fetchUserPermissions(user) {
             });
             if (roleRes.data.success) {
                 permissions = roleRes.data.data.permissions || {};
+                roleSlug = roleRes.data.data.slug || '';
             }
         }
 
@@ -84,7 +86,7 @@ async function fetchUserPermissions(user) {
         console.error('⚠️ Failed to fetch permissions/modules/branches/features:', err.message);
     }
 
-    return { permissions, modules, branches, features, plan, subscription };
+    return { permissions, modules, branches, features, plan, subscription, roleSlug };
 }
 
 /**
@@ -279,7 +281,6 @@ const registerTenant = asyncHandler(async (req, res) => {
         email: email.toLowerCase(),
         phone: phone.replace(/[\s-]/g, ''),
         password,
-        role: 'superadmin',
         roleId: tenantData.superAdminRoleId || null,
         branchId: tenantData.defaultBranchId || null,
         isEmailVerified: true,
@@ -289,18 +290,17 @@ const registerTenant = asyncHandler(async (req, res) => {
     // Clean up OTP record
     await OTP.deleteMany({ email: email.toLowerCase() });
 
+    const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
+
     // Generate tokens
-    const tokens = generateTokenPair(user);
+    const tokens = generateTokenPair(user, roleSlug);
 
     // Save refresh token
     user.refreshToken = tokens.refreshToken;
     await user.save();
 
-    // Fetch permissions, modules, branches, and features
-    const { permissions, modules, branches, features, plan, subscription } = await fetchUserPermissions(user);
-
     ApiResponse.created(res, {
-        user: user.toJSON(),
+        user: { ...user.toJSON(), role: roleSlug || 'super-admin' },
         tenant: tenantData,
         tokens,
         permissions,
@@ -347,17 +347,17 @@ const login = asyncHandler(async (req, res) => {
     // Reset login attempts on successful login
     await user.resetLoginAttempts();
 
+    // Fetch permissions, modules, branches, and features
+    const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
+
     // Generate new token pair
-    const tokens = generateTokenPair(user);
+    const tokens = generateTokenPair(user, roleSlug);
     user.refreshToken = tokens.refreshToken;
     user.lastLoginIp = req.ip || req.headers['x-forwarded-for'] || '';
     await user.save();
 
-    // Fetch permissions, modules, branches, and features
-    const { permissions, modules, branches, features, plan, subscription } = await fetchUserPermissions(user);
-
     ApiResponse.success(res, {
-        user: user.toJSON(),
+        user: { ...user.toJSON(), role: roleSlug },
         tokens,
         permissions,
         modules,
@@ -496,7 +496,7 @@ const getMe = asyncHandler(async (req, res) => {
             _id: userId,
             name: 'Owner (Impersonating)',
             email: decoded.email || 'owner@sparkcrm.com',
-            role: decoded.role || 'superadmin',
+            role: decoded.role || ROLES.SUPER_ADMIN,
             tenantId: decoded.tenantId,
             branchId: decoded.branchId || '',
             isActive: true,
@@ -524,10 +524,10 @@ const getMe = asyncHandler(async (req, res) => {
     if (!user) throw ApiError.notFound('User not found');
 
     // Fetch permissions, modules, branches, and features (same as login)
-    const { permissions, modules, branches, features, plan, subscription } = await fetchUserPermissions(user);
+    const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
 
     ApiResponse.success(res, {
-        user: user.toJSON(),
+        user: { ...user.toJSON(), role: roleSlug },
         permissions,
         modules,
         branches,

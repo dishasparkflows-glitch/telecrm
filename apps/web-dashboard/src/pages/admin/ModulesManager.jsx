@@ -7,6 +7,7 @@ import {
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Badge from '../../components/ui/Badge'
+import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 
 export default function ModulesManager() {
@@ -154,13 +155,15 @@ export default function ModulesManager() {
             <Input label="Path" placeholder="e.g. /tasks" value={newModule.path} onChange={(e) => setNewModule({ ...newModule, path: e.target.value })} />
             <Input label="Icon" placeholder="e.g. CheckSquare" value={newModule.icon} onChange={(e) => setNewModule({ ...newModule, icon: e.target.value })} />
             <div>
-              <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1">Section</label>
-              <select value={newModule.section} onChange={(e) => setNewModule({ ...newModule, section: e.target.value })}
-                className="w-full px-3 py-2.5 bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-lg text-sm text-[var(--vz-heading)] focus:outline-none focus:border-primary">
-                <option value="MENU">Main Menu</option>
-                <option value="SETTINGS">Settings</option>
-                <option value="ADMIN">Admin</option>
-              </select>
+              <Select
+                value={newModule.section}
+                onChange={(val) => setNewModule({ ...newModule, section: val })}
+                options={[
+                  { value: 'MENU', label: 'Main Menu' },
+                  { value: 'SETTINGS', label: 'Settings' },
+                  { value: 'ADMIN', label: 'Admin' }
+                ]}
+              />
             </div>
             <div className="flex items-end gap-2">
               <Button type="submit" variant="primary" size="sm" disabled={creating}>{creating ? 'Creating...' : 'Create'}</Button>
@@ -257,13 +260,15 @@ export default function ModulesManager() {
                     <Input label="Path" value={editModuleForm.path} onChange={(e) => setEditModuleForm({ ...editModuleForm, path: e.target.value })} />
                     <Input label="Icon Name" value={editModuleForm.icon} onChange={(e) => setEditModuleForm({ ...editModuleForm, icon: e.target.value })} />
                     <div>
-                        <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1.5">Section</label>
-                        <select value={editModuleForm.section} onChange={(e) => setEditModuleForm({ ...editModuleForm, section: e.target.value })}
-                            className="w-full px-3 py-2.5 bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-lg text-sm text-[var(--vz-heading)] focus:outline-none focus:border-primary">
-                            <option value="MENU">Main Menu</option>
-                            <option value="SETTINGS">Settings</option>
-                            <option value="ADMIN">Admin</option>
-                        </select>
+                        <Select
+                            value={editModuleForm.section}
+                            onChange={(val) => setEditModuleForm({ ...editModuleForm, section: val })}
+                            options={[
+                              { value: 'MENU', label: 'Main Menu' },
+                              { value: 'SETTINGS', label: 'Settings' },
+                              { value: 'ADMIN', label: 'Admin' }
+                            ]}
+                        />
                     </div>
                     <div className="flex items-center justify-end gap-2 pt-4">
                         <Button type="button" variant="ghost" onClick={() => setShowEdit(false)}>Cancel</Button>

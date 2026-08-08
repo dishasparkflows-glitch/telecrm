@@ -13,6 +13,7 @@ import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
+import Select from '../../components/ui/Select'
 import Pagination from '../../components/ui/Pagination'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
@@ -248,29 +249,27 @@ export default function LeadsList() {
         {/* Filters Row */}
         {showFilters && (
           <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-[var(--vz-border)]">
-            <select
-              value={stageFilter}
-              onChange={(e) => { setStageFilter(e.target.value); setPage(1) }}
-              className="px-3 py-1.5 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)]
-                text-[var(--vz-heading)] outline-none focus:border-primary"
-            >
-              <option value="">All Stages</option>
-              {stageOptions.map((s) => (
-                <option key={s.slug} value={s.slug}>{s.name}</option>
-              ))}
-            </select>
+            <div className="w-40">
+              <Select
+                value={stageFilter}
+                onChange={(val) => { setStageFilter(val); setPage(1) }}
+                options={[
+                  { value: '', label: 'All Stages' },
+                  ...stageOptions.map(s => ({ value: s.slug, label: s.name }))
+                ]}
+              />
+            </div>
 
-            <select
-              value={sourceFilter}
-              onChange={(e) => { setSourceFilter(e.target.value); setPage(1) }}
-              className="px-3 py-1.5 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)]
-                text-[var(--vz-heading)] outline-none focus:border-primary"
-            >
-              <option value="">All Sources</option>
-              {Object.entries(sourceLabels).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
+            <div className="w-40">
+              <Select
+                value={sourceFilter}
+                onChange={(val) => { setSourceFilter(val); setPage(1) }}
+                options={[
+                  { value: '', label: 'All Sources' },
+                  ...Object.entries(sourceLabels).map(([k, v]) => ({ value: k, label: v }))
+                ]}
+              />
+            </div>
 
             {(stageFilter || sourceFilter) && (
               <button
@@ -298,7 +297,7 @@ export default function LeadsList() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr className="bg-[var(--vz-table-header-bg)]">
                     {['Name', 'Contact', 'Company', 'Stage', 'Source', 'Score', 'Assigned To', 'Actions'].map((h) => (
@@ -410,10 +409,11 @@ export default function LeadsList() {
             {importHeaders.map((header) => (
               <div key={header} className="p-3 rounded-lg border border-[var(--vz-border)]">
                 <p className="text-xs font-semibold text-[var(--vz-heading)] mb-2 truncate" title={header}>{header}</p>
-                <select value={importMapping[header] || ''} onChange={(e) => setImportMapping({ ...importMapping, [header]: e.target.value })}
-                  className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                  {IMPORT_FIELDS.map((field) => <option key={field.value || 'skip'} value={field.value}>{field.label}</option>)}
-                </select>
+                <Select
+                  value={importMapping[header] || ''}
+                  onChange={(val) => setImportMapping({ ...importMapping, [header]: val })}
+                  options={IMPORT_FIELDS.map((field) => ({ value: field.value || 'skip', label: field.label }))}
+                />
                 <p className="mt-1 text-[10px] text-[var(--vz-text-muted)] truncate">Example: {importRows[0]?.[header] || '—'}</p>
               </div>
             ))}
@@ -460,21 +460,19 @@ export default function LeadsList() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Stage</label>
-              <select value={newLead.stage} onChange={(e) => setNewLead({ ...newLead, stage: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                {stageOptions.map((s) => (
-                  <option key={s.slug} value={s.slug}>{s.name}</option>
-                ))}
-              </select>
+              <Select
+                value={newLead.stage}
+                onChange={(val) => setNewLead({ ...newLead, stage: val })}
+                options={stageOptions.map(s => ({ value: s.slug, label: s.name }))}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Source</label>
-              <select value={newLead.source} onChange={(e) => setNewLead({ ...newLead, source: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                {Object.entries(sourceLabels).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
+              <Select
+                value={newLead.source}
+                onChange={(val) => setNewLead({ ...newLead, source: val })}
+                options={Object.entries(sourceLabels).map(([k, v]) => ({ value: k, label: v }))}
+              />
             </div>
           </div>
 

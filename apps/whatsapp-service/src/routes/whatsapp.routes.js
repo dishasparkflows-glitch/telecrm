@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/whatsapp.controller');
+const { ROLES } = require('@sparkcrm/shared-utils');
 
 /**
  * Middleware: restricts route to superadmin role only.
@@ -10,7 +11,7 @@ const ctrl = require('../controllers/whatsapp.controller');
  */
 const requireSuperAdmin = (req, res, next) => {
     const role = req.headers['x-user-role'];
-    if (role !== 'superadmin') {
+    if (role !== ROLES.SUPER_ADMIN) {
         return res.status(403).json({
             success: false,
             message: 'Only administrators can perform this action.',

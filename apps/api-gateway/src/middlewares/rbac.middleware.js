@@ -1,4 +1,4 @@
-const { ROLES, ROLE_HIERARCHY } = require('@sparkcrm/shared-utils');
+const { ROLE_HIERARCHY } = require('@sparkcrm/shared-utils');
 
 /**
  * RBAC Middleware — Role-based access control

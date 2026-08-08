@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { io as socketIO } from 'socket.io-client'
+import { ROLES } from '../../utils/constants'
 import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation } from '../../features/whatsapp/whatsappApi'
 import { useGetLeadsQuery } from '../../features/leads/leadApi'
 import PageHeader from '../../components/layout/PageHeader'
@@ -16,6 +17,7 @@ import { useToast } from '../../components/ui/Toast'
 import ChatComposer from '../../components/whatsapp/ChatComposer'
 import MessageMedia from '../../components/whatsapp/MessageMedia'
 import MessageActions from '../../components/whatsapp/MessageActions'
+import Select from '../../components/ui/Select'
 import { MessageSquare, Search, Bot, FileText, Plus, Pencil, Trash2, Megaphone, Users, CheckCircle2, RefreshCw, Lock, AlertCircle, Variable, Eye, Info, Check, Clock, X, Phone, ChevronDown, QrCode, Wifi, WifiOff, Smartphone, LogOut, Loader2 } from 'lucide-react'
 
 // ── WhatsApp QR Connect Panel (Baileys) ───────────────────────────────────────
@@ -294,15 +296,18 @@ function TemplateForm({ form, onChange }) {
       <div className="grid grid-cols-2 gap-3">
         <Input label="Template Name" value={form.name} onChange={e => onChange({ ...form, name: e.target.value })} placeholder="e.g. welcome_message" />
         <div className="space-y-1">
-          <label className="text-sm font-medium text-[var(--vz-heading)]">Language</label>
-          <select value={form.language || 'en'} onChange={e => onChange({ ...form, language: e.target.value })}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)] text-[var(--vz-text)] focus:outline-none focus:ring-2 focus:ring-primary/30">
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="mr">Marathi</option>
-            <option value="gu">Gujarati</option>
-            <option value="ta">Tamil</option>
-          </select>
+          <Select
+            label="Language"
+            value={form.language || 'en'}
+            onChange={val => onChange({ ...form, language: val })}
+            options={[
+              { value: 'en', label: 'English' },
+              { value: 'hi', label: 'Hindi' },
+              { value: 'mr', label: 'Marathi' },
+              { value: 'gu', label: 'Gujarati' },
+              { value: 'ta', label: 'Tamil' }
+            ]}
+          />
         </div>
       </div>
 
@@ -368,13 +373,16 @@ function TemplateForm({ form, onChange }) {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <label className="text-sm font-medium text-[var(--vz-heading)]">Category</label>
-          <select value={form.category || 'UTILITY'} onChange={e => onChange({ ...form, category: e.target.value })}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)] text-[var(--vz-text)] focus:outline-none focus:ring-2 focus:ring-primary/30">
-            <option value="UTILITY">Utility</option>
-            <option value="MARKETING">Marketing</option>
-            <option value="AUTHENTICATION">Authentication</option>
-          </select>
+          <Select
+            label="Category"
+            value={form.category || 'UTILITY'}
+            onChange={val => onChange({ ...form, category: val })}
+            options={[
+              { value: 'UTILITY', label: 'Utility' },
+              { value: 'MARKETING', label: 'Marketing' },
+              { value: 'AUTHENTICATION', label: 'Authentication' }
+            ]}
+          />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium text-[var(--vz-heading)]">Footer (optional)</label>
@@ -394,7 +402,7 @@ export default function WhatsApp() {
   const location = useLocation()
   const dispatch = useDispatch()
   const { user, token } = useSelector((s) => s.auth)
-  const isSuperAdmin = user?.role === 'superadmin'
+  const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN
 
   const [activeTab, setActiveTab] = useState(() => {
     if (location.pathname.includes('/broadcasts')) return 'broadcasts'
@@ -1135,17 +1143,15 @@ export default function WhatsApp() {
                     </span>
                     <div className="flex-1">
                       <p className="text-[10px] text-[var(--vz-text-muted)] mb-0.5">{v.label || `Variable ${v.index}`}</p>
-                      <select
+                      <Select
                         value={variableMapping[String(v.index)] || ''}
-                        onChange={e => setVariableMapping(prev => ({ ...prev, [String(v.index)]: e.target.value }))}
-                        className="w-full px-2 py-1.5 text-xs rounded-md border border-[var(--vz-border)] bg-[var(--vz-card-bg)] text-[var(--vz-text)] focus:outline-none focus:ring-1 focus:ring-primary/40"
-                      >
-                        <option value="">-- Select field --</option>
-                        {LEAD_FIELDS.map(f => (
-                          <option key={f.value} value={f.value}>{f.label}</option>
-                        ))}
-                        <option value="_custom">Custom text…</option>
-                      </select>
+                        onChange={val => setVariableMapping(prev => ({ ...prev, [String(v.index)]: val }))}
+                        options={[
+                          { value: '', label: '-- Select field --' },
+                          ...LEAD_FIELDS.map(f => ({ value: f.value, label: f.label })),
+                          { value: '_custom', label: 'Custom text…' }
+                        ]}
+                      />
                       {variableMapping[String(v.index)] === '_custom' && (
                         <input
                           placeholder={v.example || 'Enter custom value'}

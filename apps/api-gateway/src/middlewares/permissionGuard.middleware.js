@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { env } = require('@sparkcrm/shared-config');
-const { ROLES, ROLE_HIERARCHY } = require('@sparkcrm/shared-utils');
+const { ROLES } = require('@sparkcrm/shared-utils');
 const { createServiceHeaders } = require('@sparkcrm/shared-middleware');
 
 /**

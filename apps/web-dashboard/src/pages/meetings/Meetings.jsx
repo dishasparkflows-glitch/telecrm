@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
+import Select from '../../components/ui/Select'
 import Tabs from '../../components/ui/Tabs'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
@@ -206,16 +207,15 @@ export default function Meetings() {
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-[var(--vz-heading)]">Internal Attendees</label>
             <div className="flex gap-2">
-              <select 
+              <Select
                 value={selectedAttendee}
-                onChange={(e) => setSelectedAttendee(e.target.value)}
-                className="flex-1 px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none"
-              >
-                <option value="">Select User</option>
-                {usersData?.data?.map(u => (
-                  <option key={u._id} value={u._id}>{u.name} ({u.role})</option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedAttendee(val)}
+                className="flex-1"
+                options={[
+                  { value: '', label: 'Select User' },
+                  ...(usersData?.data || []).map(u => ({ value: u._id, label: `${u.name} (${u.role})` }))
+                ]}
+              />
               <Button size="sm" variant="ghost" onClick={() => {
                 if (!selectedAttendee) return
                 const user = usersData?.data?.find(u => u._id === selectedAttendee)
@@ -282,15 +282,16 @@ export default function Meetings() {
             <Input label="Title" placeholder="Meeting title" value={editMeetingForm.title} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, title: e.target.value })} />
             <Input label="Date & Time" type="datetime-local" value={editMeetingForm.dateTime} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, dateTime: e.target.value })} />
             <Input label="Duration (min)" type="number" value={editMeetingForm.duration} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, duration: +e.target.value })} />
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Status</label>
-              <select value={editMeetingForm.status} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, status: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                <option value="scheduled">Scheduled</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="completed">Completed</option>
-              </select>
+              <Select
+                value={editMeetingForm.status}
+                onChange={(val) => setEditMeetingForm({ ...editMeetingForm, status: val })}
+                options={[
+                  { value: 'scheduled', label: 'Scheduled' },
+                  { value: 'confirmed', label: 'Confirmed' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                  { value: 'completed', label: 'Completed' }
+                ]}
+              />
             </div>
             <Modal.Footer>
               <Button variant="ghost" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>

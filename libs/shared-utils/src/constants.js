@@ -2,17 +2,24 @@
  * Application-wide constants
  */
 const ROLES = {
-    SUPER_ADMIN: 'superadmin',
-    ADMIN: 'admin',
-    MANAGER: 'manager',
+
+    SUPER_ADMIN: 'super-admin',
+    BRANCH_MANAGER: 'branch-manager',
+    SALES_LEAD: 'sales-lead',
     AGENT: 'agent',
+    SENIOR_AGENT: 'senior-agent',
+    JUNIOR_AGENT: 'junior-agent',
+    SUPPORT_AGENT: 'support-agent',
 };
 
 const ROLE_HIERARCHY = {
     [ROLES.SUPER_ADMIN]: 4,
-    [ROLES.ADMIN]: 3,
-    [ROLES.MANAGER]: 2,
+    [ROLES.BRANCH_MANAGER]: 3,
+    [ROLES.SALES_LEAD]: 2,
     [ROLES.AGENT]: 1,
+    [ROLES.SENIOR_AGENT]: 1.2,
+    [ROLES.JUNIOR_AGENT]: 0.8,
+    [ROLES.SUPPORT_AGENT]: 1,
 };
 
 const TENANT_STATUS = {

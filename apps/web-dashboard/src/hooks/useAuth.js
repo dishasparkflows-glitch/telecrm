@@ -1,5 +1,6 @@
 import { useSelector } from 'react-redux'
 import { useGetMeQuery } from '../features/auth/authApi'
+import { ROLES } from '../utils/constants'
 
 export function useAuth() {
     const { user, token, isAuthenticated } = useSelector((s) => s.auth)
@@ -25,8 +26,8 @@ export function useAuth() {
         isAuthenticated,
         isLoading,
         isOwner,
-        isAdmin: currentUser?.role === 'superadmin' || currentUser?.role === 'admin',
-        isManager: currentUser?.role === 'superadmin' || currentUser?.role === 'admin' || currentUser?.role === 'manager',
+        isAdmin: currentUser?.role === ROLES.SUPER_ADMIN || currentUser?.role === 'admin',
+        isManager: currentUser?.role === ROLES.SUPER_ADMIN || currentUser?.role === 'admin' || currentUser?.role === 'manager',
         role: currentUser?.role,
     }
 }

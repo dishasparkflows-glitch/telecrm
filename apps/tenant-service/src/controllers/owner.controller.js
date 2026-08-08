@@ -1,7 +1,7 @@
 const Tenant = require('../models/Tenant');
 const Plan = require('../models/Plan');
 const Payment = require('../models/Payment');
-const { ApiResponse, ApiError, asyncHandler, encrypt, decrypt } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, encrypt, decrypt, ROLES } = require('@sparkcrm/shared-utils');
 const axios = require('axios');
 const { env, getRedisClient } = require('@sparkcrm/shared-config');
 const CommunicationConfig = require('../models/CommunicationConfig');
@@ -804,7 +804,7 @@ const impersonateTenant = asyncHandler(async (req, res) => {
     // Generate impersonation JWT — looks like a superadmin
     const payload = {
         userId: ownerId,
-        role: 'superadmin',
+        role: ROLES.SUPER_ADMIN,
         email: req.headers['x-user-email'] || 'owner@sparkcrm.com',
         tenantId: tenant._id.toString(),
         branchId: defaultBranch?._id?.toString() || '',

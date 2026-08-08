@@ -10,6 +10,7 @@ import {
 import Card from '../../components/ui/Card'
 import Tabs from '../../components/ui/Tabs'
 import Badge from '../../components/ui/Badge'
+import Select from '../../components/ui/Select'
 
 import { 
   Phone, Users, DollarSign, Target, TrendingUp,
@@ -400,13 +401,17 @@ export default function Analytics() {
         <div className="flex items-center gap-2">
            <div className="relative">
               <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]" />
-              <select value={dateRange} onChange={(e) => setDateRange(e.target.value)}
-                className="pl-9 pr-6 py-2 text-sm font-semibold rounded-lg border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer">
-                <option value="7d">Last 7 Days</option>
-                <option value="30d">Last 30 Days</option>
-                <option value="90d">Last quarter</option>
-                <option value="1y">Full year</option>
-              </select>
+              <Select
+                value={dateRange}
+                onChange={(val) => setDateRange(val)}
+                className="pl-9"
+                options={[
+                  { value: '7d', label: 'Last 7 Days' },
+                  { value: '30d', label: 'Last 30 Days' },
+                  { value: '90d', label: 'Last quarter' },
+                  { value: '1y', label: 'Full year' }
+                ]}
+              />
            </div>
         </div>
       </div>

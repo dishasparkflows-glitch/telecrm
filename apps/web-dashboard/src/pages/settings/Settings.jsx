@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
+import { ROLES } from '../../utils/constants'
 import {
   useGetProfileQuery,
   useUpdateSettingsMutation,
@@ -62,6 +63,7 @@ import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
+import Select from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import {
@@ -626,7 +628,7 @@ export default function Settings() {
                 <TabItem icon={Shuffle} label="Lead Assignment" active={activeTab === 'assignment'} onClick={() => setActiveTab('assignment')} />
                 <TabItem icon={Database} label="Custom Fields" active={activeTab === 'fields'} onClick={() => setActiveTab('fields')} count={customFieldsResp?.data?.length} />
                 <TabItem icon={Lock} label="Security" active={activeTab === 'security'} onClick={() => setActiveTab('security')} />
-                {currentUser?.role === 'superadmin' && (
+                {currentUser?.role === ROLES.SUPER_ADMIN && (
                   <TabItem icon={MessageCircle} label="WhatsApp Setup" active={activeTab === 'whatsapp'} onClick={() => setActiveTab('whatsapp')} />
                 )}
                 <TabItem icon={Gift} label="Referral Rewards" active={activeTab === 'referral'} onClick={() => setActiveTab('referral')} />
@@ -671,98 +673,21 @@ export default function Settings() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-[var(--vz-heading)]">System Timezone</label>
-                    <select value={companyForm.timezone} onChange={(e) => setCompanyForm({ ...companyForm, timezone: e.target.value })}
-                      className="w-full px-3 py-2.5 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary transition-colors">
-                      <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                      <option value="America/New_York">America/New_York (EST)</option>
-                      <option value="Europe/London">Europe/London (GMT)</option>
-                      <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                      <option value="Australia/Sydney">Australia/Sydney (AEDT)</option>
-                    </select>
+                    <Select
+                      value={companyForm.timezone}
+                      onChange={(val) => setCompanyForm({ ...companyForm, timezone: val })}
+                      options={[
+                        { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST)' },
+                        { value: 'America/New_York', label: 'America/New_York (EST)' },
+                        { value: 'Europe/London', label: 'Europe/London (GMT)' },
+                        { value: 'Asia/Dubai', label: 'Asia/Dubai (GST)' },
+                        { value: 'Australia/Sydney', label: 'Australia/Sydney (AEDT)' }
+                      ]}
+                    />
                   </div>
                 </div>
               </Card>
             )}
-
-            {/* 2. Team Management */}
-            {/* {activeTab === 'users' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h5 className="text-base font-bold text-[var(--vz-heading)]">Team Members</h5>
-                  <Button size="sm" onClick={() => setShowInvite(true)}><UserPlus size={14} className="mr-1.5" /> Invite Member</Button>
-                </div>
-                
-                <Card noPadding>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-[var(--vz-table-header-bg)] border-b border-[var(--vz-border)]">
-                          {['Member', 'Role', 'Branch', 'Status', 'Actions'].map((h) => (
-                            <th key={h} className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[var(--vz-text-muted)]">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[var(--vz-border)]">
-                        {usersLoading ? (
-                           <tr>
-                             <td colSpan="5" className="py-20 text-center">
-                               <Loader2 size={32} className="text-primary animate-spin inline-block" />
-                             </td>
-                           </tr>
-                        ) : users.map((u) => (
-                          <tr key={u._id} className="hover:bg-[var(--vz-body-bg)]/50">
-                            <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                                  {u.name?.[0] || '?'}
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-[var(--vz-heading)]">{u.name}</p>
-                                  <p className="text-[11px] text-[var(--vz-text-muted)]">{u.email}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              {roleChanging === u._id ? (
-                                <select autoFocus defaultValue={u.roleId} onChange={(e) => handleRoleChange(u._id, e.target.value)} onBlur={() => setRoleChanging(null)}
-                                  className="bg-[var(--vz-input-bg)] border border-primary rounded text-xs p-1 focus:outline-none">
-                                  {roles.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
-                                </select>
-                              ) : (
-                                <button onClick={() => setRoleChanging(u._id)} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-info/10 text-info text-[11px] font-bold">
-                                  <Shield size={10} /> {getRoleName(u.roleId)}
-                                </button>
-                              )}
-                            </td>
-                            <td className="px-5 py-3.5 text-xs text-[var(--vz-text-muted)]">
-                              {getBranchName(u.branchId)}
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <Badge color={u.isActive ? 'success' : 'danger'}>{u.isActive ? 'Active' : 'Inactive'}</Badge>
-                            </td>
-                             <td className="px-5 py-3.5">
-                                <div className="flex items-center gap-1">
-                                  <button onClick={() => handleEditUser(u)} className="p-1.5 rounded text-primary hover:bg-primary/10 transition-colors" title="Edit User">
-                                    <Edit3 size={14} />
-                                  </button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleStatusToggle(u._id, u.isActive)} title={u.isActive ? 'Suspend' : 'Activate'}>
-                                    <ChevronRight size={14} className={u.isActive ? 'text-warning' : 'text-success'} />
-                                  </Button>
-                                  {u._id !== currentUser?._id && (
-                                    <button onClick={() => handleDeleteUser(u._id)} className="p-1.5 rounded text-danger hover:bg-danger/10 transition-colors" title="Delete User">
-                                      <Trash2 size={14} />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </div>
-            )} */}
 
             {/* 3. Pipeline Stages */}
             {activeTab === 'pipeline' && (
@@ -845,19 +770,25 @@ export default function Settings() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input label="Connection Name" value={leadSourceApiForm.label} onChange={(e) => setLeadSourceApiForm({ ...leadSourceApiForm, label: e.target.value })} />
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-[var(--vz-heading)]">Connection Type</label>
-                      <select value={leadSourceApiForm.provider} onChange={(e) => setLeadSourceApiForm({ ...leadSourceApiForm, provider: e.target.value, defaultSource: e.target.value === 'website_api' ? 'website' : e.target.value === 'google_ads' ? 'google_ads' : 'api' })}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                        <option value="website_api">Website API</option><option value="google_ads">Google Ads Middleware</option><option value="custom_api">Custom API</option>
-                      </select>
+                      <Select
+                        value={leadSourceApiForm.provider}
+                        onChange={(val) => setLeadSourceApiForm({ ...leadSourceApiForm, provider: val, defaultSource: val === 'website_api' ? 'website' : val === 'google_ads' ? 'google_ads' : 'api' })}
+                        options={[
+                          { value: 'website_api', label: 'Website API' },
+                          { value: 'google_ads', label: 'Google Ads Middleware' },
+                          { value: 'custom_api', label: 'Custom API' }
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-[var(--vz-heading)]">Default Assignee</label>
-                      <select value={leadSourceApiForm.defaultAssignedTo} onChange={(e) => setLeadSourceApiForm({ ...leadSourceApiForm, defaultAssignedTo: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                        <option value="">Use assignment policy</option>
-                        {users.filter((user) => user.isActive !== false).map((user) => <option key={user._id} value={user._id}>{user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</option>)}
-                      </select>
+                      <Select
+                        value={leadSourceApiForm.defaultAssignedTo}
+                        onChange={(val) => setLeadSourceApiForm({ ...leadSourceApiForm, defaultAssignedTo: val })}
+                        options={[
+                          { value: '', label: 'Use assignment policy' },
+                          ...users.filter((user) => user.isActive !== false).map((user) => ({ value: user._id, label: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email }))
+                        ]}
+                      />
                     </div>
                   </div>
 
@@ -941,42 +872,46 @@ export default function Settings() {
                   </Card.Header>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-[var(--vz-heading)]">Connection</label>
-                      <select value={leadSourceMappingForm.connectionId} onChange={(e) => setLeadSourceMappingForm({ ...leadSourceMappingForm, connectionId: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                        <option value="">Select connection</option>
-                        {(leadSourceConnectionsResp?.data || []).map((connection) => (
-                          <option key={connection._id} value={connection._id}>{connection.label || connection.externalAccountId}</option>
-                        ))}
-                      </select>
+                      <Select
+                        value={leadSourceMappingForm.connectionId}
+                        onChange={(val) => setLeadSourceMappingForm({ ...leadSourceMappingForm, connectionId: val })}
+                        options={[
+                          { value: '', label: 'Select connection' },
+                          ...(leadSourceConnectionsResp?.data || []).map((connection) => ({ value: connection._id, label: connection.label || connection.externalAccountId }))
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-[var(--vz-heading)]">Lead Source</label>
-                      <select value={leadSourceMappingForm.source} onChange={(e) => setLeadSourceMappingForm({ ...leadSourceMappingForm, source: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                        <option value="facebook">Facebook</option>
-                        <option value="instagram">Instagram</option>
-                      </select>
+                      <Select
+                        value={leadSourceMappingForm.source}
+                        onChange={(val) => setLeadSourceMappingForm({ ...leadSourceMappingForm, source: val })}
+                        options={[
+                          { value: 'facebook', label: 'Facebook' },
+                          { value: 'instagram', label: 'Instagram' }
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-[var(--vz-heading)]">Discover Page</label>
-                      <select value={leadSourceMappingForm.externalPageId} onChange={(e) => handleSelectMetaPage(e.target.value)} disabled={!selectedLeadSourceConnectionId || loadingMetaPages}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                        <option value="">{loadingMetaPages ? 'Loading pages...' : 'Select discovered page or enter manually'}</option>
-                        {(metaPagesResp?.data || []).map((page) => (
-                          <option key={page.id} value={page.id}>{page.name || page.id}</option>
-                        ))}
-                      </select>
+                      <Select
+                        value={leadSourceMappingForm.externalPageId}
+                        onChange={(val) => handleSelectMetaPage(val)}
+                        disabled={!selectedLeadSourceConnectionId || loadingMetaPages}
+                        options={[
+                          { value: '', label: loadingMetaPages ? 'Loading pages...' : 'Select discovered page or enter manually' },
+                          ...(metaPagesResp?.data || []).map((page) => ({ value: page.id, label: page.name || page.id }))
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-[var(--vz-heading)]">Discover Lead Form</label>
-                      <select value={leadSourceMappingForm.externalFormId} onChange={(e) => handleSelectMetaForm(e.target.value)} disabled={!selectedLeadSourcePageId || loadingMetaForms}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                        <option value="">{loadingMetaForms ? 'Loading forms...' : 'Select discovered form or enter manually'}</option>
-                        {(metaFormsResp?.data || []).map((form) => (
-                          <option key={form.id} value={form.id}>{form.name || form.id}</option>
-                        ))}
-                      </select>
+                      <Select
+                        value={leadSourceMappingForm.externalFormId}
+                        onChange={(val) => handleSelectMetaForm(val)}
+                        disabled={!selectedLeadSourcePageId || loadingMetaForms}
+                        options={[
+                          { value: '', label: loadingMetaForms ? 'Loading forms...' : 'Select discovered form or enter manually' },
+                          ...(metaFormsResp?.data || []).map((form) => ({ value: form.id, label: form.name || form.id }))
+                        ]}
+                      />
                     </div>
                     <div className="flex items-end">
                       <Button type="button" variant="soft-primary" size="sm" onClick={handleSubscribeMetaPage} disabled={!selectedLeadSourceConnectionId || !selectedLeadSourcePageId || subscribingMetaPage}>
@@ -988,14 +923,15 @@ export default function Settings() {
                     <Input label="Lead Form ID" value={leadSourceMappingForm.externalFormId} onChange={(e) => setLeadSourceMappingForm({ ...leadSourceMappingForm, externalFormId: e.target.value })} />
                     <Input label="Lead Form Name" value={leadSourceMappingForm.externalFormName} onChange={(e) => setLeadSourceMappingForm({ ...leadSourceMappingForm, externalFormName: e.target.value })} />
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-[var(--vz-heading)]">WhatsApp Welcome Template</label>
-                      <select value={leadSourceMappingForm.welcomeTemplateName} disabled={!leadSourceMappingForm.sendWelcomeMessage} onChange={(e) => setLeadSourceMappingForm({ ...leadSourceMappingForm, welcomeTemplateName: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                        <option value="">Select approved template</option>
-                        {(whatsappTemplatesResp?.data || []).filter((template) => template.status === 'approved' && template.isActive !== false).map((template) => (
-                          <option key={template._id} value={template.name}>{template.name} ({template.language || 'en'})</option>
-                        ))}
-                      </select>
+                      <Select
+                        value={leadSourceMappingForm.welcomeTemplateName}
+                        disabled={!leadSourceMappingForm.sendWelcomeMessage}
+                        onChange={(val) => setLeadSourceMappingForm({ ...leadSourceMappingForm, welcomeTemplateName: val })}
+                        options={[
+                          { value: '', label: 'Select approved template' },
+                          ...(whatsappTemplatesResp?.data || []).filter((template) => template.status === 'approved' && template.isActive !== false).map((template) => ({ value: template.name, label: `${template.name} (${template.language || 'en'})` }))
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-sm font-medium text-[var(--vz-heading)]">Meta Consent Field</label>
@@ -1010,14 +946,14 @@ export default function Settings() {
                       Require explicit WhatsApp consent
                     </label>
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-[var(--vz-heading)]">Default Assignee</label>
-                      <select value={leadSourceMappingForm.defaultAssignedTo} onChange={(e) => setLeadSourceMappingForm({ ...leadSourceMappingForm, defaultAssignedTo: e.target.value })}
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                        <option value="">Use assignment policy</option>
-                        {users.filter((u) => u.isActive !== false).map((u) => (
-                          <option key={u._id} value={u._id}>{u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email}</option>
-                        ))}
-                      </select>
+                      <Select
+                        value={leadSourceMappingForm.defaultAssignedTo}
+                        onChange={(val) => setLeadSourceMappingForm({ ...leadSourceMappingForm, defaultAssignedTo: val })}
+                        options={[
+                          { value: '', label: 'Use assignment policy' },
+                          ...users.filter((u) => u.isActive !== false).map((u) => ({ value: u._id, label: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email }))
+                        ]}
+                      />
                     </div>
                     <label className="flex items-center gap-2 text-sm text-[var(--vz-heading)] pt-7">
                       <input type="checkbox" checked={leadSourceMappingForm.isActive} onChange={(e) => setLeadSourceMappingForm({ ...leadSourceMappingForm, isActive: e.target.checked })} />
@@ -1051,15 +987,19 @@ export default function Settings() {
                       <Card.Title>Inbound Meta Lead Events</Card.Title>
                       <p className="text-xs text-[var(--vz-text-muted)]">Review tenant-owned webhook events and replay failed imports after fixing setup.</p>
                     </div>
-                    <select value={leadSourceEventStatus} onChange={(e) => setLeadSourceEventStatus(e.target.value)}
-                      className="px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                      <option value="failed">Failed</option>
-                      <option value="unmapped">Unmapped</option>
-                      <option value="processing">Processing</option>
-                      <option value="processed">Processed</option>
-                      <option value="duplicate">Duplicate</option>
-                      <option value="all">All</option>
-                    </select>
+                    <Select
+                      value={leadSourceEventStatus}
+                      onChange={(val) => setLeadSourceEventStatus(val)}
+                      className="w-40"
+                      options={[
+                        { value: 'failed', label: 'Failed' },
+                        { value: 'unmapped', label: 'Unmapped' },
+                        { value: 'processing', label: 'Processing' },
+                        { value: 'processed', label: 'Processed' },
+                        { value: 'duplicate', label: 'Duplicate' },
+                        { value: 'all', label: 'All' }
+                      ]}
+                    />
                   </Card.Header>
                   {(!leadSourceEventsResp?.data || leadSourceEventsResp.data.length === 0) ? (
                     <EmptyState icon={RefreshCw} title="No inbound events" description="Meta webhook events for this tenant will appear here after they are received." />
@@ -1107,15 +1047,15 @@ export default function Settings() {
                   <div className="lg:col-span-1 space-y-4">
                     <div className="space-y-1.5">
                       <label className="block text-sm font-medium text-[var(--vz-heading)]">Strategy</label>
-                      <select
+                      <Select
                         value={assignmentForm.strategy}
-                        onChange={(e) => setAssignmentForm({ ...assignmentForm, strategy: e.target.value })}
-                        className="w-full px-3 py-2.5 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary"
-                      >
-                        <option value="manual">Manual / keep current behavior</option>
-                        <option value="round_robin">Round robin</option>
-                        <option value="load_based">Least active leads</option>
-                      </select>
+                        onChange={(val) => setAssignmentForm({ ...assignmentForm, strategy: val })}
+                        options={[
+                          { value: 'manual', label: 'Manual / keep current behavior' },
+                          { value: 'round_robin', label: 'Round robin' },
+                          { value: 'load_based', label: 'Least active leads' }
+                        ]}
+                      />
                     </div>
 
                     <label className="flex items-center gap-2 text-sm text-[var(--vz-heading)]">
@@ -1178,15 +1118,12 @@ export default function Settings() {
                     <p className="text-xs text-[var(--vz-text-muted)]">Extend any CRM entity with dynamic data fields</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <select 
+                    <Select 
                       value={fieldFilter} 
-                      onChange={(e) => setFieldFilter(e.target.value)}
-                      className="px-3 py-1.5 text-xs rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none"
-                    >
-                      {['Lead', 'User', 'Meeting', 'Branch', 'Role'].map(ent => (
-                        <option key={ent} value={ent}>{ent} Fields</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setFieldFilter(val)}
+                      className="w-40"
+                      options={['Lead', 'User', 'Meeting', 'Branch', 'Role'].map(ent => ({ value: ent, label: `${ent} Fields` }))}
+                    />
                     <Button size="sm" onClick={() => { setFieldForm({ ...fieldForm, targetEntity: fieldFilter }); setShowAddField(true); }}>
                       <Plus size={14} className="mr-1.5" /> Add Field
                     </Button>
@@ -1321,22 +1258,25 @@ export default function Settings() {
           <div className="grid grid-cols-2 gap-3">
              <div className="space-y-1.5">
                <label className="block text-sm font-medium text-[var(--vz-heading)]">Role</label>
-               <select value={inviteForm.roleId || ''} onChange={(e) => {
-                   const role = roles.find(r => r._id === e.target.value)
-                   setInviteForm({ ...inviteForm, roleId: e.target.value, role: role?.name?.toLowerCase() || 'agent' })
-                 }}
-                 className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                 <option value="">Select Role</option>
-                 {roles.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
-               </select>
+               <Select
+                 value={inviteForm.roleId || ''}
+                 onChange={(val) => setInviteForm({ ...inviteForm, roleId: val })}
+                 options={[
+                   { value: '', label: 'Select Role' },
+                   ...roles.map(r => ({ value: r._id, label: r.name }))
+                 ]}
+               />
              </div>
              <div className="space-y-1.5">
                <label className="block text-sm font-medium text-[var(--vz-heading)]">Primary Branch</label>
-               <select value={inviteForm.branchId || ''} onChange={(e) => setInviteForm({ ...inviteForm, branchId: e.target.value })}
-                 className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                 <option value="">Select Branch</option>
-                 {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
-               </select>
+               <Select
+                 value={inviteForm.branchId || ''}
+                 onChange={(val) => setInviteForm({ ...inviteForm, branchId: val })}
+                 options={[
+                   { value: '', label: 'Select Branch' },
+                   ...branches.map(b => ({ value: b._id, label: b.name }))
+                 ]}
+               />
              </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -1385,22 +1325,25 @@ export default function Settings() {
             <div className="grid grid-cols-2 gap-3">
                <div className="space-y-1.5">
                  <label className="block text-sm font-medium text-[var(--vz-heading)]">Role</label>
-                 <select value={editUserForm.roleId || ''} onChange={(e) => {
-                     const role = roles.find(r => r._id === e.target.value)
-                     setEditUserForm({ ...editUserForm, roleId: e.target.value, role: role?.name?.toLowerCase() || 'agent' })
-                   }}
-                   className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                   <option value="">Select Role</option>
-                   {roles.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
-                 </select>
+                 <Select
+                   value={editUserForm.roleId || ''}
+                   onChange={(val) => setEditUserForm({ ...editUserForm, roleId: val })}
+                   options={[
+                     { value: '', label: 'Select Role' },
+                     ...roles.map(r => ({ value: r._id, label: r.name }))
+                   ]}
+                 />
                </div>
                <div className="space-y-1.5">
                  <label className="block text-sm font-medium text-[var(--vz-heading)]">Primary Branch</label>
-                 <select value={editUserForm.branchId || ''} onChange={(e) => setEditUserForm({ ...editUserForm, branchId: e.target.value })}
-                   className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                   <option value="">Select Branch</option>
-                   {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
-                 </select>
+                 <Select
+                   value={editUserForm.branchId || ''}
+                   onChange={(val) => setEditUserForm({ ...editUserForm, branchId: val })}
+                   options={[
+                     { value: '', label: 'Select Branch' },
+                     ...branches.map(b => ({ value: b._id, label: b.name }))
+                   ]}
+                 />
                </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1447,28 +1390,26 @@ export default function Settings() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Target Module</label>
-              <select value={fieldForm.entity} onChange={(e) => setFieldForm({ ...fieldForm, entity: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                {['Lead', 'User', 'Meeting', 'Branch', 'Role'].map(ent => (
-                  <option key={ent} value={ent}>{ent}</option>
-                ))}
-              </select>
+              <Select
+                value={fieldForm.entity}
+                onChange={(val) => setFieldForm({ ...fieldForm, entity: val })}
+                options={['Lead', 'User', 'Meeting', 'Branch', 'Role'].map(ent => ({ value: ent, label: ent }))}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Data Type</label>
-              <select value={fieldForm.type} onChange={(e) => setFieldForm({ ...fieldForm, type: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                <optgroup label="Standard">
-                  <option value="text">Text (Single Line)</option>
-                  <option value="number">Numeric / Amount</option>
-                  <option value="email">Email Address</option>
-                </optgroup>
-                <optgroup label="Advanced">
-                  <option value="date">Date Picker</option>
-                  <option value="textarea">Multi-line Text</option>
-                  <option value="select">Dropdown List</option>
-                </optgroup>
-              </select>
+              <Select
+                value={fieldForm.type}
+                onChange={(val) => setFieldForm({ ...fieldForm, type: val })}
+                options={[
+                  { value: 'text', label: 'Text (Single Line)' },
+                  { value: 'number', label: 'Numeric / Amount' },
+                  { value: 'email', label: 'Email Address' },
+                  { value: 'date', label: 'Date Picker' },
+                  { value: 'textarea', label: 'Multi-line Text' },
+                  { value: 'select', label: 'Dropdown List' }
+                ]}
+              />
             </div>
           </div>
           <div className="flex items-center gap-2">

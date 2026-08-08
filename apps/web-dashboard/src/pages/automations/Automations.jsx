@@ -8,6 +8,7 @@ import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Tabs from '../../components/ui/Tabs'
+import Select from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { Zap, Plus, Activity, Trash2, Pencil } from 'lucide-react'
@@ -185,7 +186,7 @@ export default function Automations() {
             <EmptyState icon={Activity} title="No execution logs" description="Logs will appear here as rules are triggered" />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr className="bg-[var(--vz-table-header-bg)]">
                     {['Rule', 'Trigger', 'Status', 'Actions', 'Date'].map((h) => (
@@ -216,10 +217,11 @@ export default function Automations() {
           <Input label="Rule Name" placeholder="e.g. Auto-assign hot leads" value={newRule.name} onChange={(e) => setNewRule({ ...newRule, name: e.target.value })} />
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-[var(--vz-heading)]">Trigger Event</label>
-            <select value={newRule.triggerEvent} onChange={(e) => setNewRule({ ...newRule, triggerEvent: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-              {Object.entries(triggerLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
+            <Select
+              value={newRule.triggerEvent}
+              onChange={(val) => setNewRule({ ...newRule, triggerEvent: val })}
+              options={Object.entries(triggerLabels).map(([k, v]) => ({ value: k, label: v }))}
+            />
           </div>
         </div>
         <Modal.Footer>
@@ -235,10 +237,11 @@ export default function Automations() {
             <Input label="Rule Name" value={editRuleForm.name} onChange={(e) => setEditRuleForm({ ...editRuleForm, name: e.target.value })} />
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Trigger Event</label>
-              <select value={editRuleForm.triggerEvent} onChange={(e) => setEditRuleForm({ ...editRuleForm, triggerEvent: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                {Object.entries(triggerLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
+              <Select
+                value={editRuleForm.triggerEvent}
+                onChange={(val) => setEditRuleForm({ ...editRuleForm, triggerEvent: val })}
+                options={Object.entries(triggerLabels).map(([k, v]) => ({ value: k, label: v }))}
+              />
             </div>
             <Modal.Footer>
               <Button variant="ghost" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>

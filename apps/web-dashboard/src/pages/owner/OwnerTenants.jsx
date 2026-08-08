@@ -4,6 +4,7 @@ import { useGetOwnerTenantsQuery, useUpdateTenantStatusMutation } from '../../fe
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
+import Select from '../../components/ui/Select'
 
 import { Search, Eye, Ban, CheckCircle } from 'lucide-react'
 import { useToast } from '../../components/ui/Toast'
@@ -54,17 +55,19 @@ export default function OwnerTenants() {
             className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary"
           />
         </div>
-        <select
-          value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="px-4 py-2 text-sm rounded-lg border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary"
-        >
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="trial">Trial</option>
-          <option value="suspended">Suspended</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="free">Free</option>
-        </select>
+        <Select
+          value={statusFilter}
+          onChange={(val) => { setStatusFilter(val); setPage(1) }}
+          className="min-w-[150px]"
+          options={[
+            { value: '', label: 'All Status' },
+            { value: 'active', label: 'Active' },
+            { value: 'trial', label: 'Trial' },
+            { value: 'suspended', label: 'Suspended' },
+            { value: 'cancelled', label: 'Cancelled' },
+            { value: 'free', label: 'Free' }
+          ]}
+        />
       </div>
 
       {/* Tenants Table */}

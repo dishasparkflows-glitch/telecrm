@@ -12,6 +12,7 @@ import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
+import Select from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import {
@@ -48,18 +49,19 @@ const FieldRow = ({ field, onUpdate, onRemove }) => (
         />
       </div>
       <div className="col-span-3">
-        <select
+        <Select
           value={field.type || 'text'}
-          onChange={(e) => onUpdate({ ...field, type: e.target.value })}
-          className="w-full bg-transparent text-xs text-[var(--vz-text-muted)] outline-none border-none p-0 cursor-pointer"
-        >
-          <option value="text">Short Text</option>
-          <option value="email">Email</option>
-          <option value="phone">Phone</option>
-          <option value="date">Date</option>
-          <option value="textarea">Long Text</option>
-          <option value="number">Number</option>
-        </select>
+          onChange={(val) => onUpdate({ ...field, type: val })}
+          className="border-none"
+          options={[
+            { value: 'text', label: 'Short Text' },
+            { value: 'email', label: 'Email' },
+            { value: 'phone', label: 'Phone' },
+            { value: 'date', label: 'Date' },
+            { value: 'textarea', label: 'Long Text' },
+            { value: 'number', label: 'Number' }
+          ]}
+        />
       </div>
       <div className="col-span-4">
         <input
@@ -363,7 +365,7 @@ export default function SmartForms() {
                </div>
              ) : (
                <div className="overflow-x-auto max-h-[500px] border border-[var(--vz-border)] rounded-xl">
-                 <table className="w-full text-sm">
+                 <table className="w-full text-sm whitespace-nowrap">
                    <thead>
                      <tr className="bg-[var(--vz-table-header-bg)] border-b border-[var(--vz-border)]">
                        <th className="px-4 py-3 text-left text-xs font-bold text-[var(--vz-text-muted)]">#</th>

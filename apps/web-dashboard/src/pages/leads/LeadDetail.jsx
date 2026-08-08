@@ -16,6 +16,7 @@ import Badge from '../../components/ui/Badge'
 import Tabs from '../../components/ui/Tabs'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
+import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import {
   Phone, MessageSquare, Mail, MapPin, Building2, Calendar, Star,
@@ -250,17 +251,14 @@ export default function LeadDetail() {
             {assignedUser && (
               <p className="text-xs text-[var(--vz-text-muted)] mb-2">Current: {assignedUser.firstName || assignedUser.name} {assignedUser.lastName || ''}</p>
             )}
-            <select
+            <Select
               value={assignedToId || ''}
-              onChange={(e) => handleAssign(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)]
-                text-[var(--vz-heading)] outline-none focus:border-primary"
-            >
-              <option value="">Unassigned</option>
-              {users.map((u) => (
-                <option key={u._id} value={u._id}>{u.firstName} {u.lastName}</option>
-              ))}
-            </select>
+              onChange={(val) => handleAssign(val)}
+              options={[
+                { value: '', label: 'Unassigned' },
+                ...users.map((u) => ({ value: u._id, label: u.name || u.email }))
+              ]}
+            />
           </Card>
         </div>
 

@@ -34,13 +34,7 @@ const validateBranchAssignment = async ({ tenantId, branchId }) => {
     }
 };
 
-const validateRoleAssignment = async ({ tenantId, role, roleId, callerRole }) => {
-    if (role && !Object.values(ROLES).includes(role)) {
-        throw ApiError.badRequest('Invalid role');
-    }
-    if (role === ROLES.SUPER_ADMIN && callerRole !== ROLES.SUPER_ADMIN) {
-        throw ApiError.forbidden('Only a superadmin can assign the superadmin role');
-    }
+const validateRoleAssignment = async ({ tenantId, roleId, callerRole }) => {
     if (!roleId) return;
 
     let assignedRole;
@@ -59,6 +53,10 @@ const validateRoleAssignment = async ({ tenantId, role, roleId, callerRole }) =>
     if (!assignedRole || String(assignedRole.tenantId) !== String(tenantId)) {
         throw ApiError.forbidden('Role does not belong to this tenant');
     }
+    
+    if (assignedRole.slug === ROLES.SUPER_ADMIN && callerRole !== ROLES.SUPER_ADMIN) {
+        throw ApiError.forbidden('Only a superadmin can assign the superadmin role');
+    }
 };
 
 /**
@@ -68,14 +66,13 @@ const validateRoleAssignment = async ({ tenantId, role, roleId, callerRole }) =>
 const inviteUser = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const invitedByUserId = req.headers['x-user-id'];
-    const { name, email, phone, role, roleId, branchId, password } = req.body;
+    const { name, email, phone, roleId, branchId, password } = req.body;
 
     if (!name || !email) throw ApiError.badRequest('Name and email are required');
 
     await Promise.all([
         validateRoleAssignment({
             tenantId,
-            role: role || ROLES.AGENT,
             roleId,
             callerRole: req.headers['x-user-role'],
         }),
@@ -98,7 +95,6 @@ const inviteUser = asyncHandler(async (req, res) => {
         email: email.toLowerCase(),
         phone: phone || '',
         password: tempPassword,
-        role: role || ROLES.AGENT,
         roleId: roleId || null,
         branchId: branchId || null,
         invitedBy: invitedByUserId,
@@ -124,7 +120,7 @@ const inviteUser = asyncHandler(async (req, res) => {
  * Get all users in current tenant
  */
 const getUsers = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, search, role, isActive } = req.query;
+    const { page = 1, limit = 20, search, roleId, isActive } = req.query;
 
     // Build scope filter — superadmin sees all, managers see branch users
     const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
@@ -134,7 +130,7 @@ const getUsers = asyncHandler(async (req, res) => {
             { email: { $regex: search, $options: 'i' } },
         ];
     }
-    if (role) filter.role = role;
+    if (roleId) filter.roleId = roleId;
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -168,23 +164,20 @@ const getUserById = asyncHandler(async (req, res) => {
  */
 const updateUser = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const { name, phone, role, roleId, isActive, branchId, password } = req.body;
+    const { name, phone, roleId, isActive, branchId, password } = req.body;
 
     const user = await User.findOne({ _id: req.params.id, tenantId });
     if (!user) throw ApiError.notFound('User not found');
 
     const callerRole = req.headers['x-user-role'];
-    if (user.role === ROLES.SUPER_ADMIN && callerRole !== ROLES.SUPER_ADMIN) {
-        throw ApiError.forbidden('Only a superadmin can modify a superadmin');
-    }
+    
     await Promise.all([
-        validateRoleAssignment({ tenantId, role, roleId, callerRole }),
+        validateRoleAssignment({ tenantId, roleId, callerRole }),
         validateBranchAssignment({ tenantId, branchId }),
     ]);
 
     if (name) user.name = name;
     if (phone) user.phone = phone;
-    if (role) user.role = role;
     if (roleId) user.roleId = roleId;
     if (branchId !== undefined) user.branchId = branchId;
     if (isActive !== undefined) user.isActive = isActive;
@@ -208,9 +201,7 @@ const updateUserRole = asyncHandler(async (req, res) => {
     if (!user) throw ApiError.notFound('User not found');
 
     const callerRole = req.headers['x-user-role'];
-    if (user.role === ROLES.SUPER_ADMIN && callerRole !== ROLES.SUPER_ADMIN) {
-        throw ApiError.forbidden('Only a superadmin can modify a superadmin');
-    }
+
     await validateRoleAssignment({ tenantId, roleId, callerRole });
 
     user.roleId = roleId;

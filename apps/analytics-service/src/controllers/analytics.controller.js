@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { ApiResponse, asyncHandler } = require('@sparkcrm/shared-utils');
+const { ApiResponse, asyncHandler, ROLES } = require('@sparkcrm/shared-utils');
 const { Lead, CallLog, WhatsappMessage, User } = require('../models/ShadowModels');
 const { resolveDateRange } = require('../utils/dateRange');
 
@@ -27,7 +27,7 @@ function buildAnalyticsFilter(req, ownerField = null) {
     const filter = { tenantId };
 
     // ── Superadmin: sees all, optionally filtered by selected branch ──
-    if (userRole === 'superadmin') {
+    if (userRole === ROLES.SUPER_ADMIN) {
         const branchId = selectedBranchId || userBranchId;
         if (branchId && branchId !== 'all') {
             filter.branchId = new mongoose.Types.ObjectId(branchId);

@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button'
 
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
+import Select from '../../components/ui/Select'
 import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
 
@@ -26,7 +27,7 @@ export default function UsersList() {
   const [search, setSearch] = useState('')
   const [roleChanging, setRoleChanging] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '', phone: '', role: 'agent', roleId: '', branchId: '', password: '' })
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', phone: '', roleId: '', branchId: '', password: '' })
   const [showEdit, setShowEdit] = useState(false)
   const [editUserForm, setEditUserForm] = useState(null)
   const { user: currentUser } = useSelector((s) => s.auth)
@@ -59,7 +60,7 @@ export default function UsersList() {
     try {
       await inviteUser(inviteForm).unwrap()
       setShowInvite(false)
-      setInviteForm({ name: '', email: '', phone: '', role: 'agent', roleId: '', branchId: '', password: '' })
+      setInviteForm({ name: '', email: '', phone: '', roleId: '', branchId: '', password: '' })
     } catch (err) { toast(err.data?.message || 'Failed to invite user', 'error') }
   }
 
@@ -164,13 +165,13 @@ export default function UsersList() {
                 </td>
                 <td className="px-5 py-4">
                   {roleChanging === user._id ? (
-                    <select autoFocus defaultValue={user.roleId || ''}
-                      onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                      onBlur={() => setRoleChanging(null)}
-                      className="bg-[var(--vz-input-bg)] border border-primary rounded px-2 py-1 text-xs text-[var(--vz-heading)] focus:outline-none">
-                      <option value="">Select role</option>
-                      {roles.map((r) => <option key={r._id} value={r._id}>{r.name}</option>)}
-                    </select>
+                    <div className="w-40" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={user.roleId || ''}
+                        onChange={(val) => handleRoleChange(user._id, val)}
+                        options={roles.map(r => ({ value: r._id, label: r.name }))}
+                      />
+                    </div>
                   ) : (
                     <button onClick={() => setRoleChanging(user._id)}
                       className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors">
@@ -239,22 +240,25 @@ export default function UsersList() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Role</label>
-              <select value={inviteForm.roleId || ''} onChange={(e) => {
-                  const role = roles.find(r => r._id === e.target.value)
-                  setInviteForm({ ...inviteForm, roleId: e.target.value, role: role?.name?.toLowerCase() || 'agent' })
-                }}
-                className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                <option value="">Select Role</option>
-                {roles.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
-              </select>
+              <Select
+                value={inviteForm.roleId || ''}
+                onChange={(val) => setInviteForm({ ...inviteForm, roleId: val })}
+                options={[
+                  { value: '', label: 'Select Role' },
+                  ...roles.map(r => ({ value: r._id, label: r.name }))
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Branch</label>
-              <select value={inviteForm.branchId || ''} onChange={(e) => setInviteForm({ ...inviteForm, branchId: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                <option value="">Select Branch</option>
-                {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
-              </select>
+              <Select
+                value={inviteForm.branchId || ''}
+                onChange={(val) => setInviteForm({ ...inviteForm, branchId: val })}
+                options={[
+                  { value: '', label: 'Select Branch' },
+                  ...branches.map(b => ({ value: b._id, label: b.name }))
+                ]}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -284,22 +288,25 @@ export default function UsersList() {
             <div className="grid grid-cols-2 gap-3">
                <div className="space-y-1.5">
                  <label className="block text-sm font-medium text-[var(--vz-heading)]">Role</label>
-                 <select value={editUserForm.roleId || ''} onChange={(e) => {
-                     const role = roles.find(r => r._id === e.target.value)
-                     setEditUserForm({ ...editUserForm, roleId: e.target.value, role: role?.name?.toLowerCase() || 'agent' })
-                   }}
-                   className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                   <option value="">Select Role</option>
-                   {roles.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
-                 </select>
+                 <Select
+                   value={editUserForm.roleId || ''}
+                   onChange={(val) => setEditUserForm({ ...editUserForm, roleId: val })}
+                   options={[
+                     { value: '', label: 'Select Role' },
+                     ...roles.map(r => ({ value: r._id, label: r.name }))
+                   ]}
+                 />
                </div>
                <div className="space-y-1.5">
                  <label className="block text-sm font-medium text-[var(--vz-heading)]">Primary Branch</label>
-                 <select value={editUserForm.branchId || ''} onChange={(e) => setEditUserForm({ ...editUserForm, branchId: e.target.value })}
-                   className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary">
-                   <option value="">Select Branch</option>
-                   {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
-                 </select>
+                 <Select
+                   value={editUserForm.branchId || ''}
+                   onChange={(val) => setEditUserForm({ ...editUserForm, branchId: val })}
+                   options={[
+                     { value: '', label: 'Select Branch' },
+                     ...branches.map(b => ({ value: b._id, label: b.name }))
+                   ]}
+                 />
                </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

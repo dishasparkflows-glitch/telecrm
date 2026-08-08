@@ -44,11 +44,11 @@ const hashRefreshToken = (token) => {
 /**
  * Generate both tokens for a user
  */
-const generateTokenPair = (user) => {
+const generateTokenPair = (user, roleSlug = '') => {
     const payload = {
         userId: user._id,
         tenantId: user.tenantId,
-        role: user.role,
+        role: roleSlug,
         email: user.email,
         branchId: user.branchId || '',
         roleId: user.roleId || '',

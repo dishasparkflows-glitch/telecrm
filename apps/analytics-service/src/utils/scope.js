@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { ApiError } = require('@sparkcrm/shared-utils');
+const { ApiError, ROLES } = require('@sparkcrm/shared-utils');
 
 const objectId = (value, name) => {
     if (!mongoose.Types.ObjectId.isValid(String(value || ''))) throw ApiError.badRequest(`${name} must be a valid ObjectId`);
@@ -8,7 +8,7 @@ const objectId = (value, name) => {
 
 const hasGlobalAnalytics = (req) => {
     const role = req.headers['x-user-role'];
-    if (['superadmin', 'admin', 'manager'].includes(role)) return true;
+    if ([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.BRANCH_MANAGER].includes(role)) return true;
     try {
         const raw = req.headers['x-user-permissions'];
         const permissions = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -25,7 +25,7 @@ function buildAnalyticsFilter(req, ownerField = null, moduleName = 'analytics') 
     if (!userRole || !userId) throw ApiError.forbidden('Verified user scope is required');
 
     const filter = { tenantId };
-    if (userRole === 'superadmin') {
+    if (userRole === ROLES.SUPER_ADMIN) {
         const branchId = selectedBranchId || userBranchId;
         if (branchId && branchId !== 'all') filter.branchId = objectId(branchId, 'branchId');
         return filter;

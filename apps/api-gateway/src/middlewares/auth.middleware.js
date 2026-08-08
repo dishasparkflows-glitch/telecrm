@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { env } = require('@sparkcrm/shared-config');
-const { ApiError } = require('@sparkcrm/shared-utils');
+const { ApiError, ROLES } = require('@sparkcrm/shared-utils');
 
 /**
  * Auth Middleware — Verifies JWT access token
@@ -14,7 +14,7 @@ const verifyGatewayToken = (token) => {
             || decoded.aud !== 'sparkcrm-tenant-impersonation') {
             throw new Error('Invalid impersonation token purpose');
         }
-        if (decoded.role !== 'superadmin' || decoded.originalRole !== 'owner') {
+        if (decoded.role !== ROLES.SUPER_ADMIN || decoded.originalRole !== 'owner') {
             throw new Error('Invalid impersonation identity');
         }
     }

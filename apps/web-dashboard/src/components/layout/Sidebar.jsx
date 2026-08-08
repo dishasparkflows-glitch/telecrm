@@ -7,6 +7,7 @@ import {
   ChevronDown, X, ClipboardList, Bell, Shield, UserCog, LayoutList, Box, Megaphone,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
+import { ROLES } from '../../utils/constants'
 import { useListModulesQuery } from '../../features/modules/moduleApi'
 
 /* Lucide icon name → component lookup */
@@ -42,7 +43,7 @@ export default function Sidebar() {
   const location = useLocation()
   const [openMenus, setOpenMenus] = useState({})
 
-  const isSuperAdmin = user?.role === 'superadmin'
+  const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN
 
   /**
    * Build menu sections from dynamic modules, filtered by user permissions.

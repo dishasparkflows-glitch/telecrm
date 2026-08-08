@@ -1,4 +1,5 @@
 import { useSelector } from 'react-redux'
+import { ROLES } from '../utils/constants'
 
 /**
  * Hook to check permissions for a specific module.
@@ -12,7 +13,7 @@ import { useSelector } from 'react-redux'
  */
 export function usePermission(moduleKey) {
     const { permissions, user } = useSelector((s) => s.auth)
-    const isSuperAdmin = user?.role === 'superadmin'
+    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN
 
     const modulePerm = permissions?.[moduleKey] || {}
 
@@ -40,6 +41,6 @@ export function usePermission(moduleKey) {
  */
 export function useCanViewModule(moduleKey) {
     const { permissions, user } = useSelector((s) => s.auth)
-    if (user?.role === 'superadmin') return true
+    if (user?.role === ROLES.SUPER_ADMIN) return true
     return permissions?.[moduleKey]?.view === true
 }

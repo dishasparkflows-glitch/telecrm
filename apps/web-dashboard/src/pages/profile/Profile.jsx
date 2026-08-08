@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useGetProfileQuery } from '../../features/tenant/tenantApi'
 import Card from '../../components/ui/Card'
+import { ROLES } from '../../utils/constants'
 import Badge from '../../components/ui/Badge'
 import {
   User, Mail, Phone, Calendar, Briefcase, Shield, Building2,
@@ -55,7 +56,7 @@ export default function Profile() {
                 {user?.name || user?.firstName || 'Admin User'}
               </h4>
               <p className="text-sm text-[var(--vz-text-muted)] mt-0.5">
-                {user?.role === 'superadmin' ? 'Super Admin' : user?.role || 'Team Member'} at {tenant.companyName || 'SparkCRM'}
+                {user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Team Member'} at {tenant.companyName || 'SparkCRM'}
               </p>
             </div>
 
@@ -70,7 +71,7 @@ export default function Profile() {
                 <p className="text-xs text-[var(--vz-text-muted)]">Stages</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-primary">{user?.role === 'superadmin' ? 'Full' : 'Limited'}</p>
+                <p className="text-lg font-bold text-primary">{user?.role === ROLES.SUPER_ADMIN ? 'Full' : 'Limited'}</p>
                 <p className="text-xs text-[var(--vz-text-muted)]">Access</p>
               </div>
             </div>
@@ -146,7 +147,7 @@ export default function Profile() {
                     { icon: User, label: 'Full Name', value: user?.name || user?.firstName || 'N/A' },
                     { icon: Mail, label: 'Email', value: user?.email || 'N/A' },
                     { icon: Phone, label: 'Phone', value: user?.phone || 'Not added' },
-                    { icon: Shield, label: 'Role', value: user?.role === 'superadmin' ? 'Super Admin' : user?.role || 'Agent', badge: true },
+                    { icon: Shield, label: 'Role', value: user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Agent', badge: true },
                     { icon: Building2, label: 'Branch', value: activeBranch?.name || 'Head Office' },
                     { icon: Briefcase, label: 'Company', value: tenant.companyName || 'N/A' },
                     { icon: Calendar, label: 'Joined', value: joinDate },
@@ -178,8 +179,8 @@ export default function Profile() {
                 </Card.Header>
                 <div className="space-y-3">
                   <p className="text-sm text-[var(--vz-text)] leading-relaxed">
-                    Managing {tenant.companyName || 'the organization'} with SparkCRM. As a {user?.role === 'superadmin' ? 'Super Admin' : user?.role || 'team member'},
-                    {user?.role === 'superadmin'
+                    Managing {tenant.companyName || 'the organization'} with SparkCRM. As a {user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'team member'},
+                    {user?.role === ROLES.SUPER_ADMIN
                       ? ' overseeing all branches, users, and business operations. Full access to roles, permissions, modules, and all CRM features.'
                       : ' contributing to lead management, customer communications, and team collaboration.'}
                   </p>
