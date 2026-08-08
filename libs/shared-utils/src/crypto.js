@@ -1,9 +1,15 @@
 const crypto = require('crypto');
-const { env } = require('@sparkcrm/shared-config');
 
 const ALGORITHM = 'aes-256-gcm';
-// ENCRYPTION_KEY should be a 32-byte hex string (64 characters)
-const ENCRYPTION_KEY = Buffer.from(env.ENCRYPTION_KEY, 'hex');
+let ENCRYPTION_KEY;
+
+function getEncryptionKey() {
+    if (!ENCRYPTION_KEY) {
+        const { env } = require('@sparkcrm/shared-config');
+        ENCRYPTION_KEY = Buffer.from(env.ENCRYPTION_KEY, 'hex');
+    }
+    return ENCRYPTION_KEY;
+}
 
 /**
  * Encrypts a plaintext string using AES-256-GCM.
@@ -14,7 +20,7 @@ function encrypt(text) {
     if (!text) return text;
 
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+    const cipher = crypto.createCipheriv(ALGORITHM, getEncryptionKey(), iv);
 
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -42,7 +48,7 @@ function decrypt(cipherText) {
         const encryptedText = Buffer.from(parts[1], 'hex');
         const authTag = Buffer.from(parts[2], 'hex');
 
-        const decipher = crypto.createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+        const decipher = crypto.createDecipheriv(ALGORITHM, getEncryptionKey(), iv);
         decipher.setAuthTag(authTag);
 
         let decrypted = decipher.update(encryptedText, 'hex', 'utf8');

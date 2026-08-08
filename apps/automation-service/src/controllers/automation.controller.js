@@ -19,7 +19,7 @@ const getRules = asyncHandler(async (req, res) => {
     const { page, limit, skip } = pagination(req.query);
     const filter = buildScopeFilter(req, { ownerField: 'createdBy', module: 'automations' });
     const [rules, total] = await Promise.all([
-        AutomationRule.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        AutomationRule.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(limit),
         AutomationRule.countDocuments(filter),
     ]);
     ApiResponse.paginated(res, rules, { page, limit, total, totalPages: Math.ceil(total / limit) });
@@ -85,7 +85,7 @@ const getLogs = asyncHandler(async (req, res) => {
         filter.ruleId = { $in: await AutomationRule.distinct('_id', ruleScope) };
     }
     const [logs, total] = await Promise.all([
-        AutomationLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        AutomationLog.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(limit),
         AutomationLog.countDocuments(filter),
     ]);
 

@@ -51,7 +51,7 @@ export default function MessageActions({ message, contacts = [], onReply, toast 
           <button type="button" onClick={() => setShowForward(true)} className="w-full px-3 py-2 flex items-center gap-2 text-xs hover:bg-[var(--vz-input-bg)]"><Forward size={14} /> Forward</button>
           <button type="button" onClick={() => setShowReactions(true)} className="w-full px-3 py-2 flex items-center gap-2 text-xs hover:bg-[var(--vz-input-bg)]"><Smile size={14} /> React</button>
           {(message.content || message.mediaName) && <button type="button" onClick={copyText} className="w-full px-3 py-2 flex items-center gap-2 text-xs hover:bg-[var(--vz-input-bg)]"><Copy size={14} /> Copy</button>}
-          <button type="button" onClick={() => { toast?.(`${message.status || 'received'} · ${new Date(message.createdAt).toLocaleString()}`, 'info'); setOpen(false) }} className="w-full px-3 py-2 flex items-center gap-2 text-xs hover:bg-[var(--vz-input-bg)]"><Info size={14} /> Message info</button>
+          <button type="button" onClick={() => { toast?.(`${message.status || 'received'} · ${new Date(message.meta?.createdAt).toLocaleString()}`, 'info'); setOpen(false) }} className="w-full px-3 py-2 flex items-center gap-2 text-xs hover:bg-[var(--vz-input-bg)]"><Info size={14} /> Message info</button>
         </div>
       )}
       {showReactions && (

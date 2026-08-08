@@ -118,7 +118,7 @@ export default function MeetingDetail({ meeting, isOpen, onClose }) {
                         {c.text}
                     </div>
                     <span className="text-[10px] text-[var(--vz-text-muted)] mt-1 px-1">
-                      {c.userName} • {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {c.userName} • {new Date(c.meta?.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 ))

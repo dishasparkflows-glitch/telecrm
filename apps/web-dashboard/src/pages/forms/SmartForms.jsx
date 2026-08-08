@@ -237,7 +237,7 @@ export default function SmartForms() {
                  </div>
                  <div className="p-2.5 rounded-lg bg-[var(--vz-body-bg)] border border-[var(--vz-border)] text-center">
                     <p className="text-[10px] text-[var(--vz-text-muted)] font-bold uppercase tracking-widest mb-1">Created</p>
-                    <p className="text-sm font-semibold text-[var(--vz-heading)]">{new Date(form.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm font-semibold text-[var(--vz-heading)]">{new Date(form.meta?.createdAt).toLocaleDateString()}</p>
                  </div>
               </div>
 
@@ -346,7 +346,7 @@ export default function SmartForms() {
                    <div>
                       <p className="text-[10px] text-[var(--vz-text-muted)] font-black uppercase tracking-widest mb-1">Last Updated</p>
                       <p className="text-lg font-bold text-[var(--vz-heading)]">
-                        {currentSubmissions.length > 0 ? new Date(currentSubmissions[0].createdAt).toLocaleDateString() : 'N/A'}
+                        {currentSubmissions.length > 0 ? new Date(currentSubmissions[0].meta?.createdAt).toLocaleDateString() : 'N/A'}
                       </p>
                    </div>
                 </div>
@@ -386,7 +386,7 @@ export default function SmartForms() {
                            </td>
                          ))}
                          <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">
-                           {new Date(sub.createdAt).toLocaleString()}
+                           {new Date(sub.meta?.createdAt).toLocaleString()}
                          </td>
                        </tr>
                      ))}

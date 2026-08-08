@@ -6,6 +6,7 @@ const {
   errorHandler,
   requestLogger,
   requireServiceIdentity,
+  contextMiddleware,
 } = require('@sparkcrm/shared-middleware');
 
 const tenantRoutes = require('./routes/tenant.routes');
@@ -26,6 +27,7 @@ app.use(helmet());
 app.use(cors(createCorsOptions()));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(contextMiddleware);
 app.use(requestLogger('tenant-service'));
 
 // Health check

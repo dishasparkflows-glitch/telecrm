@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { createCorsOptions, errorHandler, requestLogger } = require('@sparkcrm/shared-middleware');
+const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = require('@sparkcrm/shared-middleware');
 
 const billingRoutes = require('./routes/billing.routes');
 const featureRoutes = require('./routes/feature.routes');
@@ -28,6 +28,7 @@ app.use((req, res, next) => {
   express.json({ limit: '10mb' })(req, res, next);
 });
 app.use(express.urlencoded({ extended: true }));
+app.use(contextMiddleware);
 app.use(requestLogger('billing-service'));
 
 // Health check

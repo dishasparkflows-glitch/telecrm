@@ -55,7 +55,7 @@ async function processInboundMessage({ tenantId, branchId = null, userId = null,
 
 async function retryPendingInboundEvents(limit = 100) {
     const boundedLimit = Math.max(1, Math.min(Number(limit) || 100, 100));
-    const messages = await WhatsappMessage.find({ direction: 'inbound', eventPublishedAt: null }).sort({ createdAt: 1 }).limit(boundedLimit);
+    const messages = await WhatsappMessage.find({ direction: 'inbound', eventPublishedAt: null }).sort({ 'meta.createdAt': 1 }).limit(boundedLimit);
     for (const message of messages) await publishInboundEvent(message);
 }
 

@@ -23,10 +23,16 @@ const leadSourceConnectionSchema = new mongoose.Schema(
             message: { type: String, default: '' },
             checkedAt: { type: Date, default: null },
         },
-        createdBy: { type: mongoose.Schema.Types.ObjectId, default: null },
-        updatedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 const leadSourceMappingSchema = new mongoose.Schema(
@@ -54,10 +60,16 @@ const leadSourceMappingSchema = new mongoose.Schema(
             whatsappConsent: { type: String, default: 'whatsapp_opt_in' },
         },
         isActive: { type: Boolean, default: true, index: true },
-        createdBy: { type: mongoose.Schema.Types.ObjectId, default: null },
-        updatedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 const metaOAuthStateSchema = new mongoose.Schema(
@@ -68,8 +80,16 @@ const metaOAuthStateSchema = new mongoose.Schema(
         userId: { type: mongoose.Schema.Types.ObjectId, default: null },
         expiresAt: { type: Date, required: true, index: { expires: 0 } },
         usedAt: { type: Date, default: null },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 const inboundLeadEventSchema = new mongoose.Schema(
@@ -97,8 +117,16 @@ const inboundLeadEventSchema = new mongoose.Schema(
         rawPayload: { type: mongoose.Schema.Types.Mixed, default: {} },
         normalizedPayload: { type: mongoose.Schema.Types.Mixed, default: {} },
         processedAt: { type: Date, default: null },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 leadSourceConnectionSchema.index({ tenantId: 1, provider: 1, externalAccountId: 1 });

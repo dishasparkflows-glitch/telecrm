@@ -7,6 +7,7 @@ const { buildScopeFilter, canAccessRecord } = require('./dataScope');
 const { validateEmail, validatePhone } = require('./emailValidator');
 const cryptoUtils = require('./crypto');
 const cloudStorage = require('./cloudStorage');
+const metaPlugin = require('./metaPlugin');
 
 module.exports = {
     ApiResponse,
@@ -20,4 +21,5 @@ module.exports = {
     validatePhone,
     ...cryptoUtils,
     ...cloudStorage,
+    metaPlugin,
 };

@@ -80,9 +80,17 @@ const whatsappMessageSchema = new mongoose.Schema(
         automationType: { type: String, default: '' },
         isRead: { type: Boolean, default: false },
         readAt: { type: Date, default: null },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
     {
-        timestamps: true, versionKey: false,
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false,
         toJSON: { transform: removePrivateMediaKey },
         toObject: { transform: removePrivateMediaKey },
     }
@@ -113,8 +121,18 @@ const templateSchema = new mongoose.Schema(
         waTemplateId: { type: String, default: null },
         status: { type: String, enum: ['draft', 'pending', 'approved', 'rejected'], default: 'draft' },
         isActive: { type: Boolean, default: true },
+    
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    {
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 templateSchema.index({ tenantId: 1, name: 1 });
@@ -130,8 +148,17 @@ const chatbotRuleSchema = new mongoose.Schema(
         templateName: { type: String, default: null },
         isActive: { type: Boolean, default: true },
         priority: { type: Number, default: 0 },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    {
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 chatbotRuleSchema.index({ tenantId: 1, isActive: 1, priority: -1 });

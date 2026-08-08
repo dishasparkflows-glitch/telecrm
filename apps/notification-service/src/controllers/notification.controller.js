@@ -15,7 +15,7 @@ const getNotifications = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [notifications, total, unreadCount] = await Promise.all([
-        Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        Notification.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
         Notification.countDocuments(filter),
         Notification.countDocuments({ ...filter, isRead: false }),
     ]);

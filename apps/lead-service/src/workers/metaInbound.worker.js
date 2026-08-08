@@ -36,7 +36,7 @@ const claimNextEvent = async () => {
                 error: '',
             },
         },
-        { new: true, sort: { createdAt: 1 } }
+        { new: true, sort: { 'createdAt': 1 } }
     );
 };
 

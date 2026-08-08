@@ -103,7 +103,7 @@ const completeMetaOAuth = asyncHandler(async (req, res) => {
 
 const listConnections = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const connections = await LeadSourceConnection.find({ tenantId }).sort({ updatedAt: -1 }).select('+verifyToken').lean();
+    const connections = await LeadSourceConnection.find({ tenantId }).sort({ 'meta.updatedAt': -1 }).select('+verifyToken').lean();
     const data = connections.map((connection) => ({
         ...connection,
         accessToken: connection.accessToken ? '••••••' : '',
@@ -260,7 +260,7 @@ const receiveInboundApiLead = asyncHandler(async (req, res) => {
 
 const listMappings = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const mappings = await LeadSourceMapping.find({ tenantId }).sort({ updatedAt: -1 });
+    const mappings = await LeadSourceMapping.find({ tenantId }).sort({ 'meta.updatedAt': -1 });
     ApiResponse.success(res, mappings, 'Lead source mappings fetched');
 });
 
@@ -657,7 +657,7 @@ const listInboundEvents = asyncHandler(async (req, res) => {
     if (status && status !== 'all') filter.status = status;
 
     const events = await InboundLeadEvent.find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ 'meta.createdAt': -1 })
         .limit(Math.min(Number(limit) || 25, 100))
         .select('-rawPayload -normalizedPayload')
         .lean();

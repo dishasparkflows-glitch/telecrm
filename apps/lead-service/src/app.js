@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { createCorsOptions, errorHandler, requestLogger } = require('@sparkcrm/shared-middleware');
+const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = require('@sparkcrm/shared-middleware');
 
 const leadRoutes = require('./routes/lead.routes');
 const leadController = require('./controllers/lead.controller');
@@ -36,6 +36,7 @@ app.use(express.json({
   },
 }));
 app.use(express.urlencoded({ extended: true }));
+app.use(contextMiddleware);
 app.use(requestLogger('lead-service'));
 
 // Health check

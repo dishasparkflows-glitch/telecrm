@@ -428,7 +428,7 @@ const getLeadTimeline = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [activities, total] = await Promise.all([
-        LeadActivity.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        LeadActivity.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
         LeadActivity.countDocuments(filter),
     ]);
 

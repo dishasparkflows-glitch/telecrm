@@ -58,7 +58,7 @@ const getForms = asyncHandler(async (req, res) => {
     const { page, limit, skip } = pagination(req.query);
     const filter = buildScopeFilter(req, { ownerField: null, module: 'forms' });
     const [forms, total] = await Promise.all([
-        SmartForm.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        SmartForm.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(limit),
         SmartForm.countDocuments(filter),
     ]);
     ApiResponse.paginated(res, forms, { page, limit, total, totalPages: Math.ceil(total / limit) });
@@ -129,7 +129,7 @@ const getSubmissions = asyncHandler(async (req, res) => {
     if (scopeFilter.branchId) filter.branchId = scopeFilter.branchId;
 
     const [submissions, total] = await Promise.all([
-        FormSubmission.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        FormSubmission.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(limit),
         FormSubmission.countDocuments(filter),
     ]);
 

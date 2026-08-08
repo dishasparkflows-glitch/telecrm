@@ -23,7 +23,7 @@ const getAuditLogs = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [logs, total] = await Promise.all([
-        AuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        AuditLog.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
         AuditLog.countDocuments(filter),
     ]);
 

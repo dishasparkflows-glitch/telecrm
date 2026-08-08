@@ -16,8 +16,16 @@ const reminderSchema = new mongoose.Schema(
         sentAt: { type: Date, default: null },
         attempts: { type: Number, default: 0 },
         lastError: { type: String, default: '' },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 reminderSchema.index({ tenantId: 1, leadId: 1, type: 1 }, { unique: true });

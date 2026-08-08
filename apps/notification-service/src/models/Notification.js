@@ -15,8 +15,16 @@ const notificationSchema = new mongoose.Schema(
         readAt: { type: Date, default: null },
         sentAt: { type: Date, default: Date.now },
         expiresAt: { type: Date, default: null },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 notificationSchema.index({ tenantId: 1, userId: 1, isRead: 1, createdAt: -1 });

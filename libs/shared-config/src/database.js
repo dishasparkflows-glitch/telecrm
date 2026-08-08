@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const metaPlugin = require('@sparkcrm/shared-utils/src/metaPlugin');
+mongoose.plugin(metaPlugin);
 
 /**
  * Connect to MongoDB for a specific service

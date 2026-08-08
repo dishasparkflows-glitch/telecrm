@@ -210,7 +210,7 @@ export default function LeadDetail() {
               )}
               <div className="flex items-center gap-3 text-sm">
                 <Calendar size={15} className="text-[var(--vz-text-muted)] shrink-0" />
-                <span className="text-[var(--vz-text)]">{new Date(lead.createdAt).toLocaleDateString()}</span>
+                <span className="text-[var(--vz-text)]">{new Date(lead.meta?.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
 
@@ -417,7 +417,7 @@ export default function LeadDetail() {
                         <span className="text-[10px] text-[var(--vz-text-muted)]">{message.type} · {message.status}</span>
                       </div>
                       <p className="text-sm text-[var(--vz-heading)]">{message.content || (message.templateName ? `Template: ${message.templateName}` : 'Media message')}</p>
-                      <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{new Date(message.createdAt).toLocaleString()}</p>
+                      <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{new Date(message.meta?.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -444,7 +444,7 @@ export default function LeadDetail() {
                         <div className="text-right">
                           {call.disposition && <Badge color="info">{call.disposition}</Badge>}
                           {(call.recordingStatus === 'available' || call.recordingUrl) && <button onClick={() => handlePlayRecording(call._id)} className="block ml-auto text-[10px] text-primary hover:underline mt-1">Play recording</button>}
-                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{new Date(call.startedAt || call.createdAt).toLocaleString()}</p>
+                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{new Date(call.startedAt || call.meta?.createdAt).toLocaleString()}</p>
                         </div>
                       </div>
                     ))}

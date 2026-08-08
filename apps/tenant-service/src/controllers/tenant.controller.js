@@ -144,7 +144,7 @@ const getPaymentHistory = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
 
     const payments = await Payment.find({ tenantId })
-        .sort({ createdAt: -1 })
+        .sort({ 'meta.createdAt': -1 })
         .skip((page - 1) * limit)
         .limit(limit);
 

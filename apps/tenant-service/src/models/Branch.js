@@ -29,7 +29,6 @@ const branchSchema = new mongoose.Schema(
         email: { type: String, default: '' },
         isDefault: { type: Boolean, default: false },
         isActive: { type: Boolean, default: true },
-        createdBy: { type: mongoose.Schema.Types.ObjectId, default: null },
 
         // ─── Custom Fields ───
         customFields: {
@@ -37,8 +36,16 @@ const branchSchema = new mongoose.Schema(
             of: mongoose.Schema.Types.Mixed,
             default: {},
         },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 // Unique branch code per tenant

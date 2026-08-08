@@ -15,7 +15,7 @@ async function publishPendingMeetingEvents(meeting) {
 function registerMeetingEventRetryJob() {
     const timer = setInterval(async () => {
         try {
-            const meetings = await Meeting.find({ 'pendingEvents.0': { $exists: true } }).sort({ updatedAt: 1 }).limit(100);
+            const meetings = await Meeting.find({ 'pendingEvents.0': { $exists: true } }).sort({ 'meta.updatedAt': 1 }).limit(100);
             for (const meeting of meetings) await publishPendingMeetingEvents(meeting);
         } catch (error) { console.error('Meeting event retry failed:', error.message); }
     }, 60_000);

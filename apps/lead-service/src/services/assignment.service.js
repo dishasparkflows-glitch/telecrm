@@ -25,7 +25,7 @@ const findActivePolicy = async ({ tenantId, branchId = null, source, priority })
             { branchId: branchObjectId },
             { branchId: null },
         ],
-    }).sort({ branchId: -1, updatedAt: -1 });
+    }).sort({ branchId: -1, 'meta.updatedAt': -1 });
 
     return policies.find((policy) => policyMatches(policy, { source, priority })) || null;
 };

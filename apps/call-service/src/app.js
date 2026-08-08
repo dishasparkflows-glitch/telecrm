@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { createCorsOptions, errorHandler, requestLogger } = require('@sparkcrm/shared-middleware');
+const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = require('@sparkcrm/shared-middleware');
 const callRoutes = require('./routes/call.routes');
 const exotelWebhook = require('./webhooks/exotel.webhook');
 const { requireVerifiedUser, requireInternalService } = require('./middleware/security');
@@ -19,6 +19,7 @@ app.use('/webhooks', exotelWebhook);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(contextMiddleware);
 
 app.get('/health', (req, res) => {
   res.json({ service: 'call-service', status: 'healthy', timestamp: new Date().toISOString() });

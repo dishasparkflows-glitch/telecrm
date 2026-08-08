@@ -107,7 +107,7 @@ export default function OwnerTenants() {
                     <Badge color={STATUS_COLORS[t.status] || 'primary'}>{t.status}</Badge>
                   </td>
                   <td className="px-5 py-4 text-[var(--vz-text-muted)] text-xs">
-                    {new Date(t.createdAt).toLocaleDateString()}
+                    {new Date(t.meta?.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">

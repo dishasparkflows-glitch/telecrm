@@ -1428,7 +1428,7 @@ export default function Settings() {
                </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-                <Input label="Phone" placeholder="+91 ..." value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })} />
+                <Input label="Phone" placeholder="+91 ..." value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
                 <Input label="Change Password?" type="password" placeholder="Leave blank to keep same" value={editUserForm.password} onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })} />
              </div>
 

@@ -21,7 +21,7 @@ async function publishSubmission(submission, form) {
 }
 
 async function retryPendingSubmissions(limit = 100) {
-    const pending = await FormSubmission.find({ eventPublishedAt: null }).sort({ createdAt: 1 }).limit(limit);
+    const pending = await FormSubmission.find({ eventPublishedAt: null }).sort({ 'meta.createdAt': 1 }).limit(limit);
     for (const submission of pending) {
         const form = await SmartForm.findOne({ _id: submission.formId, tenantId: submission.tenantId });
         if (form) await publishSubmission(submission, form);

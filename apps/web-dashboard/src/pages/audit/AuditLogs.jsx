@@ -65,7 +65,7 @@ export default function AuditLogs() {
                       <td className="px-4 py-3 text-[var(--vz-text)] capitalize">{log.resource}</td>
                       <td className="px-4 py-3 text-[var(--vz-text)] text-xs max-w-[200px] truncate">{log.details || '—'}</td>
                       <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs font-mono">{log.ipAddress || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{new Date(log.createdAt).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{new Date(log.meta?.createdAt).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

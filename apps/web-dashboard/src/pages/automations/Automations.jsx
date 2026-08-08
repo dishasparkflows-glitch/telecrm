@@ -201,7 +201,7 @@ export default function Automations() {
                       <td className="px-4 py-3 text-[var(--vz-text)]">{triggerLabels[log.triggerEvent?.replace(/\./g, '_')] || log.triggerEvent || '—'}</td>
                       <td className="px-4 py-3"><Badge color={log.status === 'success' ? 'success' : 'danger'}>{log.status}</Badge></td>
                       <td className="px-4 py-3 text-[var(--vz-text)]">{Array.isArray(log.actionsExecuted) ? log.actionsExecuted.length : (log.actionsExecuted || 0)}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{new Date(log.createdAt).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{new Date(log.meta?.createdAt).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

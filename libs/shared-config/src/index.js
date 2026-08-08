@@ -1,12 +1,15 @@
-const { connectDB } = require('./database');
-const { getRedisClient, getRedisSubscriber, isRedisReady, isSubscriberReady } = require('./redis');
 const { env } = require('./env');
 
-module.exports = {
+// Export env first to resolve circular dependencies
+module.exports.env = env;
+
+const { connectDB } = require('./database');
+const { getRedisClient, getRedisSubscriber, isRedisReady, isSubscriberReady } = require('./redis');
+
+Object.assign(module.exports, {
     connectDB,
     getRedisClient,
     getRedisSubscriber,
     isRedisReady,
     isSubscriberReady,
-    env,
-};
+});

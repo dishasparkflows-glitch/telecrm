@@ -16,7 +16,7 @@ async function publishPendingEvents(callLog) {
 }
 
 async function retryPendingCallEvents(limit = 100) {
-    const logs = await CallLog.find({ 'pendingEvents.0': { $exists: true } }).sort({ updatedAt: 1 }).limit(limit);
+    const logs = await CallLog.find({ 'pendingEvents.0': { $exists: true } }).sort({ 'meta.updatedAt': 1 }).limit(limit);
     for (const log of logs) await publishPendingEvents(log);
 }
 

@@ -18,8 +18,16 @@ const subscriptionSchema = new mongoose.Schema(
         amount: { type: Number, required: true },
         amountMinor: { type: Number, default: null },
         currency: { type: String, default: 'INR' },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 subscriptionSchema.index({ tenantId: 1, status: 1 });

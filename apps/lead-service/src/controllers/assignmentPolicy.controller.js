@@ -17,7 +17,7 @@ const getAssignmentPolicy = asyncHandler(async (req, res) => {
 
 const listAssignmentPolicies = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const policies = await AssignmentPolicy.find({ tenantId }).sort({ branchId: 1, updatedAt: -1 });
+    const policies = await AssignmentPolicy.find({ tenantId }).sort({ branchId: 1, 'meta.updatedAt': -1 });
     ApiResponse.success(res, policies, 'Assignment policies fetched');
 });
 

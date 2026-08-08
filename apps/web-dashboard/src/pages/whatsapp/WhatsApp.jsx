@@ -481,7 +481,7 @@ export default function WhatsApp() {
           const index = draft.data.findIndex((item) => item._id === incoming._id)
           if (index >= 0) draft.data[index] = incoming
           else draft.data.push(incoming)
-          draft.data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+          draft.data.sort((a, b) => new Date(a.meta?.createdAt) - new Date(b.meta?.createdAt))
         }))
       }
       dispatch(whatsappApi.util.invalidateTags([{ type: 'WhatsApp', id: 'INBOX' }]))
@@ -827,7 +827,7 @@ export default function WhatsApp() {
                                 <div className="flex flex-wrap gap-1 mt-1">{msg.reactions.map((reaction, index) => <span key={`${reaction.emoji}-${index}`} className="px-1.5 py-0.5 rounded-full bg-black/10 text-sm">{reaction.emoji}</span>)}</div>
                               )}
                               <div className={`flex items-center justify-end gap-1 mt-1 ${isOut ? 'text-white/60' : 'text-[var(--vz-text-muted)]'} text-[10px]`}>
-                                {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(msg.timestamp || msg.meta?.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 {isOut && statusIcon}
                               </div>
                             </div>

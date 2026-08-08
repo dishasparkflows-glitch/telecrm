@@ -32,16 +32,16 @@ const paymentConfigSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed,
         default: {}
     },
-    createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+    meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    updatedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    }
-}, {
-    timestamps: true, versionKey: false,
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false,
     toJSON: { flattenMaps: true }
 });
 

@@ -11,8 +11,16 @@ const deviceTokenSchema = new mongoose.Schema(
         isActive: { type: Boolean, default: true, index: true },
         lastSeenAt: { type: Date, default: Date.now },
         lastError: { type: String, default: '' },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 deviceTokenSchema.index({ tenantId: 1, userId: 1, deviceId: 1 }, { unique: true });

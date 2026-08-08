@@ -305,7 +305,7 @@ export default function UsersList() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Phone" type="tel" placeholder="+91 98765 43210" value={inviteForm.phone} onChange={(e) => setInviteForm({ ...inviteForm, phone: e.target.value })} />
+            <Input label="Phone" type="tel" placeholder="+91 98765 43210" value={inviteForm.phone} onChange={(e) => setInviteForm({ ...inviteForm, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
             <Input label="Set Password" type="password" placeholder="••••••••" value={inviteForm.password} onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })} />
           </div>
           <p className="text-xs text-[var(--vz-text-muted)] italic">
@@ -366,7 +366,7 @@ export default function UsersList() {
                </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-               <Input label="Phone" placeholder="+91 ..." value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })} />
+               <Input label="Phone" placeholder="+91 ..." value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
                <Input label="Change Password?" type="password" placeholder="Leave blank to keep same" value={editUserForm.password} onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })} />
             </div>
             <div className="flex items-center gap-2 pt-2">

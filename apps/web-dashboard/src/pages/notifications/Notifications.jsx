@@ -87,7 +87,7 @@ export default function Notifications() {
                       {notif.title || notif.message}
                     </p>
                     {notif.body && <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">{notif.body}</p>}
-                    <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{new Date(notif.createdAt).toLocaleString()}</p>
+                    <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{new Date(notif.meta?.createdAt).toLocaleString()}</p>
                   </div>
                   {!notif.read && (
                     <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />

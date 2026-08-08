@@ -9,7 +9,16 @@ const paymentEventSchema = new mongoose.Schema({
     attempts: { type: Number, default: 1 },
     lastError: { type: String, default: null },
     processedAt: { type: Date, default: null },
-}, { timestamps: true, versionKey: false });
+    meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
+    },
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false });
 
 paymentEventSchema.index({ provider: 1, eventId: 1 }, { unique: true });
 paymentEventSchema.index({ status: 1, updatedAt: 1 });

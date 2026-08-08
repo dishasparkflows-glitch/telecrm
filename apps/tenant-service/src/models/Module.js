@@ -57,18 +57,22 @@ const moduleSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
-        createdBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            default: null,
-        },
         requiredFeature: {
             type: String,
             default: null,
             trim: true,
         },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
     {
-        timestamps: true, versionKey: false
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false
     }
 );
 

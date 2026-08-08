@@ -71,7 +71,7 @@ async function retryQueuedMessages(limit = 50) {
     const messages = await WhatsappMessage.find({
         status: 'queued',
         $or: [{ nextAttemptAt: null }, { nextAttemptAt: { $lte: new Date() } }],
-    }).select('_id').sort({ createdAt: 1 }).limit(boundedLimit).lean();
+    }).select('_id').sort({ 'meta.createdAt': 1 }).limit(boundedLimit).lean();
     for (const message of messages) await deliverQueuedMessage(message._id);
 }
 

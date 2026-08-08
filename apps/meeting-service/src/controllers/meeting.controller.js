@@ -221,7 +221,7 @@ const bookMeeting = asyncHandler(async (req, res) => {
 
 const getBookingLinks = asyncHandler(async (req, res) => {
     const filter = buildScopeFilter(req, { ownerField: 'userId', module: 'meetings' });
-    const links = await BookingLink.find(filter).sort({ createdAt: -1 });
+    const links = await BookingLink.find(filter).sort({ 'meta.createdAt': -1 });
     ApiResponse.success(res, links);
 });
 

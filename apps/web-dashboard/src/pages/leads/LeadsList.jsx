@@ -460,7 +460,7 @@ export default function LeadsList() {
           <Input label="Email" type="email" placeholder="Email address" icon={MailIcon} value={newLead.email}
             onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} />
           <Input label="Phone" placeholder="Phone number" icon={Phone} value={newLead.phone}
-            onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })} />
+            onChange={(e) => setNewLead({ ...newLead, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
           <Input label="Company" placeholder="Company name" value={newLead.company}
             onChange={(e) => setNewLead({ ...newLead, company: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">

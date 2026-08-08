@@ -191,7 +191,7 @@ export default function OwnerTenantDetail() {
             </div>
             <div className="flex justify-between py-2">
               <span className="text-[var(--vz-text-muted)]">Created</span>
-              <span className="font-medium text-[var(--vz-heading)]">{new Date(tenant.createdAt).toLocaleDateString()}</span>
+              <span className="font-medium text-[var(--vz-heading)]">{new Date(tenant.meta?.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
         </Card>

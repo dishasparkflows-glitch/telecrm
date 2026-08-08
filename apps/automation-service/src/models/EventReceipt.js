@@ -4,7 +4,16 @@ const eventReceiptSchema = new mongoose.Schema({
     eventId: { type: String, required: true, unique: true, index: true },
     event: { type: String, required: true },
     processedAt: { type: Date, default: Date.now },
-}, { timestamps: true, versionKey: false });
+    meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
+    },
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false });
 
 eventReceiptSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 

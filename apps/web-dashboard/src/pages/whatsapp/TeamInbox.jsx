@@ -56,7 +56,7 @@ function MessageBubble({ msg, contacts, onReply, toast }) {
         {msg.content && <p className={`break-words ${msg.type !== 'text' ? 'mt-1.5' : ''}`}>{msg.content}</p>}
         {msg.reactions?.length > 0 && <div className="flex flex-wrap gap-1 mt-1">{msg.reactions.map((reaction, index) => <span key={`${reaction.emoji}-${index}`} className="px-1.5 py-0.5 rounded-full bg-black/10">{reaction.emoji}</span>)}</div>}
         <div className={`flex items-center gap-1 mt-1 ${isOut ? 'justify-end' : 'justify-start'}`}>
-          <span className="text-[10px] text-gray-500">{formatTime(msg.createdAt)}</span>
+          <span className="text-[10px] text-gray-500">{formatTime(msg.meta?.createdAt)}</span>
           {isOut && (
             msg.status === 'read'
               ? <CheckCheck size={12} className="text-blue-500" />
@@ -98,7 +98,7 @@ function ConvRow({ conv, active, onClick }) {
             {conv.leadName || phone}
           </p>
           <span className="text-[10px] text-[var(--vz-text-muted)] ml-2 flex-shrink-0">
-            {timeAgo(lastMsg.createdAt)}
+            {timeAgo(lastMsg.meta?.createdAt)}
           </span>
         </div>
         <div className="flex items-center justify-between mt-0.5">
@@ -164,7 +164,7 @@ export default function TeamInbox() {
         const index = draft.data.findIndex((item) => item._id === message._id)
         if (index >= 0) draft.data[index] = message
         else draft.data.push(message)
-        draft.data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        draft.data.sort((a, b) => new Date(a.meta?.createdAt) - new Date(b.meta?.createdAt))
       }))
       dispatch(whatsappApi.util.invalidateTags([{ type: 'WhatsApp', id: 'INBOX' }]))
     })

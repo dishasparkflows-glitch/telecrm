@@ -54,8 +54,17 @@ const tenantWhatsAppConfigSchema = new mongoose.Schema(
         testStatus:   { type: String, enum: ['untested', 'success', 'failed'], default: 'untested' },
         testMessage:  { type: String, default: '' },
         lastTestedAt: { type: Date, default: null },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    {
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 // ── Encrypt / Decrypt helpers ─────────────────────────────────────────────────

@@ -13,7 +13,7 @@ async function publishPendingLeadEvents(lead) {
 }
 
 async function retryPendingLeadEvents(limit = 100) {
-    const leads = await Lead.find({ 'pendingEvents.0': { $exists: true } }).sort({ updatedAt: 1 }).limit(limit);
+    const leads = await Lead.find({ 'pendingEvents.0': { $exists: true } }).sort({ 'meta.updatedAt': 1 }).limit(limit);
     for (const lead of leads) await publishPendingLeadEvents(lead);
 }
 

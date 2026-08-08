@@ -89,7 +89,7 @@ export default function CallLogs() {
                         <Badge color={statusColors[log.status] || 'primary'}>{log.status}</Badge>
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)] capitalize">{log.disposition || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)] text-xs">{new Date(log.createdAt).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)] text-xs">{new Date(log.meta?.createdAt).toLocaleString()}</td>
                       <td className="px-4 py-3">
                         <Button variant="ghost" size="sm" onClick={() => { setShowDisp(log._id); setDisposition(log.disposition || '') }}>
                           Edit

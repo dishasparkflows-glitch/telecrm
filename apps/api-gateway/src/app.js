@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
-const { createCorsOptions, errorHandler, requestLogger } = require('@sparkcrm/shared-middleware');
+const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = require('@sparkcrm/shared-middleware');
 const { setupProxies } = require('./proxy/serviceProxy');
 
 const app = express();

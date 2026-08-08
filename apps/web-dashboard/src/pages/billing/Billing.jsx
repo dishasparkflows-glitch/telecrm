@@ -290,7 +290,7 @@ export default function Billing() {
                     { icon: Building2, label: 'Company', value: tenantInfo.companyName },
                     { icon: Mail, label: 'Email', value: tenantInfo.email },
                     { icon: Phone, label: 'Phone', value: tenantInfo.phone || 'N/A' },
-                    { icon: Calendar, label: 'Registered', value: formatDate(tenantInfo.createdAt) },
+                    { icon: Calendar, label: 'Registered', value: formatDate(tenantInfo.meta?.createdAt) },
                     { icon: Shield, label: 'Status', value: tenantInfo.status, isBadge: true },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center gap-3">
@@ -422,7 +422,7 @@ export default function Billing() {
                       <td className="py-3 px-4">
                         <code className="text-xs bg-[var(--vz-input-bg)] px-2 py-1 rounded font-mono">{inv.invoiceNumber}</code>
                       </td>
-                      <td className="py-3 px-4 text-[var(--vz-text)]">{formatDate(inv.paidAt || inv.createdAt)}</td>
+                      <td className="py-3 px-4 text-[var(--vz-text)]">{formatDate(inv.paidAt || inv.meta?.createdAt)}</td>
                       <td className="py-3 px-4 text-[var(--vz-heading)] font-medium">{inv.description || inv.type}</td>
                       <td className="py-3 px-4 font-bold text-[var(--vz-heading)]">
                         <span className="text-xs text-[var(--vz-text-muted)] mr-0.5">{inv.currency}</span>
@@ -478,7 +478,7 @@ export default function Billing() {
                 <tbody>
                   {payments.map((p) => (
                     <tr key={p._id} className="border-b border-[var(--vz-border)] hover:bg-[var(--vz-input-bg)]">
-                      <td className="py-3 px-4 text-[var(--vz-text)]">{formatDate(p.paidAt || p.createdAt)}</td>
+                      <td className="py-3 px-4 text-[var(--vz-text)]">{formatDate(p.paidAt || p.meta?.createdAt)}</td>
                       <td className="py-3 px-4"><code className="text-xs bg-[var(--vz-input-bg)] px-2 py-0.5 rounded">{p.invoiceNumber}</code></td>
                       <td className="py-3 px-4 font-medium text-[var(--vz-heading)]">{p.planName}</td>
                       <td className="py-3 px-4 font-bold text-[var(--vz-heading)]">

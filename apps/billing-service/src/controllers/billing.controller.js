@@ -318,7 +318,7 @@ const getInvoices = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [invoices, total] = await Promise.all([
-        Invoice.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        Invoice.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
         Invoice.countDocuments(filter),
     ]);
 

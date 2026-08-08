@@ -73,7 +73,7 @@ async function migrateEmbeddedCustomFields() {
 async function repairDefaultInvariants() {
     const tenantIds = await Tenant.distinct('_id');
     for (const tenantId of tenantIds) {
-        const branches = await Branch.find({ tenantId }).sort({ isDefault: -1, createdAt: 1 });
+        const branches = await Branch.find({ tenantId }).sort({ isDefault: -1, 'meta.createdAt': 1 });
         if (branches.length > 0) {
             const keepBranch = branches.find((branch) => branch.isDefault && branch.isActive)
                 || branches.find((branch) => branch.isActive)
@@ -82,7 +82,7 @@ async function repairDefaultInvariants() {
             await Branch.updateOne({ _id: keepBranch._id }, { $set: { isDefault: true, isActive: true } });
         }
 
-        const roles = await Role.find({ tenantId, isActive: true }).sort({ isDefault: -1, createdAt: 1 });
+        const roles = await Role.find({ tenantId, isActive: true }).sort({ isDefault: -1, 'meta.createdAt': 1 });
         if (roles.length > 0) {
             const keepRole = roles.find((role) => role.isDefault)
                 || roles.find((role) => (role.systemKey || role.slug) === 'junior-agent')

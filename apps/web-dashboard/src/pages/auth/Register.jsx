@@ -104,7 +104,7 @@ export default function Register() {
             <Input label="Email" type="email" placeholder="Enter email address" icon={Mail}
               value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
             <Input label="Phone" type="tel" placeholder="+91 98765 43210" icon={Phone}
-              value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
             <Input label="Password" type="password" placeholder="Create password (min 8 chars)" icon={Lock}
               value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} />
 

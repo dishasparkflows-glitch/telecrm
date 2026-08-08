@@ -26,8 +26,16 @@ const Lead = leadConn.model('Lead', new mongoose.Schema({
         formName: String,
     },
     isArchived: { type: Boolean, default: false },
-    createdAt: Date
-}, { timestamps: true, versionKey: false }));
+    meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
+    },
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }));
 
 // Shadow CallLog Model
 const CallLog = callConn.model('CallLog', new mongoose.Schema({
@@ -38,8 +46,17 @@ const CallLog = callConn.model('CallLog', new mongoose.Schema({
     callerId: mongoose.Schema.Types.ObjectId,
     disposition: String,
     direction: String,
-    startedAt: Date
-}, { timestamps: true, versionKey: false }));
+    startedAt: Date,
+    meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
+    },
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }));
 
 // Shadow WhatsappMessage Model
 const WhatsappMessage = whatsappConn.model('WhatsappMessage', new mongoose.Schema({
@@ -47,8 +64,16 @@ const WhatsappMessage = whatsappConn.model('WhatsappMessage', new mongoose.Schem
     branchId: { type: mongoose.Schema.Types.ObjectId, index: true },
     direction: String,
     status: String,
-    createdAt: Date
-}, { timestamps: true, versionKey: false }));
+    meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
+    },
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }));
 
 // Shadow User Model
 const User = authConn.model('User', new mongoose.Schema({
@@ -58,7 +83,16 @@ const User = authConn.model('User', new mongoose.Schema({
     firstName: String,
     lastName: String,
     email: String,
-    isActive: Boolean
-}, { timestamps: true, versionKey: false }));
+    isActive: Boolean,
+    meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
+    },
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }));
 
 module.exports = { Lead, CallLog, WhatsappMessage, User };

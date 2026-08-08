@@ -122,7 +122,7 @@ export default function BranchManager() {
             <Input label="Code" placeholder="e.g. MUM" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} disabled={!!editId} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <Input label="Phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
             <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <Input label="Street" value={form.address.street} onChange={(e) => setAddr('street', e.target.value)} />

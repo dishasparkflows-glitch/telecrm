@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { createCorsOptions, errorHandler, requestLogger } = require('@sparkcrm/shared-middleware');
+const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = require('@sparkcrm/shared-middleware');
 const analyticsRoutes = require('./routes/analytics.routes');
 const { requireVerifiedUser } = require('./middleware/security');
 
@@ -12,6 +12,7 @@ app.use(helmet());
 app.use(cors(createCorsOptions()));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(contextMiddleware);
 app.use(requestLogger('analytics-service'));
 
 app.get('/health', (req, res) => {

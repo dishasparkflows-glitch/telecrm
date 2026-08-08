@@ -134,7 +134,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [users, total] = await Promise.all([
-        User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        User.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
         User.countDocuments(filter),
     ]);
 

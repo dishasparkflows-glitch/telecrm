@@ -72,17 +72,21 @@ const roleSchema = new mongoose.Schema(
             default: false,
         },
         permissions: [modulePermissionSchema],
-        createdBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            default: null,
-        },
         isActive: {
             type: Boolean,
             default: true,
         },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
     {
-        timestamps: true, versionKey: false
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false
     }
 );
 

@@ -32,7 +32,7 @@ const getReferralStats = asyncHandler(async (req, res) => {
 
     const referrals = await Referral.find({ referrerTenantId: tenantId })
         .populate('referredTenantId', 'companyName status createdAt')
-        .sort({ createdAt: -1 });
+        .sort({ 'meta.createdAt': -1 });
 
     const stats = {
         totalReferrals: referrals.length,

@@ -435,7 +435,7 @@ const getChat = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [messages] = await Promise.all([
-        WhatsappMessage.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        WhatsappMessage.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
         WhatsappMessage.countDocuments(filter),
     ]);
 
@@ -474,7 +474,7 @@ const getTeamInbox = asyncHandler(async (req, res) => {
 
     const conversations = await WhatsappMessage.aggregate([
         { $match: matchStage },
-        { $sort: { createdAt: -1 } },
+        { $sort: { 'meta.createdAt': -1 } },
         {
             $group: {
                 _id: {
@@ -545,7 +545,7 @@ const getInboxChat = asyncHandler(async (req, res) => {
     };
 
     const [messages, total] = await Promise.all([
-        WhatsappMessage.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        WhatsappMessage.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
         WhatsappMessage.countDocuments(filter),
     ]);
 
@@ -654,7 +654,7 @@ const getTemplates = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [templates, total] = await Promise.all([
-        Template.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        Template.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
         Template.countDocuments(filter),
     ]);
     ApiResponse.paginated(res, templates, { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / parseInt(limit)) });

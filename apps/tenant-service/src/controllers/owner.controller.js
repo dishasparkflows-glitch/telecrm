@@ -301,7 +301,7 @@ const getTenantDetail = asyncHandler(async (req, res) => {
 
     // Fetch payment history
     const payments = await Payment.find({ tenantId: tenant._id })
-        .sort({ createdAt: -1 })
+        .sort({ 'meta.createdAt': -1 })
         .limit(50)
         .lean();
 
@@ -471,7 +471,7 @@ const updateUserStatus = asyncHandler(async (req, res) => {
  * All plans (including inactive)
  */
 const listPlans = asyncHandler(async (req, res) => {
-    const plans = await Plan.find().sort({ sortOrder: 1, createdAt: 1 }).lean();
+    const plans = await Plan.find().sort({ sortOrder: 1, 'meta.createdAt': 1 }).lean();
     ApiResponse.success(res, plans, 'Plans fetched');
 });
 
@@ -574,7 +574,7 @@ const getRevenue = asyncHandler(async (req, res) => {
     const [payments, total] = await Promise.all([
         Payment.find(filter)
             .populate('tenantId', 'companyName email slug')
-            .sort({ createdAt: -1 })
+            .sort({ 'meta.createdAt': -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean(),

@@ -130,7 +130,7 @@ const reconcilePendingPayments = async () => {
         ],
     })
         .select('+reconciliationAttempts +nextReconciliationAt')
-        .sort({ createdAt: 1 })
+        .sort({ 'meta.createdAt': 1 })
         .limit(20);
 
     for (const invoice of invoices) {

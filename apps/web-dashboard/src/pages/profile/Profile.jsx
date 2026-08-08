@@ -27,7 +27,7 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('overview')
 
   const activeBranch = branches?.find(b => b._id === activeBranchId)
-  const joinDate = user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'
+  const joinDate = user?.meta?.createdAt ? new Date(user.meta?.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'
   const lastLogin = user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Just now'
 
   const handleAvatarUpload = async (e) => {

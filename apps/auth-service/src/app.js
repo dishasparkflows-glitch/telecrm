@@ -7,6 +7,7 @@ const {
     errorHandler,
     requestLogger,
     requireServiceIdentity,
+    contextMiddleware,
 } = require('@sparkcrm/shared-middleware');
 
 const authRoutes = require('./routes/auth.routes');
@@ -19,6 +20,7 @@ app.use(cookieParser());
 app.use(cors(createCorsOptions()));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(contextMiddleware);
 app.use(requestLogger('auth-service'));
 
 // Health check

@@ -34,8 +34,16 @@ const smartFormSchema = new mongoose.Schema(
         embedCode: { type: String, default: '' },
         isActive: { type: Boolean, default: true },
         submissionCount: { type: Number, default: 0 },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 const formSubmissionSchema = new mongoose.Schema(
@@ -47,8 +55,17 @@ const formSubmissionSchema = new mongoose.Schema(
         leadId: { type: mongoose.Schema.Types.ObjectId, default: null },
         ipAddress: { type: String, default: '' },
         userAgent: { type: String, default: '' },
+    
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 const SmartForm = mongoose.model('SmartForm', smartFormSchema);

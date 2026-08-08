@@ -13,7 +13,7 @@ const createBranch = asyncHandler(async (req, res) => {
     const branch = await Branch.create({
         tenantId, name, code: code.toUpperCase(),
         address: address || {}, phone: phone || '', email: email || '',
-        createdBy: req.headers['x-user-id'],
+        'meta.createdBy': req.headers['x-user-id'],
     });
 
     ApiResponse.created(res, branch, 'Branch created');

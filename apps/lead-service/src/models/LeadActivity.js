@@ -19,8 +19,16 @@ const leadActivitySchema = new mongoose.Schema(
         title: { type: String, required: true, trim: true },
         description: { type: String, default: '', trim: true },
         metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 leadActivitySchema.index({ tenantId: 1, leadId: 1, createdAt: -1 });

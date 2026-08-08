@@ -26,9 +26,16 @@ const automationRuleSchema = new mongoose.Schema(
         ],
         executionCount: { type: Number, default: 0 },
         lastExecutedAt: { type: Date, default: null },
-        createdBy: { type: mongoose.Schema.Types.ObjectId },
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 automationRuleSchema.index({ tenantId: 1, isActive: 1, 'trigger.event': 1 });
@@ -50,8 +57,17 @@ const automationLogSchema = new mongoose.Schema(
             },
         ],
         status: { type: String, enum: ['success', 'partial', 'failed'], default: 'success' },
+    
+        meta: {
+            createdBy: { type: mongoose.Schema.Types.ObjectId },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId },
+            deletedBy: { type: mongoose.Schema.Types.ObjectId },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+            deletedAt: { type: Date },
+        },
     },
-    { timestamps: true, versionKey: false }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 automationLogSchema.index({ tenantId: 1, createdAt: -1 });

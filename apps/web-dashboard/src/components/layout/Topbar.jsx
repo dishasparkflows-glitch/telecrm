@@ -280,7 +280,7 @@ function NotificationBell({ notifRef, notifOpen, setNotifOpen, navigate }) {
                     {n.title || n.message}
                   </p>
                   <p className="text-[10px] text-[var(--vz-text-muted)] mt-0.5">
-                    {new Date(n.createdAt).toLocaleString()}
+                    {new Date(n.meta?.createdAt).toLocaleString()}
                   </p>
                 </div>
               ))
