@@ -18,7 +18,6 @@ const leadSchema = new mongoose.Schema(
             default: null,
             index: true,
         },
-
         // ─── Contact Info ───
         contact: {
             firstName: {
@@ -71,21 +70,21 @@ const leadSchema = new mongoose.Schema(
                 default: '',
             },
         },
-
         // ─── Pipeline ───
-        stage: {
-            type: String,
-            default: PIPELINE_STAGES.NEW,
+        pipeline: {
+            stage: {
+                type: String,
+                default: PIPELINE_STAGES.NEW,
+            },
+            previousStage: {
+                type: String,
+                default: null,
+            },
+            stageChangedAt: {
+                type: Date,
+                default: Date.now,
+            },
         },
-        previousStage: {
-            type: String,
-            default: null,
-        },
-        stageChangedAt: {
-            type: Date,
-            default: Date.now,
-        },
-
         // ─── Source & Assignment ───
         source: {
             type: String,
@@ -146,41 +145,58 @@ const leadSchema = new mongoose.Schema(
                 metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
             },
         ],
-
         // ─── Scoring ───
-        score: {
-            type: Number,
-            default: 0,
-            min: 0,
-            max: 100,
+        scoring: {
+            score: {
+                type: Number,
+                default: 0,
+                min: 0,
+                max: 100,
+            },
+            scoreBreakdown: {
+                profileCompleteness: { type: Number, default: 0 },
+                engagement: { type: Number, default: 0 },
+                responseRate: { type: Number, default: 0 },
+                dealValue: { type: Number, default: 0 },
+                recency: { type: Number, default: 0 },
+            },
+            lastScoredAt: {
+                type: Date,
+                default: null,
+            },
         },
-        scoreBreakdown: {
-            profileCompleteness: { type: Number, default: 0 },
-            engagement: { type: Number, default: 0 },
-            responseRate: { type: Number, default: 0 },
-            dealValue: { type: Number, default: 0 },
-            recency: { type: Number, default: 0 },
+        // ─── Lifecycle ───
+        lifecycle: {
+            priority: {
+                type: String,
+                enum: Object.values(LEAD_PRIORITY),
+                default: LEAD_PRIORITY.MEDIUM,
+            },
+            expectedValue: {
+                type: Number,
+                default: 0,
+            },
+            currency: {
+                type: String,
+                default: 'INR',
+            },
+            lastActivityAt: {
+                type: Date,
+                default: null,
+            },
+            lastContactedAt: {
+                type: Date,
+                default: null,
+            },
+            followUpAt: {
+                type: Date,
+                default: null,
+            },
+            convertedAt: {
+                type: Date,
+                default: null,
+            },
         },
-        lastScoredAt: {
-            type: Date,
-            default: null,
-        },
-
-        // ─── Deal ───
-        priority: {
-            type: String,
-            enum: Object.values(LEAD_PRIORITY),
-            default: LEAD_PRIORITY.MEDIUM,
-        },
-        expectedValue: {
-            type: Number,
-            default: 0,
-        },
-        currency: {
-            type: String,
-            default: 'INR',
-        },
-
         // ─── Activity ───
         tags: [{ type: String, trim: true }],
         notes: [
@@ -190,18 +206,6 @@ const leadSchema = new mongoose.Schema(
                 createdAt: { type: Date, default: Date.now },
             },
         ],
-        lastActivityAt: {
-            type: Date,
-            default: Date.now,
-        },
-        lastContactedAt: {
-            type: Date,
-            default: null,
-        },
-        followUpAt: {
-            type: Date,
-            default: null,
-        },
 
         // ─── Custom Fields ───
         customFields: {
@@ -223,10 +227,6 @@ const leadSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
-        convertedAt: {
-            type: Date,
-            default: null,
-        },
         meta: {
             createdBy: { type: mongoose.Schema.Types.ObjectId },
             updatedBy: { type: mongoose.Schema.Types.ObjectId },
@@ -242,12 +242,12 @@ const leadSchema = new mongoose.Schema(
 );
 
 // ─── Indexes for performance ───
-leadSchema.index({ tenantId: 1, stage: 1 });
+leadSchema.index({ tenantId: 1, 'pipeline.stage': 1 });
 leadSchema.index({ tenantId: 1, assignedTo: 1 });
 leadSchema.index({ tenantId: 1, source: 1 });
-leadSchema.index({ tenantId: 1, score: -1 });
+leadSchema.index({ tenantId: 1, 'scoring.score': -1 });
 leadSchema.index({ tenantId: 1, createdAt: -1 });
-leadSchema.index({ tenantId: 1, followUpAt: 1 });
+leadSchema.index({ tenantId: 1, 'lifecycle.followUpAt': 1 });
 leadSchema.index({ tenantId: 1, tags: 1 });
 leadSchema.index({ tenantId: 1, 'contact.email': 1 });
 leadSchema.index({ tenantId: 1, 'contact.phone': 1 });

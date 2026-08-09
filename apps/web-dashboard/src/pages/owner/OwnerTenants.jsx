@@ -86,59 +86,65 @@ export default function OwnerTenants() {
                 <tr><td colSpan={6} className="px-5 py-8 text-center text-[var(--vz-text-muted)]">Loading...</td></tr>
               ) : tenants.length === 0 ? (
                 <tr><td colSpan={6} className="px-5 py-8 text-center text-[var(--vz-text-muted)]">No tenants found</td></tr>
-              ) : tenants.map((t) => (
-                <tr key={t._id} className="hover:bg-[var(--vz-body-bg)]/50 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
-                        {t.companyName?.[0]?.toUpperCase() || '?'}
+              ) : tenants.map((t) => {
+                const companyName = t.company?.name;
+                const slug = t.company?.slug;
+                const email = t.company?.email;
+                const status = t.status;
+                return (
+                  <tr key={t._id} className="hover:bg-[var(--vz-body-bg)]/50 transition-colors">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
+                          {companyName?.[0]?.toUpperCase() || '?'}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-[var(--vz-heading)]">{companyName}</p>
+                          <p className="text-[11px] text-[var(--vz-text-muted)]">{slug}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-[var(--vz-heading)]">{t.companyName}</p>
-                        <p className="text-[11px] text-[var(--vz-text-muted)]">{t.slug}</p>
+                    </td>
+                    <td className="px-5 py-4 text-[var(--vz-text)]">{email}</td>
+                    <td className="px-5 py-4">
+                      <Badge color="soft-primary">{t.planId?.name || 'N/A'}</Badge>
+                    </td>
+                    <td className="px-5 py-4">
+                      <Badge color={STATUS_COLORS[status] || 'primary'}>{status}</Badge>
+                    </td>
+                    <td className="px-5 py-4 text-[var(--vz-text-muted)] text-xs">
+                      {new Date(t.meta?.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/owner/tenants/${t._id}`)}
+                          className="p-1.5 rounded-md hover:bg-primary/10 text-primary transition-colors"
+                          title="View Detail"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {status !== 'suspended' ? (
+                          <button
+                            onClick={() => handleStatusChange(t._id, 'suspended')}
+                            className="p-1.5 rounded-md hover:bg-danger/10 text-danger transition-colors"
+                            title="Suspend"
+                          >
+                            <Ban size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleStatusChange(t._id, 'active')}
+                            className="p-1.5 rounded-md hover:bg-success/10 text-success transition-colors"
+                            title="Activate"
+                          >
+                            <CheckCircle size={16} />
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-[var(--vz-text)]">{t.email}</td>
-                  <td className="px-5 py-4">
-                    <Badge color="soft-primary">{t.planId?.name || 'N/A'}</Badge>
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge color={STATUS_COLORS[t.status] || 'primary'}>{t.status}</Badge>
-                  </td>
-                  <td className="px-5 py-4 text-[var(--vz-text-muted)] text-xs">
-                    {new Date(t.meta?.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => navigate(`/owner/tenants/${t._id}`)}
-                        className="p-1.5 rounded-md hover:bg-primary/10 text-primary transition-colors"
-                        title="View Detail"
-                      >
-                        <Eye size={16} />
-                      </button>
-                      {t.status !== 'suspended' ? (
-                        <button
-                          onClick={() => handleStatusChange(t._id, 'suspended')}
-                          className="p-1.5 rounded-md hover:bg-danger/10 text-danger transition-colors"
-                          title="Suspend"
-                        >
-                          <Ban size={16} />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleStatusChange(t._id, 'active')}
-                          className="p-1.5 rounded-md hover:bg-success/10 text-success transition-colors"
-                          title="Activate"
-                        >
-                          <CheckCircle size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

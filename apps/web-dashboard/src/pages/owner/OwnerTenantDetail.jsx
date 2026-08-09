@@ -140,6 +140,12 @@ export default function OwnerTenantDetail() {
     return <div className="flex items-center justify-center h-64 text-[var(--vz-text-muted)]">Loading...</div>
   }
 
+  const companyName = tenant.company?.name;
+  const email = tenant.company?.email;
+  const slug = tenant.company?.slug;
+  const status = tenant.status;
+  const billingCycle = tenant.subscription?.billingCycle || 'None';
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -149,10 +155,10 @@ export default function OwnerTenantDetail() {
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h4 className="text-xl font-black text-[var(--vz-heading)]">{tenant.companyName}</h4>
-            <p className="text-sm text-[var(--vz-text-muted)] mt-0.5">{tenant.email}</p>
+            <h4 className="text-xl font-black text-[var(--vz-heading)]">{companyName}</h4>
+            <p className="text-sm text-[var(--vz-text-muted)] mt-0.5">{email}</p>
           </div>
-          <Badge color={STATUS_COLORS[tenant.status] || 'primary'}>{tenant.status}</Badge>
+          <Badge color={STATUS_COLORS[status] || 'primary'}>{status}</Badge>
         </div>
         <Button onClick={handleImpersonate} disabled={impersonating}>
           <LogIn size={16} className="mr-2" />
@@ -175,11 +181,11 @@ export default function OwnerTenantDetail() {
           <div className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b border-[var(--vz-border)]">
               <span className="text-[var(--vz-text-muted)]">Company</span>
-              <span className="font-medium text-[var(--vz-heading)]">{tenant.companyName}</span>
+              <span className="font-medium text-[var(--vz-heading)]">{companyName}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-[var(--vz-border)]">
               <span className="text-[var(--vz-text-muted)]">Slug</span>
-              <span className="font-medium text-[var(--vz-heading)]">{tenant.slug}</span>
+              <span className="font-medium text-[var(--vz-heading)]">{slug}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-[var(--vz-border)]">
               <span className="text-[var(--vz-text-muted)]">Plan</span>
@@ -187,7 +193,7 @@ export default function OwnerTenantDetail() {
             </div>
             <div className="flex justify-between py-2 border-b border-[var(--vz-border)]">
               <span className="text-[var(--vz-text-muted)]">Billing</span>
-              <span className="font-medium text-[var(--vz-heading)]">{tenant.billingCycle || 'None'}</span>
+              <span className="font-medium text-[var(--vz-heading)]">{billingCycle}</span>
             </div>
             <div className="flex justify-between py-2">
               <span className="text-[var(--vz-text-muted)]">Created</span>

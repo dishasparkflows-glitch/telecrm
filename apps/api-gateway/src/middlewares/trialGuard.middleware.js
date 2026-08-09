@@ -18,22 +18,24 @@ const trialGuard = (req, res, next) => {
                 message: 'Tenant data not available. Ensure tenantResolver runs before trialGuard.',
             });
         }
+        const status = tenant.status;
+        const trialExpiresAt = tenant.trial?.expiresAt;
 
         // Active paid plan — always allowed
-        if (tenant.status === TENANT_STATUS.ACTIVE) {
+        if (status === TENANT_STATUS.ACTIVE) {
             req.isTrial = false;
             return next();
         }
 
         // Free plan — allowed (limited features handled by feature guard)
-        if (tenant.status === TENANT_STATUS.FREE) {
+        if (status === TENANT_STATUS.FREE) {
             req.isTrial = false;
             return next();
         }
 
         // Trial — check if still active
-        if (tenant.status === TENANT_STATUS.TRIAL) {
-            const trialExpiry = new Date(tenant.trialExpiresAt);
+        if (status === TENANT_STATUS.TRIAL) {
+            const trialExpiry = new Date(trialExpiresAt);
             if (trialExpiry > new Date()) {
                 req.isTrial = true;
                 req.trialDaysRemaining = Math.ceil(

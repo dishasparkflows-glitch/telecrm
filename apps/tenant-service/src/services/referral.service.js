@@ -43,13 +43,13 @@ const processReferralReward = async (tenantId) => {
         await referral.save();
 
         await publishEvent(EVENTS.SEND_EMAIL, {
-            to: referrer.email,
+            to: referrer.company?.email,
             template: 'referral_reward',
             data: {
-                companyName: referrer.companyName,
-                referredCompany: tenant.companyName,
+                companyName: referrer.company?.name,
+                referredCompany: tenant.company?.name,
                 reward: '1 Free Month',
-                newExpiresAt: referrer.planExpiresAt,
+                newExpiresAt: referrer.subscription?.expiresAt,
             },
         });
     }

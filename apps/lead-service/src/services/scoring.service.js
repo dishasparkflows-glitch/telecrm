@@ -37,21 +37,24 @@ const calculateLeadScore = (lead) => {
         won: 20,
         lost: 4,
     };
-    breakdown.responseRate = stageScores[lead.stage] || 2;
+    const currentStage = lead.pipeline?.stage;
+    breakdown.responseRate = stageScores[currentStage] || 2;
 
     // 4. Deal Value (0-20)
-    if (lead.expectedValue > 0) {
-        if (lead.expectedValue >= 100000) breakdown.dealValue = 20;
-        else if (lead.expectedValue >= 50000) breakdown.dealValue = 15;
-        else if (lead.expectedValue >= 20000) breakdown.dealValue = 10;
-        else if (lead.expectedValue >= 5000) breakdown.dealValue = 5;
+    const expectedValue = lead.lifecycle?.expectedValue ?? 0;
+    if (expectedValue > 0) {
+        if (expectedValue >= 100000) breakdown.dealValue = 20;
+        else if (expectedValue >= 50000) breakdown.dealValue = 15;
+        else if (expectedValue >= 20000) breakdown.dealValue = 10;
+        else if (expectedValue >= 5000) breakdown.dealValue = 5;
         else breakdown.dealValue = 2;
     }
 
     // 5. Recency (0-20) — Based on last activity
-    if (lead.lastActivityAt) {
+    const lastActivityAt = lead.lifecycle?.lastActivityAt;
+    if (lastActivityAt) {
         const daysSinceActivity = Math.floor(
-            (Date.now() - new Date(lead.lastActivityAt)) / (1000 * 60 * 60 * 24)
+            (Date.now() - new Date(lastActivityAt)) / (1000 * 60 * 60 * 24)
         );
         if (daysSinceActivity <= 1) breakdown.recency = 20;
         else if (daysSinceActivity <= 3) breakdown.recency = 16;
@@ -81,9 +84,11 @@ const recalculateScores = async (tenantId) => {
 
     for (const lead of leads) {
         const { score, breakdown } = calculateLeadScore(lead);
-        lead.score = score;
-        lead.scoreBreakdown = breakdown;
-        lead.lastScoredAt = new Date();
+        lead.scoring = {
+            score,
+            scoreBreakdown: breakdown,
+            lastScoredAt: new Date(),
+        };
         await lead.save();
         updated++;
     }

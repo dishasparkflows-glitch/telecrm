@@ -24,8 +24,8 @@ const pipelineValue = (tenantId) => [
     { $match: { tenantId, isArchived: false } },
     {
         $group: {
-            _id: '$stage',
-            totalValue: { $sum: '$dealValue' },
+            _id: { $ifNull: ['$pipeline.stage', '$stage'] },
+            totalValue: { $sum: { $ifNull: ['$lifecycle.expectedValue', '$expectedValue'] } },
             count: { $sum: 1 },
         },
     },

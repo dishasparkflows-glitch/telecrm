@@ -23,7 +23,7 @@ const listModules = asyncHandler(async (req, res) => {
     // Owner is impersonating the tenant. Only the explicit module-management
     // request (?all=true) may retrieve the complete tenant module catalog.
     if (all !== 'true') {
-        const tenant = await Tenant.findById(tenantId).populate('planId', 'features moduleKeys');
+        const tenant = await Tenant.findById(tenantId).populate('subscription.planId', 'features moduleKeys');
         modules = filterModulesForTenantPlan(modules, tenant);
     }
 

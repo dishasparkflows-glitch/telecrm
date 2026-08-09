@@ -144,12 +144,12 @@ const generateInvoicePdf = (invoice, tenant) => {
             putText('BILLING ADDRESS', marginL, y);
 
             doc.fillColor(textDark).fontSize(10).font('Helvetica-Bold');
-            putText(tenant.companyName || 'Customer', marginL, y + 15);
+            putText(tenant.company?.name || 'Customer', marginL, y + 15);
 
             doc.fillColor(textBody).fontSize(9).font('Helvetica');
             let addrY = y + 28;
-            if (tenant.email) { putText(`Email: ${tenant.email}`, marginL, addrY); addrY += 13; }
-            if (tenant.phone) { putText(`Phone: ${tenant.phone}`, marginL, addrY); addrY += 13; }
+            if (tenant.company?.email) { putText(`Email: ${tenant.company?.email}`, marginL, addrY); addrY += 13; }
+            if (tenant.company?.phone) { putText(`Phone: ${tenant.company?.phone}`, marginL, addrY); addrY += 13; }
 
             // ═══════════════════════════════════════
             //  4. LINE ITEMS TABLE

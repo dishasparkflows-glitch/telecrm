@@ -97,7 +97,8 @@ const tenantResolver = async (req, res, next) => {
         }
 
         // ── Check tenant status ────────────────────────────────────────────────
-        if (tenant.status === 'suspended') {
+        const status = tenant.status;
+        if (status === 'suspended') {
             return res.status(403).json({
                 success: false,
                 message: 'Your account has been suspended. Please contact support.',
@@ -106,7 +107,7 @@ const tenantResolver = async (req, res, next) => {
             });
         }
 
-        if (tenant.status === 'cancelled') {
+        if (status === 'cancelled') {
             return res.status(403).json({
                 success: false,
                 message: 'Your account has been cancelled.',
@@ -116,7 +117,7 @@ const tenantResolver = async (req, res, next) => {
 
         // ── Attach tenant to request ───────────────────────────────────────────
         req.tenant = tenant;
-        req.tenantPlan = tenant.planId;
+        req.tenantPlan = tenant.subscription?.planId;
 
         // ── Inject calling headers for call-service ────────────────────────────
         // x-tenant-calling-number: Exotel virtual number assigned to this tenant

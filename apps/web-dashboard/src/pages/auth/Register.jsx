@@ -41,7 +41,23 @@ export default function Register() {
     e.preventDefault()
     setError('')
     try {
-      const payload = { ...form }
+      const payload = {
+        company: {
+          name: form.companyName,
+          email: form.email,
+          phone: form.phone,
+        },
+        user: {
+          name: form.name,
+          contact: {
+            name: form.name,
+            email: form.email,
+            phone: form.phone,
+            password: form.password,
+          },
+          password: form.password,
+        }
+      }
       if (planSlug) payload.planSlug = planSlug
 
       const result = await register(payload).unwrap()

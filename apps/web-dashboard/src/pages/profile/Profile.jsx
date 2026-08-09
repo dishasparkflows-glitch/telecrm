@@ -49,7 +49,7 @@ export default function Profile() {
       })
 
       // Update the user profile with the new avatar key
-      await updateUser({ id: user._id, avatar: key }).unwrap()
+      await updateUser({ id: user._id, contact: { avatar: key }, avatar: key }).unwrap()
       toast('Profile photo updated successfully', 'success')
       refetchMe()
     } catch (err) {
@@ -85,10 +85,10 @@ export default function Profile() {
             {/* Avatar */}
             <div className="relative -mt-[60px] ml-2">
               <div className="w-[120px] h-[120px] rounded-full border-4 border-[var(--vz-card-bg)] shadow-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white text-4xl font-bold overflow-hidden">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                {(user?.contact?.avatar) ? (
+                  <img src={user?.contact?.avatar} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  user?.name?.[0] || 'A'
+                  user?.contact?.name?.[0] || 'A'
                 )}
               </div>
               <input 
@@ -109,10 +109,10 @@ export default function Profile() {
             {/* Info */}
             <div className="flex-1 md:pb-1">
               <h4 className="text-xl font-bold text-[var(--vz-heading)]">
-                {user?.name || 'Admin User'}
+                {user?.contact?.name || 'Admin User'}
               </h4>
               <p className="text-sm text-[var(--vz-text-muted)] mt-0.5">
-                {user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Team Member'} at {tenant.companyName || 'SparkCRM'}
+                {user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Team Member'} at {tenant.company?.name || 'SparkCRM'}
               </p>
             </div>
 
@@ -171,10 +171,10 @@ export default function Profile() {
                   </div>
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     {[
-                      { label: 'Avatar', done: false },
-                      { label: 'Email Verified', done: user?.isEmailVerified },
-                      { label: 'Phone Added', done: !!user?.phone },
-                      { label: '2FA Enabled', done: user?.twoFactorEnabled },
+                      { label: 'Avatar', done: !!(user?.contact?.avatar) },
+                      { label: 'Email Verified', done: !!user?.authentication?.isEmailVerified },
+                      { label: 'Phone Added', done: !!(user?.contact?.phone) },
+                      { label: '2FA Enabled', done: !!user?.twoFactor?.enabled },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center gap-1.5 text-xs">
                         <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold
@@ -195,12 +195,12 @@ export default function Profile() {
                 </Card.Header>
                 <div className="space-y-3.5">
                   {[
-                    { icon: User, label: 'Full Name', value: user?.name || 'N/A' },
-                    { icon: Mail, label: 'Email', value: user?.email || 'N/A' },
-                    { icon: Phone, label: 'Phone', value: user?.phone || 'Not added' },
+                    { icon: User, label: 'Full Name', value: user?.contact?.name || 'N/A' },
+                    { icon: Mail, label: 'Email', value: user?.contact?.email || 'N/A' },
+                    { icon: Phone, label: 'Phone', value: user?.contact?.phone || 'Not added' },
                     { icon: Shield, label: 'Role', value: user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Agent', badge: true },
                     { icon: Building2, label: 'Branch', value: activeBranch?.name || 'Head Office' },
-                    { icon: Briefcase, label: 'Company', value: tenant.companyName || 'N/A' },
+                    { icon: Briefcase, label: 'Company', value: tenant.company?.name || 'N/A' },
                     { icon: Calendar, label: 'Joined', value: joinDate },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center gap-3">
@@ -230,7 +230,7 @@ export default function Profile() {
                 </Card.Header>
                 <div className="space-y-3">
                   <p className="text-sm text-[var(--vz-text)] leading-relaxed">
-                    Managing {tenant.companyName || 'the organization'} with SparkCRM. As a {user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'team member'},
+                    Managing {tenant.company?.name || 'the organization'} with SparkCRM. As a {user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'team member'},
                     {user?.role === ROLES.SUPER_ADMIN
                       ? ' overseeing all branches, users, and business operations. Full access to roles, permissions, modules, and all CRM features.'
                       : ' contributing to lead management, customer communications, and team collaboration.'}
@@ -259,8 +259,8 @@ export default function Profile() {
                 </Card.Header>
                 <div className="space-y-3">
                   {[
-                    { label: 'Email Verification', desc: user?.isEmailVerified ? 'Your email is verified' : 'Please verify your email', status: user?.isEmailVerified, badge: user?.isEmailVerified ? 'Verified' : 'Pending' },
-                    { label: 'Two-Factor Authentication', desc: user?.twoFactorEnabled ? '2FA is enabled for extra security' : 'Add an extra layer of security', status: user?.twoFactorEnabled, badge: user?.twoFactorEnabled ? 'Enabled' : 'Disabled' },
+                    { label: 'Email Verification', desc: user?.authentication?.isEmailVerified ? 'Your email is verified' : 'Please verify your email', status: !!user?.authentication?.isEmailVerified, badge: user?.authentication?.isEmailVerified ? 'Verified' : 'Pending' },
+                    { label: 'Two-Factor Authentication', desc: user?.twoFactor?.enabled ? '2FA is enabled for extra security' : 'Add an extra layer of security', status: !!user?.twoFactor?.enabled, badge: user?.twoFactor?.enabled ? 'Enabled' : 'Disabled' },
                     { label: 'Password', desc: 'Last changed on registration', status: true, badge: 'Set' },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)] hover:border-primary/30 transition-colors">

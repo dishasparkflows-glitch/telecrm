@@ -3,57 +3,83 @@ const { TENANT_STATUS, TRIAL_STATUS } = require('@sparkcrm/shared-utils');
 
 const tenantSchema = new mongoose.Schema(
     {
-        companyName: {
-            type: String,
-            required: [true, 'Company name is required'],
-            trim: true,
-            maxlength: [200, 'Company name cannot exceed 200 characters'],
-        },
-        slug: {
-            type: String,
-            required: true,
-            unique: true,
-            lowercase: true,
-            trim: true,
-        },
-        email: {
-            type: String,
-            required: [true, 'Email is required'],
-            lowercase: true,
-            trim: true,
-        },
-        phone: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-        logo: {
-            type: String,
-            default: '',
-        },
-        website: {
-            type: String,
-            default: '',
+        // ─── Company ───
+        company: {
+            name: {
+                type: String,
+                required: [true, 'Company name is required'],
+                trim: true,
+                maxlength: [200, 'Company name cannot exceed 200 characters'],
+            },
+            slug: {
+                type: String,
+                required: true,
+                unique: true,
+                lowercase: true,
+                trim: true,
+            },
+            email: {
+                type: String,
+                required: [true, 'Email is required'],
+                lowercase: true,
+                trim: true,
+            },
+            phone: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+            logo: {
+                type: String,
+                default: '',
+            },
+            website: {
+                type: String,
+                default: '',
+            },
         },
         address: {
             type: String,
             trim: true,
         },
-
-        // ─── Plan & Subscription ───
-        planId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Plan',
-            required: true,
+        // ─── Status ───
+        status: {
+            type: String,
+            enum: Object.values(TENANT_STATUS),
+            default: TENANT_STATUS.TRIAL,
         },
-        planExpiresAt: {
-            type: Date,
+        suspendedReason: {
+            type: String,
             default: null,
         },
-        billingCycle: {
-            type: String,
-            enum: ['monthly', 'yearly', 'none'],
-            default: 'none',
+        // ─── Subscription ───
+        subscription: {
+            planId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Plan',
+                required: true,
+            },
+            billingCycle: {
+                type: String,
+                enum: ['monthly', 'yearly', 'none'],
+                default: 'none',
+            },
+            startedAt: {
+                type: Date,
+                default: Date.now,
+            },
+            expiresAt: {
+                type: Date,
+                default: null,
+            },
+            convertedAt: {
+                type: Date,
+                default: null,
+            },
+            suspendedReason: {
+                type: String,
+                default: null,
+            },
         },
         paymentMethodsConfigured: {
             type: Boolean,
@@ -80,26 +106,26 @@ const tenantSchema = new mongoose.Schema(
             ],
             default: [],
         },
-
         // ─── Trial ───
-        trialStatus: {
-            type: String,
-            enum: Object.values(TRIAL_STATUS),
-            default: TRIAL_STATUS.ACTIVE,
+        trial: {
+            status: {
+                type: String,
+                enum: Object.values(TRIAL_STATUS),
+                default: TRIAL_STATUS.ACTIVE,
+            },
+            startedAt: {
+                type: Date,
+                default: Date.now,
+            },
+            expiresAt: {
+                type: Date,
+                default: null,
+            },
+            convertedAt: {
+                type: Date,
+                default: null,
+            },
         },
-        trialStartedAt: {
-            type: Date,
-            default: null,
-        },
-        trialExpiresAt: {
-            type: Date,
-            default: null,
-        },
-        trialConvertedAt: {
-            type: Date,
-            default: null,
-        },
-
         // ─── Features ───
         // Stores feature slugs (e.g. 'call_recording', 'auto_dialer') as plain strings.
         // Previously stored ObjectId refs but the Feature model lives in billing-service
@@ -124,18 +150,6 @@ const tenantSchema = new mongoose.Schema(
                 lowercase: true,
             },
         ],
-
-        // ─── Status ───
-        status: {
-            type: String,
-            enum: Object.values(TENANT_STATUS),
-            default: TENANT_STATUS.TRIAL,
-        },
-        suspendedReason: {
-            type: String,
-            default: null,
-        },
-
         // ─── Calling Configuration ───
         // Assigned by the Owner from their Exotel virtual-number pool.
         // Individual agents do NOT configure Exotel — they only store their
@@ -147,7 +161,6 @@ const tenantSchema = new mongoose.Schema(
             // Owner can disable calling for a specific tenant without touching global config
             callingEnabled: { type: Boolean, default: false },
         },
-
         // ─── Settings ───
         settings: {
             timezone: { type: String, default: 'Asia/Kolkata' },
@@ -159,7 +172,6 @@ const tenantSchema = new mongoose.Schema(
             dateFormat: { type: String, default: 'DD/MM/YYYY' },
             language: { type: String, default: 'en' },
         },
-
         // ─── Pipeline (default stages) ───
         pipelineStages: {
             type: [
@@ -180,7 +192,6 @@ const tenantSchema = new mongoose.Schema(
                 { name: 'Lost', slug: 'lost', color: '#ef4444', order: 6 },
             ],
         },
-
         // ─── Custom Fields Definition ───
         customFields: [
             {
@@ -195,13 +206,11 @@ const tenantSchema = new mongoose.Schema(
                 order: { type: Number, default: 0 },
             },
         ],
-
         // ─── Onboarding ───
         onboarding: {
             completedSteps: { type: [String], default: [] },
             isComplete: { type: Boolean, default: false },
         },
-
         // ─── Referral ───
         referralCode: {
             type: String,
@@ -222,29 +231,32 @@ const tenantSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false  }
+    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
 // ─── Indexes ───
-tenantSchema.index({ slug: 1 });
-tenantSchema.index({ email: 1 });
-tenantSchema.index({ status: 1 });
-tenantSchema.index({ trialStatus: 1, trialExpiresAt: 1 });
+tenantSchema.index({ 'company.slug': 1 });
+tenantSchema.index({ 'company.email': 1 });
+tenantSchema.index({ 'subscription.status': 1 });
+tenantSchema.index({ 'trial.status': 1, 'trial.expiresAt': 1 });
 tenantSchema.index({ referralCode: 1 });
 
 // ─── Virtual: isTrialActive ───
 tenantSchema.virtual('isTrialActive').get(function () {
+    const status = this.trial?.status;
+    const expiresAt = this.trial?.expiresAt;
     return (
-        this.trialStatus === TRIAL_STATUS.ACTIVE &&
-        this.trialExpiresAt &&
-        new Date() < new Date(this.trialExpiresAt)
+        status === TRIAL_STATUS.ACTIVE &&
+        expiresAt &&
+        new Date() < new Date(expiresAt)
     );
 });
 
 // ─── Virtual: trialDaysRemaining ───
 tenantSchema.virtual('trialDaysRemaining').get(function () {
     if (!this.isTrialActive) return 0;
-    const diff = new Date(this.trialExpiresAt) - new Date();
+    const expiresAt = this.trial?.expiresAt;
+    const diff = new Date(expiresAt) - new Date();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 });
 

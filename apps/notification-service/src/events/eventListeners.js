@@ -42,7 +42,7 @@ const registerEventListeners = async () => {
     // ─── Tenant registered → Welcome email + Trial invoice ───
     await subscribeToEvents(EVENTS.TENANT_REGISTERED, async (_channel, data) => {
         try {
-            const { email, companyName, phone, planName, trialExpiresAt, invoiceNumber } = data;
+            const { companyName, email, phone, planName, trialExpiresAt, invoiceNumber } = data;
             if (!email) return;
 
             // Send welcome email

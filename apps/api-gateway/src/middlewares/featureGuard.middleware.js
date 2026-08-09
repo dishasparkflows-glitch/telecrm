@@ -25,7 +25,8 @@ const featureGuard = (requiredFeature) => {
             }
 
             // 1. Check plan features (planId is populated by tenantResolver)
-            const planFeatures = tenant.planId?.features || [];
+            const plan = tenant.subscription?.planId;
+            const planFeatures = plan?.features || [];
             if (planFeatures.includes(requiredFeature)) return next();
 
             // 2. Check purchased add-on features (stored as string slugs since migration)
@@ -37,7 +38,7 @@ const featureGuard = (requiredFeature) => {
             if (extraFeatures.includes(requiredFeature)) return next();
 
             // Feature not available — deny with upgrade hint
-            console.log(`🚫 [featureGuard] DENIED: tenant=${tenant._id}, feature=${requiredFeature}, plan=${tenant.planId?.slug || 'unknown'}`);
+            console.log(`🚫 [featureGuard] DENIED: tenant=${tenant._id}, feature=${requiredFeature}, plan=${plan?.slug || 'unknown'}`);
             return res.status(403).json({
                 success: false,
                 message: `This feature requires '${requiredFeature}'. Please upgrade your plan or purchase it as an add-on.`,

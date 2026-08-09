@@ -151,7 +151,7 @@ const getLeadAnalytics = asyncHandler(async (req, res) => {
 
     const byStage = await Lead.aggregate([
         { $match: filter },
-        { $group: { _id: '$stage', count: { $sum: 1 } } }
+        { $group: { _id: { $ifNull: ['$pipeline.stage', '$stage'] }, count: { $sum: 1 } } }
     ]);
 
     const bySource = await Lead.aggregate([
@@ -162,7 +162,7 @@ const getLeadAnalytics = asyncHandler(async (req, res) => {
     const [sourceConversion, campaignConversion] = await Promise.all([
         Lead.aggregate([
             { $match: filter },
-            { $group: { _id: '$source', total: { $sum: 1 }, won: { $sum: { $cond: [{ $eq: ['$stage', 'won'] }, 1, 0] } } } },
+            { $group: { _id: '$source', total: { $sum: 1 }, won: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'won'] }, 1, 0] } } } },
             { $sort: { total: -1 } },
         ]),
         Lead.aggregate([
@@ -171,7 +171,7 @@ const getLeadAnalytics = asyncHandler(async (req, res) => {
                 _id: '$firstTouch.campaignId',
                 campaignName: { $first: '$firstTouch.campaignName' },
                 total: { $sum: 1 },
-                won: { $sum: { $cond: [{ $eq: ['$stage', 'won'] }, 1, 0] } },
+                won: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'won'] }, 1, 0] } },
             } },
             { $sort: { total: -1 } },
             { $limit: 20 },
@@ -286,9 +286,9 @@ const getTeamAnalytics = asyncHandler(async (req, res) => {
             { $group: {
                 _id: '$assignedTo',
                 count: { $sum: 1 },
-                won: { $sum: { $cond: [{ $eq: ['$stage', 'won'] }, 1, 0] } },
-                lost: { $sum: { $cond: [{ $eq: ['$stage', 'lost'] }, 1, 0] } },
-                pipelineValue: { $sum: { $ifNull: ['$expectedValue', 0] } },
+                won: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'won'] }, 1, 0] } },
+                lost: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'lost'] }, 1, 0] } },
+                pipelineValue: { $sum: { $ifNull: ['$lifecycle.expectedValue', { $ifNull: ['$expectedValue', 0] }] } },
             } },
             { $sort: { won: -1, count: -1 } },
         ]),
@@ -350,14 +350,14 @@ const getRevenueAnalytics = asyncHandler(async (req, res) => {
             { $match: filter },
             { $group: {
                 _id: null,
-                dealsClosed: { $sum: { $cond: [{ $eq: ['$stage', 'won'] }, 1, 0] } },
-                wonRevenue: { $sum: { $cond: [{ $eq: ['$stage', 'won'] }, { $ifNull: ['$expectedValue', 0] }, 0] } },
-                pipelineValue: { $sum: { $cond: [{ $nin: ['$stage', ['won', 'lost']] }, { $ifNull: ['$expectedValue', 0] }, 0] } },
+                dealsClosed: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'won'] }, 1, 0] } },
+                wonRevenue: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'won'] }, { $ifNull: ['$lifecycle.expectedValue', { $ifNull: ['$expectedValue', 0] }] }, 0] } },
+                pipelineValue: { $sum: { $cond: [{ $nin: [{ $ifNull: ['$pipeline.stage', '$stage'] }, ['won', 'lost']] }, { $ifNull: ['$lifecycle.expectedValue', { $ifNull: ['$expectedValue', 0] }] }, 0] } },
             } },
         ]),
         Lead.aggregate([
-            { $match: { ...filter, stage: 'won' } },
-            { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } }, revenue: { $sum: { $ifNull: ['$expectedValue', 0] } }, deals: { $sum: 1 } } },
+            { $match: { ...filter, $or: [{ 'pipeline.stage': 'won' }, { stage: 'won' }] } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } }, revenue: { $sum: { $ifNull: ['$lifecycle.expectedValue', { $ifNull: ['$expectedValue', 0] }] } }, deals: { $sum: 1 } } },
             { $sort: { _id: 1 } },
         ]),
     ]);

@@ -284,14 +284,15 @@ export default function Settings() {
   // Sync form state
   useEffect(() => {
     if (profileData?.data) {
+      const company = profileData.data.company || {}
       setCompanyForm({
-        companyName: profileData.data.companyName || '',
-        email: profileData.data.email || '',
-        phone: profileData.data.phone || '',
-        logo: profileData.data.logo || '',
+        companyName: company.name || '',
+        email: company.email || '',
+        phone: company.phone || '',
+        logo: company.logo || '',
         address: profileData.data.address || '',
         timezone: profileData.data.timezone || 'Asia/Kolkata',
-        website: profileData.data.website || ''
+        website: company.website || ''
       })
     }
   }, [profileData])
@@ -469,7 +470,19 @@ export default function Settings() {
 
   const handleSaveCompany = async () => {
     try {
-      await updateSettings(companyForm).unwrap()
+      await updateSettings({
+        company: {
+          name: companyForm.companyName,
+          email: companyForm.email,
+          phone: companyForm.phone,
+          logo: companyForm.logo,
+          website: companyForm.website,
+        },
+        address: companyForm.address,
+        settings: {
+          timezone: companyForm.timezone,
+        },
+      }).unwrap()
       toast('Company settings updated', 'success')
       refetchProfile()
     } catch {
@@ -499,7 +512,15 @@ export default function Settings() {
       setCompanyForm(updatedForm)
       
       // Update the settings with the key, not the downloadUrl
-      await updateSettings({ ...companyForm, logo: key }).unwrap()
+      await updateSettings({
+        company: {
+          name: companyForm.companyName,
+          email: companyForm.email,
+          phone: companyForm.phone,
+          logo: key,
+          website: companyForm.website,
+        },
+      }).unwrap()
       toast('Company logo updated successfully', 'success')
       refetchProfile()
     } catch (err) {
@@ -547,7 +568,22 @@ export default function Settings() {
   const handleInvite = async () => {
     if (!inviteForm.name || !inviteForm.email) return toast('Name and email required', 'error')
     try {
-      await inviteUser(inviteForm).unwrap()
+      const payload = {
+        contact: {
+          name: inviteForm.name,
+          email: inviteForm.email,
+          phone: inviteForm.phone,
+          password: inviteForm.password,
+        },
+        name: inviteForm.name,
+        email: inviteForm.email,
+        phone: inviteForm.phone,
+        password: inviteForm.password,
+        role: inviteForm.role,
+        roleId: inviteForm.roleId,
+        branchId: inviteForm.branchId,
+      }
+      await inviteUser(payload).unwrap()
       toast('Invitation sent successfully', 'success')
       setShowInvite(false)
       setInviteForm({ name: '', email: '', phone: '', role: 'agent', roleId: '', branchId: '', password: '' })
@@ -558,11 +594,22 @@ export default function Settings() {
 
   const handleUpdateUser = async () => {
     try {
-        const { id, ...data } = editUserForm
-        // Remove password if empty
-        if (!data.password) delete data.password
-        
-        await updateUser({ id, ...data }).unwrap()
+        const { id, name, email, phone, avatar, password, role, roleId, branchId, isBranchLeader, isActive } = editUserForm
+        const payload = {
+          contact: {
+            name,
+            email,
+            phone,
+            avatar,
+            ...(password ? { password } : {}),
+          },
+          role,
+          roleId,
+          branchId,
+          isBranchLeader,
+          isActive,
+        }
+        await updateUser({ id, ...payload }).unwrap()
         toast('User updated successfully', 'success')
         setShowEditUser(false)
     } catch (err) {

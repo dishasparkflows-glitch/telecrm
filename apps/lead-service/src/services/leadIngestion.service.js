@@ -109,20 +109,41 @@ const createOrUpdateLeadFromSource = async ({
     let resolvedAssignedTo = assignedTo || leadData.assignedTo || null;
     let assignmentPolicy = null;
     let assignmentStrategy = null;
+    const resolvedPriority = leadData.lifecycle?.priority || 'medium';
+    const resolvedExpectedValue = Number(leadData.lifecycle?.expectedValue) || 0;
+    const resolvedFollowUpAt = leadData.lifecycle?.followUpAt || null;
     if (!resolvedAssignedTo) {
         const assignment = await assignLeadFromPolicy({
             tenantId,
             branchId: branchId || leadData.branchId || null,
             source,
-            priority: leadData.priority,
+            priority: resolvedPriority,
         });
         resolvedAssignedTo = assignment.assignedTo || null;
         assignmentPolicy = assignment.policy;
         assignmentStrategy = assignment.strategy;
     }
 
+    const pipeline = {
+        stage: leadData.pipeline?.stage || 'new',
+        previousStage: leadData.pipeline?.previousStage || null,
+        stageChangedAt: leadData.pipeline?.stageChangedAt || new Date(),
+    };
+
+    const lifecycle = {
+        priority: resolvedPriority,
+        expectedValue: resolvedExpectedValue,
+        currency: leadData.lifecycle?.currency || 'INR',
+        lastActivityAt: leadData.lifecycle?.lastActivityAt || new Date(),
+        lastContactedAt: leadData.lifecycle?.lastContactedAt || null,
+        followUpAt: resolvedFollowUpAt,
+        convertedAt: leadData.lifecycle?.convertedAt || null,
+    };
+
     const lead = await Lead.create({
         ...leadData,
+        pipeline,
+        lifecycle,
         tenantId,
         branchId: branchId || leadData.branchId || null,
         contact: {
@@ -143,9 +164,11 @@ const createOrUpdateLeadFromSource = async ({
     });
 
     const { score, breakdown } = calculateLeadScore(lead);
-    lead.score = score;
-    lead.scoreBreakdown = breakdown;
-    lead.lastScoredAt = new Date();
+    lead.scoring = {
+        score,
+        scoreBreakdown: breakdown,
+        lastScoredAt: new Date(),
+    };
     await lead.save();
 
     await recordLeadActivity({

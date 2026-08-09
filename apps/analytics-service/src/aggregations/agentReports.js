@@ -11,8 +11,8 @@ const leadsPerAgent = (tenantId, dateQuery = {}) => [
         $group: {
             _id: '$assignedTo',
             totalLeads: { $sum: 1 },
-            wonLeads: { $sum: { $cond: [{ $eq: ['$stage', 'won'] }, 1, 0] } },
-            lostLeads: { $sum: { $cond: [{ $eq: ['$stage', 'lost'] }, 1, 0] } },
+            wonLeads: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'won'] }, 1, 0] } },
+            lostLeads: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'lost'] }, 1, 0] } },
             avgScore: { $avg: '$score' },
         },
     },

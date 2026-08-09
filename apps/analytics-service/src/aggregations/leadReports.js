@@ -7,7 +7,7 @@
  */
 const conversionFunnel = (tenantId, dateQuery = {}) => [
     { $match: { tenantId, isArchived: false, ...dateQuery } },
-    { $group: { _id: '$stage', count: { $sum: 1 } } },
+    { $group: { _id: { $ifNull: ['$pipeline.stage', '$stage'] }, count: { $sum: 1 } } },
     { $sort: { count: -1 } },
 ];
 

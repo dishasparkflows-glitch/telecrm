@@ -278,10 +278,11 @@ export default function Meetings() {
       {/* Edit Meeting Modal */}
       <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Edit Meeting" size="md">
         {editMeetingForm && (
-          <div className="space-y-3">
-            <Input label="Title" placeholder="Meeting title" value={editMeetingForm.title} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, title: e.target.value })} />
-            <Input label="Date & Time" type="datetime-local" value={editMeetingForm.dateTime} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, dateTime: e.target.value })} />
-            <Input label="Duration (min)" type="number" value={editMeetingForm.duration} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, duration: +e.target.value })} />
+          <>
+            <div className="space-y-3">
+              <Input label="Title" placeholder="Meeting title" value={editMeetingForm.title} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, title: e.target.value })} />
+              <Input label="Date & Time" type="datetime-local" value={editMeetingForm.dateTime} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, dateTime: e.target.value })} />
+              <Input label="Duration (min)" type="number" value={editMeetingForm.duration} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, duration: +e.target.value })} />
               <Select
                 value={editMeetingForm.status}
                 onChange={(val) => setEditMeetingForm({ ...editMeetingForm, status: val })}
@@ -297,7 +298,7 @@ export default function Meetings() {
               <Button variant="ghost" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>
               <Button size="sm" onClick={handleUpdate} disabled={updating}>{updating ? 'Updating...' : 'Save Changes'}</Button>
             </Modal.Footer>
-          </div>
+          </>
         )}
       </Modal>
 

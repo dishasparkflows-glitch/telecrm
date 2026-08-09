@@ -13,11 +13,13 @@ const getProfile = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     if (!tenantId) throw ApiError.badRequest('Tenant ID is required');
 
-    const tenant = await Tenant.findById(tenantId).populate('planId');
+    const tenant = await Tenant.findById(tenantId).populate('subscription.planId');
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
     const tenantObj = tenant.toObject();
-    tenantObj.logo = await getPresignedDownloadUrl(tenantObj.logo);
+    if (tenantObj.company?.logo) {
+        tenantObj.company.logo = await getPresignedDownloadUrl(tenantObj.company.logo);
+    }
     ApiResponse.success(res, tenantObj, 'Tenant profile fetched');
 });
 
@@ -27,21 +29,32 @@ const getProfile = asyncHandler(async (req, res) => {
  */
 const updateSettings = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const { companyName, phone, logo, website, address, settings } = req.body;
+    const { companyName, phone, logo, website, address, settings, company } = req.body;
 
     const tenant = await Tenant.findById(tenantId);
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
-    if (companyName) tenant.companyName = companyName;
-    if (phone) tenant.phone = phone;
-    if (logo && logo !== tenant.logo) {
-        if (tenant.logo) {
-            await deleteMedia(tenant.logo)
+    if (!tenant.company) tenant.company = {};
+
+    const name = company?.name !== undefined ? company.name : companyName;
+    if (name !== undefined) tenant.company.name = name;
+
+    if (company?.email !== undefined) tenant.company.email = company.email;
+
+    const compPhone = company?.phone !== undefined ? company.phone : phone;
+    if (compPhone !== undefined) tenant.company.phone = compPhone;
+
+    const compWebsite = company?.website !== undefined ? company.website : website;
+    if (compWebsite !== undefined) tenant.company.website = compWebsite;
+
+    const newLogo = company?.logo !== undefined ? company.logo : logo;
+    if (newLogo !== undefined && newLogo !== tenant.company.logo) {
+        if (tenant.company.logo) {
+            await deleteMedia(tenant.company.logo);
         }
-        tenant.logo = logo;
+        tenant.company.logo = newLogo;
     }
-    if (website) tenant.website = website;
-    if (address) tenant.address = address;
+    if (address !== undefined) tenant.address = address;
     if (settings) {
         if (settings.timezone) tenant.settings.timezone = settings.timezone;
         if (settings.workingHours) tenant.settings.workingHours = settings.workingHours;
@@ -61,18 +74,18 @@ const updateSettings = asyncHandler(async (req, res) => {
 const getTrialStatus = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
 
-    const tenant = await Tenant.findById(tenantId).populate('planId');
+    const tenant = await Tenant.findById(tenantId).populate('subscription.planId');
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
     const data = {
         status: tenant.status,
-        trialStatus: tenant.trialStatus,
+        trialStatus: tenant.trial?.status,
         isTrialActive: tenant.isTrialActive,
         trialDaysRemaining: tenant.trialDaysRemaining,
-        trialStartedAt: tenant.trialStartedAt,
-        trialExpiresAt: tenant.trialExpiresAt,
-        trialConvertedAt: tenant.trialConvertedAt,
-        currentPlan: tenant.planId,
+        trialStartedAt: tenant.trial?.startedAt,
+        trialExpiresAt: tenant.trial?.expiresAt,
+        trialConvertedAt: tenant.trial?.convertedAt,
+        currentPlan: tenant.subscription?.planId,
     };
 
     ApiResponse.success(res, data, 'Trial status fetched');
@@ -85,32 +98,33 @@ const getTrialStatus = asyncHandler(async (req, res) => {
 const getBillingDetails = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
 
-    const tenant = await Tenant.findById(tenantId).populate('planId');
+    const tenant = await Tenant.findById(tenantId).populate('subscription.planId');
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
     const now = new Date();
-    const plan = tenant.planId;
+    const plan = tenant.subscription?.planId;
 
     // Calculate days remaining
     let daysRemaining = 0;
     let expiresAt = null;
-    if (tenant.isTrialActive && tenant.trialExpiresAt) {
-        daysRemaining = Math.max(0, Math.ceil((tenant.trialExpiresAt - now) / (1000 * 60 * 60 * 24)));
-        expiresAt = tenant.trialExpiresAt;
-    } else if (tenant.planExpiresAt) {
-        daysRemaining = Math.max(0, Math.ceil((tenant.planExpiresAt - now) / (1000 * 60 * 60 * 24)));
-        expiresAt = tenant.planExpiresAt;
+    if (tenant.isTrialActive && tenant.trial?.expiresAt) {
+        daysRemaining = Math.max(0, Math.ceil((new Date(tenant.trial.expiresAt) - now) / (1000 * 60 * 60 * 24)));
+        expiresAt = tenant.trial.expiresAt;
+    } else if (tenant.subscription?.expiresAt) {
+        daysRemaining = Math.max(0, Math.ceil((new Date(tenant.subscription.expiresAt) - now) / (1000 * 60 * 60 * 24)));
+        expiresAt = tenant.subscription.expiresAt;
     }
 
     const data = {
         tenant: {
             _id: tenant._id,
-            companyName: tenant.companyName,
-            email: tenant.email,
-            phone: tenant.phone,
-            slug: tenant.slug,
+            companyName: tenant.company?.name,
+            email: tenant.company?.email,
+            phone: tenant.company?.phone,
+            slug: tenant.company?.slug,
+            company: tenant.company,
             status: tenant.status,
-            createdAt: tenant.createdAt,
+            createdAt: tenant.meta?.createdAt,
         },
         plan: plan ? {
             _id: plan._id,
@@ -123,11 +137,10 @@ const getBillingDetails = asyncHandler(async (req, res) => {
         } : null,
         billing: {
             isOnTrial: tenant.isTrialActive,
-            trialStatus: tenant.trialStatus,
+            trialStatus: tenant.trial?.status,
             daysRemaining,
             expiresAt,
-            billingCycle: tenant.billingCycle || 'monthly',
-            trialStartedAt: tenant.trialStartedAt,
+            billingCycle: tenant.subscription?.billingCycle || 'monthly',
         },
     };
 
@@ -166,7 +179,7 @@ const upgradePlan = asyncHandler(async (req, res) => {
 
     if (!planId) throw ApiError.badRequest('Plan ID is required');
 
-    const tenant = await Tenant.findById(tenantId).populate('planId', 'price yearlyPrice');
+    const tenant = await Tenant.findById(tenantId).populate('subscription.planId', 'price yearlyPrice');
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
     const newPlan = await Plan.findById(planId);
@@ -176,8 +189,8 @@ const upgradePlan = asyncHandler(async (req, res) => {
     const cycle = billingCycle || 'monthly';
     const amount = cycle === 'yearly' ? (newPlan.yearlyPrice || newPlan.price * 12) : newPlan.price;
     const currentPlanPrice = cycle === 'yearly'
-        ? (tenant.planId?.yearlyPrice || (tenant.planId?.price || 0) * 12)
-        : (tenant.planId?.price || 0);
+        ? (tenant.subscription?.planId?.yearlyPrice || (tenant.subscription?.planId?.price || 0) * 12)
+        : (tenant.subscription?.planId?.price || 0);
 
     // The existing dashboard uses this route only for free plans and
     // downgrades. Paid upgrades must complete through billing verification.
@@ -191,13 +204,15 @@ const upgradePlan = asyncHandler(async (req, res) => {
         ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
         : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    tenant.planId = newPlan._id;
-    tenant.billingCycle = cycle;
-    tenant.planExpiresAt = periodEnd;
+    if (!tenant.subscription) tenant.subscription = {};
+    if (!tenant.trial) tenant.trial = {};
+    tenant.subscription.planId = newPlan._id;
+    tenant.subscription.billingCycle = cycle;
+    tenant.subscription.expiresAt = periodEnd;
     tenant.status = 'active';
-    if (tenant.trialStatus === 'active') {
-        tenant.trialStatus = 'converted';
-        tenant.trialConvertedAt = now;
+    if (tenant.trial.status === 'active') {
+        tenant.trial.status = 'converted';
+        tenant.trial.convertedAt = now;
     }
     await tenant.save();
 

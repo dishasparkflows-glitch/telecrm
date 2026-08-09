@@ -8,130 +8,149 @@ const userSchema = new mongoose.Schema(
             required: [true, 'Tenant ID is required'],
             index: true,
         },
-        name: {
-            type: String,
-            required: [true, 'Name is required'],
-            trim: true,
-            maxlength: [100, 'Name cannot exceed 100 characters'],
-        },
-        email: {
-            type: String,
-            required: [true, 'Email is required'],
-            lowercase: true,
-            trim: true,
-        },
-        phone: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-        password: {
-            type: String,
-            required: [true, 'Password is required'],
-            minlength: [8, 'Password must be at least 8 characters'],
-            select: false,
-        },
-
         roleId: {
             type: mongoose.Schema.Types.ObjectId,
+            ref: 'Role',
             default: null,
             index: true,
         },
         branchId: {
             type: mongoose.Schema.Types.ObjectId,
-            default: null,
-            index: true,
-        },
-        avatar: {
-            type: String,
-            default: '',
-        },
-
-        // ─── Security ───
-        isEmailVerified: {
-            type: Boolean,
-            default: false,
-        },
-        emailVerificationToken: {
-            type: String,
-            select: false,
-        },
-        passwordResetToken: {
-            type: String,
-            select: false,
-        },
-        passwordResetExpires: {
-            type: Date,
-            select: false,
-        },
-        twoFactorEnabled: {
-            type: Boolean,
-            default: false,
-        },
-        twoFactorSecret: {
-            type: String,
-            select: false,
-        },
-        twoFactorBackupCodes: {
-            type: [String],
-            select: false,
-            default: [],
-        },
-        loginAttempts: {
-            type: Number,
-            default: 0,
-        },
-        lockUntil: {
-            type: Date,
+            ref: 'Branch',
             default: null,
         },
-        lastLoginAt: {
-            type: Date,
-            default: null,
-        },
-        lastLoginIp: {
-            type: String,
-            default: '',
-        },
-
-        // ─── Status ───
         isActive: {
             type: Boolean,
             default: true,
+            index: true,
         },
-        invitedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            default: null,
-        },
-        inviteAccepted: {
+        isBranchLeader: {
             type: Boolean,
-            default: true,
+            default: false,
+        },
+        tokenVersion: {
+            type: Number,
+            default: 0,
+        },
+        // ─── Contact ───
+        contact: {
+            name: {
+                type: String,
+                required: [true, 'Name is required'],
+                trim: true,
+                default: '',
+            },
+            email: {
+                type: String,
+                required: [true, 'Email is required'],
+                lowercase: true,
+                trim: true,
+            },
+            password: {
+                type: String,
+                required: [true, 'Password is required'],
+                minlength: [8, 'Password must be at least 8 characters'],
+                select: false,
+            },
+            avatar: {
+                type: String,
+                default: '',
+            },
+            phone: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+            whatsappNumber: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+            mobileNumber: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+            extensionNumber: {
+                type: String,
+                trim: true,
+                default: '',
+            },
+        },
+        // ─── Authentication ───
+        authentication: {
+            isEmailVerified: {
+                type: Boolean,
+                default: false,
+            },
+            emailVerificationToken: {
+                type: String,
+                select: false,
+            },
+            passwordResetToken: {
+                type: String,
+                select: false,
+            },
+            passwordResetExpires: {
+                type: Date,
+                select: false,
+            },
+            refreshToken: {
+                type: String,
+                select: false,
+            },
+            lastLoginAt: {
+                type: Date,
+                default: null,
+            },
+            lastLoginIp: {
+                type: String,
+                default: '',
+            },
+        },
+        // ─── Two Factor Authentication ───
+        twoFactor: {
+            enabled: {
+                type: Boolean,
+                default: false,
+            },
+            secret: {
+                type: String,
+                select: false,
+            },
+            backupCodes: {
+                type: [String],
+                select: false,
+                default: [],
+            },
+        },
+        // ─── Account Security ───
+        security: {
+            loginAttempts: {
+                type: Number,
+                default: 0,
+            },
+            lockUntil: {
+                type: Date,
+                default: null,
+            },
         },
 
-        // ─── Communication ───
-        whatsappNumber: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-        // Agent's personal mobile number — Exotel rings this first when they click "Call".
-        // The lead always sees the company's virtual number; this stays private.
-        mobileNumber: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-        extensionNumber: {
-            type: String,
-            trim: true,
-            default: '',
-        },
-
-        // ─── Refresh Token ───
-        refreshToken: {
-            type: String,
-            select: false,
+        // ─── Invitation ───
+        invitation: {
+            invitedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                default: null,
+            },
+            accepted: {
+                type: Boolean,
+                default: true,
+            },
+            acceptedAt: {
+                type: Date,
+                default: null,
+            },
         },
 
         // ─── Custom Fields ───
@@ -155,45 +174,81 @@ const userSchema = new mongoose.Schema(
 );
 
 // ─── Indexes ───
-userSchema.index({ tenantId: 1, email: 1 }, { unique: true });
-userSchema.index({ tenantId: 1, role: 1 });
+userSchema.index({ tenantId: 1, 'contact.email': 1 }, { unique: true });
+userSchema.index({ tenantId: 1, roleId: 1 });
 userSchema.index({ tenantId: 1, isActive: 1 });
 
 // ─── Pre-save: Hash password ───
 userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
+    if (this.isModified('contact.password')) {
+        const pass = this.contact?.password;
+        if (pass && !pass.startsWith('$2a$') && !pass.startsWith('$2b$')) {
+            const salt = await bcrypt.genSalt(12);
+            const hashed = await bcrypt.hash(pass, salt);
+            if (!this.contact) this.contact = {};
+            this.contact.password = hashed;
+        }
+    }
     next();
 });
 
 // ─── Methods ───
 userSchema.methods.comparePassword = async function (candidatePassword) {
-    return bcrypt.compare(candidatePassword, this.password);
+    const hash = this.contact?.password;
+    if (!hash) return false;
+    return bcrypt.compare(candidatePassword, hash);
 };
 
 userSchema.methods.isLocked = function () {
-    return this.lockUntil && this.lockUntil > new Date();
+    const lockUntil = this.security?.lockUntil || this.lockUntil;
+    return lockUntil && lockUntil > new Date();
 };
 
 userSchema.methods.incrementLoginAttempts = async function () {
-    this.loginAttempts += 1;
-    if (this.loginAttempts >= 5) {
-        this.lockUntil = new Date(Date.now() + 30 * 60 * 1000); // Lock for 30 minutes
+    if (!this.security) this.security = {};
+    this.security.loginAttempts = (this.security.loginAttempts || 0) + 1;
+    this.loginAttempts = this.security.loginAttempts;
+    if (this.security.loginAttempts >= 5) {
+        this.security.lockUntil = new Date(Date.now() + 30 * 60 * 1000); // Lock for 30 minutes
+        this.lockUntil = this.security.lockUntil;
     }
     await this.save();
 };
 
 userSchema.methods.resetLoginAttempts = async function () {
+    if (!this.security) this.security = {};
+    if (!this.authentication) this.authentication = {};
+    this.security.loginAttempts = 0;
+    this.security.lockUntil = null;
+    this.authentication.lastLoginAt = new Date();
     this.loginAttempts = 0;
     this.lockUntil = null;
-    this.lastLoginAt = new Date();
+    this.lastLoginAt = this.authentication.lastLoginAt;
     await this.save();
 };
 
 // ─── Remove sensitive fields from JSON ───
 userSchema.methods.toJSON = function () {
-    const obj = this.toObject();
+    const obj = this.toObject({ virtuals: true });
+    obj.name = obj.name || this.contact?.name || '';
+    obj.email = obj.email || this.contact?.email || '';
+    obj.phone = obj.phone || this.contact?.phone || '';
+    obj.avatar = obj.avatar || this.contact?.avatar || '';
+    obj.lastLoginAt = obj.lastLoginAt || this.authentication?.lastLoginAt || null;
+
+    if (obj.contact) {
+        delete obj.contact.password;
+    }
+    if (obj.authentication) {
+        delete obj.authentication.refreshToken;
+        delete obj.authentication.emailVerificationToken;
+        delete obj.authentication.passwordResetToken;
+        delete obj.authentication.passwordResetExpires;
+    }
+    if (obj.twoFactor) {
+        delete obj.twoFactor.secret;
+        delete obj.twoFactor.backupCodes;
+    }
     delete obj.password;
     delete obj.refreshToken;
     delete obj.emailVerificationToken;

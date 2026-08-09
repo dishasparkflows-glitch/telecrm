@@ -49,11 +49,11 @@ const generateTokenPair = (user, roleSlug = '') => {
         userId: user._id,
         tenantId: user.tenantId,
         role: roleSlug,
-        email: user.email,
+        email: user.contact?.email || '',
         branchId: user.branchId || '',
         roleId: user.roleId || '',
-        whatsappNumber: user.whatsappNumber || '',
-        mobileNumber: user.mobileNumber || '',   // Needed by call-service for Exotel first-leg
+        whatsappNumber: user.contact?.whatsappNumber || '',
+        mobileNumber: user.contact?.mobileNumber || '',
         tokenVersion: user.tokenVersion,
     };
 

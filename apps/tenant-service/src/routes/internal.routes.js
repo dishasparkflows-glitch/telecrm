@@ -18,9 +18,10 @@ const { filterModulesForTenantPlan } = require('../utils/moduleAccess');
 router.post(
     '/tenants',
     asyncHandler(async (req, res) => {
-        const { companyName, email, phone, referralCode, planSlug } = req.body;
+        const { company, companyName, email, phone, referralCode, planSlug } = req.body;
 
         const tenant = await trialService.createTenantWithTrial({
+            company,
             companyName,
             email,
             phone,
@@ -53,7 +54,7 @@ router.post(
 router.get(
     '/tenants/:id',
     asyncHandler(async (req, res) => {
-        const tenant = await Tenant.findById(req.params.id).populate('planId');
+        const tenant = await Tenant.findById(req.params.id).populate('subscription.planId');
         if (!tenant) {
             return res.status(404).json({ success: false, message: 'Tenant not found' });
         }
@@ -72,11 +73,13 @@ router.post(
         const tenant = await Tenant.findById(req.params.tenantId);
         if (!tenant) return res.status(404).json({ success: false, message: 'Tenant not found' });
 
-        tenant.planId = planId;
+        if (!tenant.subscription) tenant.subscription = {};
+        if (!tenant.trial) tenant.trial = {};
+        tenant.subscription.planId = planId;
         tenant.status = 'active';
-        if (tenant.trialStatus === 'active') {
-            tenant.trialStatus = 'converted';
-            tenant.trialConvertedAt = new Date();
+        if (tenant.trial.status === 'active') {
+            tenant.trial.status = 'converted';
+            tenant.trial.convertedAt = new Date();
         }
         await tenant.save();
 
@@ -92,7 +95,7 @@ router.post(
         }
 
         // Populate plan so billing-service can return updated data to frontend
-        await tenant.populate('planId');
+        await tenant.populate('subscription.planId');
 
         res.json({ success: true, data: tenant });
     })
@@ -141,7 +144,7 @@ router.get(
         }).sort({ section: 1, order: 1 });
 
         // Plan-based filtering
-        const tenant = await Tenant.findById(tenantId).populate('planId', 'features moduleKeys');
+        const tenant = await Tenant.findById(tenantId).populate('subscription.planId', 'features moduleKeys');
         modules = filterModulesForTenantPlan(modules, tenant);
 
         res.json({ success: true, data: modules });
@@ -174,17 +177,18 @@ router.get(
 router.get(
     '/features/:tenantId',
     asyncHandler(async (req, res) => {
-        const tenant = await Tenant.findById(req.params.tenantId).populate('planId', 'name slug features moduleKeys');
+        const tenant = await Tenant.findById(req.params.tenantId).populate('subscription.planId', 'name slug features moduleKeys');
         if (!tenant) {
             return res.status(404).json({ success: false, message: 'Tenant not found' });
         }
 
-        const planFeatures = tenant.planId?.features || [];
+        const plan = tenant.subscription?.planId;
+        const planFeatures = plan?.features || [];
         const purchasedFeatures = tenant.purchasedFeatures || []; // now stored as string slugs
         const extraFeatures = tenant.extraFeatures || [];
         const allowedFeatures = [...new Set([...planFeatures, ...purchasedFeatures, ...extraFeatures])];
 
-        const planModuleKeys = tenant.planId?.moduleKeys || [];
+        const planModuleKeys = plan?.moduleKeys || [];
         const extraModuleKeys = tenant.extraModuleKeys || [];
         const allowedModuleKeys = [...new Set([...planModuleKeys, ...extraModuleKeys])];
 
@@ -193,15 +197,15 @@ router.get(
             data: {
                 features: allowedFeatures,
                 moduleKeys: allowedModuleKeys,
-                plan: tenant.planId ? {
-                    name: tenant.planId.name,
-                    slug: tenant.planId.slug,
+                plan: plan ? {
+                    name: plan.name,
+                    slug: plan.slug,
                 } : null,
                 subscription: {
                     status: tenant.status,
-                    trialStatus: tenant.trialStatus,
-                    trialExpiresAt: tenant.trialExpiresAt,
-                    planExpiresAt: tenant.planExpiresAt,
+                    trialStatus: tenant.trial?.status,
+                    trialExpiresAt: tenant.trial?.expiresAt,
+                    planExpiresAt: tenant.subscription?.expiresAt,
                 },
             },
         });

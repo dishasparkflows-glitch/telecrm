@@ -8,7 +8,11 @@ const crypto = require('crypto');
 /**
  * Create a new tenant with 30-day free trial
  */
-const createTenantWithTrial = async ({ companyName, email, phone, referralCode, planSlug }) => {
+const createTenantWithTrial = async ({ company, companyName, email, phone, referralCode, planSlug }) => {
+    const compName = company?.name;
+    const compEmail = company?.email;
+    const compPhone = company?.phone || '';
+
     // If a specific plan was selected, use it; otherwise fall back to trial/free plan
     let trialPlan;
     if (planSlug) {
@@ -25,13 +29,13 @@ const createTenantWithTrial = async ({ companyName, email, phone, referralCode, 
     }
 
     // Generate unique slug
-    const baseSlug = companyName
+    const baseSlug = (compName || 'company')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
     let slug = baseSlug;
     let counter = 1;
-    while (await Tenant.findOne({ slug })) {
+    while (await Tenant.findOne({ 'company.slug': slug })) {
         slug = `${baseSlug}-${counter}`;
         counter++;
     }
@@ -42,18 +46,38 @@ const createTenantWithTrial = async ({ companyName, email, phone, referralCode, 
     const now = new Date();
     const trialExpiresAt = new Date(now.getTime() + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000);
 
-    const tenant = await Tenant.create({
-        companyName,
+    const companyObj = {
+        name: compName,
         slug,
-        email,
-        phone: phone || '',
+        email: compEmail,
+        phone: compPhone || '',
+        logo: company?.logo || '',
+        website: company?.website || '',
+    };
+
+    const subscription = {
         planId: trialPlan._id,
+        billingCycle: 'none',
+        startedAt: now,
+        expiresAt: trialExpiresAt,
+        convertedAt: null,
+        suspendedReason: null,
+    };
+
+    const trial = {
+        status: TRIAL_STATUS.ACTIVE,
+        startedAt: now,
+        expiresAt: trialExpiresAt,
+        convertedAt: null,
+    };
+
+    const tenant = await Tenant.create({
+        company: companyObj,
         status: TENANT_STATUS.TRIAL,
-        trialStatus: TRIAL_STATUS.ACTIVE,
-        trialStartedAt: now,
-        trialExpiresAt,
+        subscription,
+        trial,
         referralCode: tenantReferralCode,
-        referredBy: null, // Will be set if referralCode is provided
+        referredBy: null,
     });
 
     // Handle referral
@@ -90,11 +114,11 @@ const createTenantWithTrial = async ({ companyName, email, phone, referralCode, 
     // Publish event with full details for welcome email + invoice
     await publishEvent(EVENTS.TENANT_REGISTERED, {
         tenantId: tenant._id,
-        companyName: tenant.companyName,
-        email: tenant.email,
-        phone: tenant.phone,
+        companyName: tenant.company?.name,
+        email: tenant.company?.email,
+        phone: tenant.company?.phone,
         planName: trialPlan.name,
-        trialExpiresAt: tenant.trialExpiresAt,
+        trialExpiresAt: tenant.trial?.expiresAt,
         invoiceNumber,
     });
 
@@ -107,9 +131,9 @@ const createTenantWithTrial = async ({ companyName, email, phone, referralCode, 
  */
 const processExpiredTrials = async () => {
     const expiredTenants = await Tenant.find({
-        status: TENANT_STATUS.TRIAL,
-        trialStatus: TRIAL_STATUS.ACTIVE,
-        trialExpiresAt: { $lte: new Date() },
+        'subscription.status': TENANT_STATUS.TRIAL,
+        'trial.status': TRIAL_STATUS.ACTIVE,
+        'trial.expiresAt': { $lte: new Date() },
     });
 
     const results = [];
@@ -118,22 +142,25 @@ const processExpiredTrials = async () => {
         // Downgrade to free plan
         const freePlan = await Plan.findOne({ slug: 'free', isActive: true });
         if (freePlan) {
-            tenant.planId = freePlan._id;
+            if (!tenant.subscription) tenant.subscription = {};
+            tenant.subscription.planId = freePlan._id;
         }
 
+        if (!tenant.subscription) tenant.subscription = {};
+        if (!tenant.trial) tenant.trial = {};
         tenant.status = TENANT_STATUS.FREE;
-        tenant.trialStatus = TRIAL_STATUS.EXPIRED;
+        tenant.trial.status = TRIAL_STATUS.EXPIRED;
         await tenant.save();
 
         await publishEvent(EVENTS.TENANT_TRIAL_EXPIRED, {
             tenantId: tenant._id,
-            companyName: tenant.companyName,
-            email: tenant.email,
+            companyName: tenant.company?.name,
+            email: tenant.company?.email,
         });
 
         results.push({
             tenantId: tenant._id,
-            companyName: tenant.companyName,
+            companyName: tenant.company?.name,
         });
     }
 
@@ -154,11 +181,8 @@ const getTrialReminders = async (day) => {
 
     return Tenant.find({
         status: TENANT_STATUS.TRIAL,
-        trialStatus: TRIAL_STATUS.ACTIVE,
-        trialStartedAt: {
-            $gte: windowStart,
-            $lte: windowEnd,
-        },
+        'trial.status': TRIAL_STATUS.ACTIVE,
+        'trial.startedAt': { $gte: windowStart, $lte: windowEnd },
     });
 };
 
@@ -178,12 +202,15 @@ const convertTrial = async (tenantId, planId, billingCycle = 'monthly') => {
             ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
             : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    tenant.planId = planId;
+    if (!tenant.subscription) tenant.subscription = {};
+    if (!tenant.trial) tenant.trial = {};
+    tenant.subscription.planId = planId;
+    tenant.subscription.billingCycle = billingCycle;
+    tenant.subscription.expiresAt = expiresAt;
+    tenant.subscription.convertedAt = now;
+    tenant.trial.status = TRIAL_STATUS.CONVERTED;
+    tenant.trial.convertedAt = now;
     tenant.status = TENANT_STATUS.ACTIVE;
-    tenant.trialStatus = TRIAL_STATUS.CONVERTED;
-    tenant.trialConvertedAt = now;
-    tenant.billingCycle = billingCycle;
-    tenant.planExpiresAt = expiresAt;
     await tenant.save();
 
     await publishEvent(EVENTS.TENANT_UPGRADED, {

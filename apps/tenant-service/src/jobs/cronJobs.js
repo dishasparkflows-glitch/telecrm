@@ -32,15 +32,16 @@ const registerCronJobs = () => {
             });
 
             for (const tenant of expiringTenants) {
+                const trialExpiresAt = tenant.trial?.expiresAt;
                 const daysLeft = Math.ceil(
-                    (new Date(tenant.trialExpiresAt) - now) / (1000 * 60 * 60 * 24)
+                    (new Date(trialExpiresAt) - now) / (1000 * 60 * 60 * 24)
                 );
 
                 await publishEvent(EVENTS.TENANT_TRIAL_EXPIRING, {
                     tenantId: tenant._id,
-                    companyName: tenant.companyName,
+                    companyName: tenant.company?.name,
                     daysLeft,
-                    email: tenant.email,
+                    email: tenant.company?.email,
                 });
             }
 

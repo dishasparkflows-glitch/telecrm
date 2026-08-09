@@ -11,6 +11,20 @@ const authConn = mongoose.createConnection(env.MONGO.AUTH);
 const Lead = leadConn.model('Lead', new mongoose.Schema({
     tenantId: { type: mongoose.Schema.Types.ObjectId, index: true },
     branchId: { type: mongoose.Schema.Types.ObjectId, index: true },
+    pipeline: {
+        stage: String,
+        previousStage: String,
+        stageChangedAt: Date,
+    },
+    lifecycle: {
+        priority: String,
+        expectedValue: Number,
+        currency: String,
+        lastActivityAt: Date,
+        lastContactedAt: Date,
+        followUpAt: Date,
+        convertedAt: Date,
+    },
     stage: String,
     source: String,
     score: Number,

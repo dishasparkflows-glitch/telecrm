@@ -269,10 +269,30 @@ export default function Pricing() {
     setOtpStep(false)
     setShowSuccess(true)
     try {
-      const result = await register({
-        ...formData,
+      const payload = {
+        company: {
+          name: formData.companyName,
+          email: formData.email,
+          phone: formData.phone,
+        },
+        user: {
+          name: formData.name,
+          contact: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            password: formData.password,
+          },
+          password: formData.password,
+        },
+        companyName: formData.companyName,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
         planSlug: selectedPlan?.slug || 'free',
-      }).unwrap()
+      }
+      const result = await register(payload).unwrap()
       if (result?.data) {
         dispatch(setCredentials({
           user: result.data.user,

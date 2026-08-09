@@ -85,8 +85,8 @@ const registerEventListeners = async () => {
             const lead = await Lead.findOneAndUpdate(
                 { _id: leadId, tenantId },
                 {
-                    lastContactedAt: new Date(),
-                    lastActivityAt: new Date(),
+                    'lifecycle.lastContactedAt': new Date(),
+                    'lifecycle.lastActivityAt': new Date(),
                 },
                 { new: true }
             );
@@ -114,7 +114,7 @@ const registerEventListeners = async () => {
             if (!leadId) return;
             const lead = await Lead.findOneAndUpdate(
                 { _id: leadId, tenantId },
-                { lastActivityAt: new Date() },
+                { 'lifecycle.lastActivityAt': new Date() },
                 { new: true }
             );
             if (!lead) return;
@@ -165,7 +165,7 @@ const registerEventListeners = async () => {
 
             const lead = await Lead.findOneAndUpdate(
                 { _id: leadId, tenantId },
-                { lastActivityAt: new Date() },
+                { 'lifecycle.lastActivityAt': new Date() },
                 { new: true }
             );
             if (lead) {
@@ -194,12 +194,23 @@ const registerEventListeners = async () => {
             if (!leadId || !changes || typeof changes !== 'object') return;
 
             // Only allow safe fields to be updated via this event
-            const safeFields = ['lastContactedAt', 'lastActivityAt', 'followUpAt', 'stage', 'assignedTo'];
             const updatePayload = {};
-            for (const field of safeFields) {
-                if (changes[field] !== undefined) {
-                    updatePayload[field] = changes[field];
-                }
+            const lifecycleMap = {
+                lastContactedAt: 'lifecycle.lastContactedAt',
+                lastActivityAt: 'lifecycle.lastActivityAt',
+                followUpAt: 'lifecycle.followUpAt',
+                'lifecycle.lastContactedAt': 'lifecycle.lastContactedAt',
+                'lifecycle.lastActivityAt': 'lifecycle.lastActivityAt',
+                'lifecycle.followUpAt': 'lifecycle.followUpAt',
+            };
+            const pipelineMap = {
+                stage: 'pipeline.stage',
+                'pipeline.stage': 'pipeline.stage',
+            };
+            for (const [key, value] of Object.entries(changes)) {
+                if (lifecycleMap[key]) updatePayload[lifecycleMap[key]] = value;
+                else if (pipelineMap[key]) updatePayload[pipelineMap[key]] = value;
+                else if (key === 'assignedTo') updatePayload.assignedTo = value;
             }
 
             if (Object.keys(updatePayload).length === 0) return;

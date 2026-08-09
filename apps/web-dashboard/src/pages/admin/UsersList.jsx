@@ -31,19 +31,19 @@ export default function UsersList() {
 
   const { data: rolesResp } = useListRolesQuery()
   const roles = rolesResp?.data || []
-  
+
   // Find roles that match the search term
-  const matchedRoles = debouncedSearch 
+  const matchedRoles = debouncedSearch
     ? roles.filter(r => r.name.toLowerCase().includes(debouncedSearch.toLowerCase())).map(r => r._id).join(',')
     : ''
 
-  const { data: usersResp, isLoading } = useListUsersQuery({ 
-    page, 
-    limit: PAGE_SIZE, 
+  const { data: usersResp, isLoading } = useListUsersQuery({
+    page,
+    limit: PAGE_SIZE,
     search: debouncedSearch,
     matchedRoles: matchedRoles || undefined
   })
-  
+
   const { data: branchesResp } = useListBranchesQuery()
   const [updateRole] = useUpdateUserRoleMutation()
   const [updateStatus] = useUpdateUserStatusMutation()
@@ -79,7 +79,17 @@ export default function UsersList() {
   const handleInvite = async () => {
     if (!inviteForm.name || !inviteForm.email) return toast('Name and email are required', 'warning')
     try {
-      await inviteUser(inviteForm).unwrap()
+      const payload = {
+        contact: {
+          name: inviteForm.name,
+          email: inviteForm.email,
+          phone: inviteForm.phone,
+          password: inviteForm.password,
+        },
+        roleId: inviteForm.roleId,
+        branchId: inviteForm.branchId,
+      }
+      await inviteUser(payload).unwrap()
       setShowInvite(false)
       setInviteForm({ name: '', email: '', phone: '', roleId: '', branchId: '', password: '' })
     } catch (err) { toast(err.data?.message || 'Failed to invite user', 'error') }
@@ -87,16 +97,16 @@ export default function UsersList() {
 
   const handleEdit = (user) => {
     setEditUserForm({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone || '',
-        role: user.role,
-        roleId: user.roleId,
-        branchId: user.branchId,
-        isActive: user.isActive,
-        avatar: user.avatar,
-        password: ''
+      id: user._id,
+      name: user.contact?.name || '',
+      email: user.contact?.email || '',
+      phone: user.contact?.phone || '',
+      role: user.role,
+      roleId: user.roleId,
+      branchId: user.branchId,
+      isActive: user.isActive,
+      avatar: user.contact?.avatar || '',
+      password: ''
     })
     setShowEdit(true)
   }
@@ -104,17 +114,29 @@ export default function UsersList() {
   const handleUpdate = async (e) => {
     e.preventDefault()
     try {
-        const { id, ...data } = editUserForm
-        if (!data.password) delete data.password
-        await updateUser({ id, ...data }).unwrap()
-        setShowEdit(false)
+      const { id, name, email, phone, avatar, password, role, roleId, branchId, isActive } = editUserForm
+      const payload = {
+        contact: {
+          name,
+          email,
+          phone,
+          avatar,
+          ...(password ? { password } : {}),
+        },
+        role,
+        roleId,
+        branchId,
+        isActive,
+      }
+      await updateUser({ id, ...payload }).unwrap()
+      setShowEdit(false)
     } catch (err) { toast(err.data?.message || 'Failed to update user', 'error') }
   }
 
   const handleDelete = async () => {
     if (!confirmDelete.user) return
-    try { 
-      await deleteUser(confirmDelete.user._id).unwrap() 
+    try {
+      await deleteUser(confirmDelete.user._id).unwrap()
       setConfirmDelete({ isOpen: false, user: null })
     }
     catch (err) { toast(err.data?.message || 'Failed to remove user', 'error') }
@@ -175,90 +197,95 @@ export default function UsersList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--vz-border)]">
-            {filteredUsers.map((user) => (
-              <tr key={user._id} className="hover:bg-[var(--vz-body-bg)]/50 transition-colors">
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold overflow-hidden shrink-0">
-                      {user.avatar ? (
-                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                      ) : (
-                        user.name?.charAt(0)?.toUpperCase() || '?'
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-medium text-[var(--vz-heading)]">{user.name}</div>
-                      <div className="text-xs text-[var(--vz-text-muted)]">{user.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-5 py-4">
-                  {roleChanging === user._id ? (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setRoleChanging(null)} />
-                      <div className="w-40 relative z-50" onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={user.roleId || ''}
-                          onChange={(val) => handleRoleChange(user._id, val)}
-                          options={roles.map(r => ({ value: r._id, label: r.name }))}
-                        />
+            {filteredUsers.map((user) => {
+              const userName = user.contact?.name  || ''
+              const userEmail = user.contact?.email || ''
+              const userAvatar =  user.contact?.avatar
+              const userLastLogin = user.authentication?.lastLoginAt
+              return (
+                <tr key={user._id} className="hover:bg-[var(--vz-body-bg)]/50 transition-colors">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold overflow-hidden shrink-0">
+                        {userAvatar ? (
+                          <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+                        ) : (
+                          userName.charAt(0).toUpperCase() || '?'
+                        )}
                       </div>
-                    </>
-                  ) : (
-                    <button onClick={() => setRoleChanging(user._id)}
-                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors">
-                      <Shield size={12} />
-                      {getRoleName(user.roleId) || user.role || 'No role'}
-                      <ChevronDown size={10} />
-                    </button>
-                  )}
-                </td>
-                <td className="px-5 py-4">
-                  <span className="inline-flex items-center gap-1 text-xs text-[var(--vz-text)]">
-                    <Building2 size={12} className="text-[var(--vz-text-muted)]" />
-                    {getBranchName(user.branchId)}
-                  </span>
-                </td>
-                <td className="px-5 py-4">
-                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
-                    user.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-5 py-4 text-[var(--vz-text-muted)] text-xs">
-                  {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never'}
-                </td>
-                <td className="px-5 py-4 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <button onClick={() => handleEdit(user)} className="p-1.5 rounded text-[var(--vz-primary)] hover:bg-[var(--vz-primary)]/10 transition-colors" title="Edit User">
-                        <Edit3 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => handleStatusToggle(user._id, user.isActive)} 
-                      className={`p-1.5 rounded transition-colors ${
-                        user.isActive 
-                          ? 'text-[var(--vz-warning)] hover:bg-[var(--vz-warning)]/10' 
-                          : 'text-[var(--vz-success)] hover:bg-[var(--vz-success)]/10'
-                      }`}
-                      title={user.isActive ? 'Suspend User' : 'Activate User'}
-                    >
-                      {user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-                    </button>
-                    {user._id !== currentUser?._id && (
-                      <button 
-                        onClick={() => setConfirmDelete({ isOpen: true, user })} 
-                        className="p-1.5 rounded text-[var(--vz-danger)] hover:bg-[var(--vz-danger)]/10 transition-colors" 
-                        title="Delete User"
-                      >
-                        <Trash2 size={16} />
+                      <div>
+                        <div className="font-medium text-[var(--vz-heading)]">{userName || 'Unnamed User'}</div>
+                        <div className="text-xs text-[var(--vz-text-muted)]">{userEmail}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    {roleChanging === user._id ? (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setRoleChanging(null)} />
+                        <div className="w-40 relative z-50" onClick={(e) => e.stopPropagation()}>
+                          <Select
+                            value={user.roleId || ''}
+                            onChange={(val) => handleRoleChange(user._id, val)}
+                            options={roles.map(r => ({ value: r._id, label: r.name }))}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <button onClick={() => setRoleChanging(user._id)}
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors">
+                        <Shield size={12} />
+                        {getRoleName(user.roleId) || user.role || 'No role'}
+                        <ChevronDown size={10} />
                       </button>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="inline-flex items-center gap-1 text-xs text-[var(--vz-text)]">
+                      <Building2 size={12} className="text-[var(--vz-text-muted)]" />
+                      {getBranchName(user.branchId)}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${user.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                      }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
+                      {user.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-[var(--vz-text-muted)] text-xs">
+                    {userLastLogin ? new Date(userLastLogin).toLocaleString() : 'Never'}
+                  </td>
+                  <td className="px-5 py-4 text-right">
+
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => handleEdit(user)} className="p-1.5 rounded text-[var(--vz-primary)] hover:bg-[var(--vz-primary)]/10 transition-colors" title="Edit User">
+                        <Edit3 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleStatusToggle(user._id, user.isActive)}
+                        className={`p-1.5 rounded transition-colors ${user.isActive
+                            ? 'text-[var(--vz-warning)] hover:bg-[var(--vz-warning)]/10'
+                            : 'text-[var(--vz-success)] hover:bg-[var(--vz-success)]/10'
+                          }`}
+                        title={user.isActive ? 'Suspend User' : 'Activate User'}
+                      >
+                        {user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
+                      </button>
+                      {user._id !== currentUser?._id && (
+                        <button
+                          onClick={() => setConfirmDelete({ isOpen: true, user })}
+                          className="p-1.5 rounded text-[var(--vz-danger)] hover:bg-[var(--vz-danger)]/10 transition-colors"
+                          title="Delete User"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
 
@@ -338,46 +365,46 @@ export default function UsersList() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-               <Input label="Full Name" placeholder="John Doe" value={editUserForm.name} onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })} />
-               <Input label="Email Address" type="email" readOnly value={editUserForm.email} className="bg-[var(--vz-body-bg)]" />
+              <Input label="Full Name" placeholder="John Doe" value={editUserForm.name} onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })} />
+              <Input label="Email Address" type="email" readOnly value={editUserForm.email} className="bg-[var(--vz-body-bg)]" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-               <div className="space-y-1.5">
-                 <label className="block text-sm font-medium text-[var(--vz-heading)]">Role</label>
-                 <Select
-                   value={editUserForm.roleId || ''}
-                   onChange={(val) => setEditUserForm({ ...editUserForm, roleId: val })}
-                   options={[
-                     { value: '', label: 'Select Role' },
-                     ...roles.map(r => ({ value: r._id, label: r.name }))
-                   ]}
-                 />
-               </div>
-               <div className="space-y-1.5">
-                 <label className="block text-sm font-medium text-[var(--vz-heading)]">Primary Branch</label>
-                 <Select
-                   value={editUserForm.branchId || ''}
-                   onChange={(val) => setEditUserForm({ ...editUserForm, branchId: val })}
-                   options={[
-                     { value: '', label: 'Select Branch' },
-                     ...branches.map(b => ({ value: b._id, label: b.name }))
-                   ]}
-                 />
-               </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-[var(--vz-heading)]">Role</label>
+                <Select
+                  value={editUserForm.roleId || ''}
+                  onChange={(val) => setEditUserForm({ ...editUserForm, roleId: val })}
+                  options={[
+                    { value: '', label: 'Select Role' },
+                    ...roles.map(r => ({ value: r._id, label: r.name }))
+                  ]}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-[var(--vz-heading)]">Primary Branch</label>
+                <Select
+                  value={editUserForm.branchId || ''}
+                  onChange={(val) => setEditUserForm({ ...editUserForm, branchId: val })}
+                  options={[
+                    { value: '', label: 'Select Branch' },
+                    ...branches.map(b => ({ value: b._id, label: b.name }))
+                  ]}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-               <Input label="Phone" placeholder="+91 ..." value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
-               <Input label="Change Password?" type="password" placeholder="Leave blank to keep same" value={editUserForm.password} onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })} />
+              <Input label="Phone" placeholder="+91 ..." value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
+              <Input label="Change Password?" type="password" placeholder="Leave blank to keep same" value={editUserForm.password} onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })} />
             </div>
             <div className="flex items-center gap-2 pt-2">
-                <input type="checkbox" id="user_active_list" checked={editUserForm.isActive} onChange={(e) => setEditUserForm({ ...editUserForm, isActive: e.target.checked })} />
-                <label htmlFor="user_active_list" className="text-sm font-medium text-[var(--vz-heading)]">Account Active</label>
+              <input type="checkbox" id="user_active_list" checked={editUserForm.isActive} onChange={(e) => setEditUserForm({ ...editUserForm, isActive: e.target.checked })} />
+              <label htmlFor="user_active_list" className="text-sm font-medium text-[var(--vz-heading)]">Account Active</label>
             </div>
             <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>
-                <Button type="submit" size="sm" disabled={updatingUser}>
-                    {updatingUser ? 'Updating...' : 'Save Changes'}
-                </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>
+              <Button type="submit" size="sm" disabled={updatingUser}>
+                {updatingUser ? 'Updating...' : 'Save Changes'}
+              </Button>
             </div>
           </form>
         )}

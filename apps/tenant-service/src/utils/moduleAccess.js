@@ -1,7 +1,8 @@
 function filterModulesForTenantPlan(modules, tenant) {
-    if (!tenant?.planId) return modules;
+    const plan = tenant?.subscription?.planId;
+    if (!plan) return modules;
 
-    const planModuleKeys = tenant.planId.moduleKeys || [];
+    const planModuleKeys = plan.moduleKeys || [];
     const extraModuleKeys = tenant.extraModuleKeys || [];
     const allowedModuleKeys = new Set([...planModuleKeys, ...extraModuleKeys]);
 
@@ -13,7 +14,7 @@ function filterModulesForTenantPlan(modules, tenant) {
         });
     }
 
-    const planFeatures = tenant.planId.features || [];
+    const planFeatures = plan.features || [];
     const extraFeatures = tenant.extraFeatures || [];
     const allowedFeatures = new Set([...planFeatures, ...extraFeatures]);
     return modules.filter((module) => !module.requiredFeature || allowedFeatures.has(module.requiredFeature));

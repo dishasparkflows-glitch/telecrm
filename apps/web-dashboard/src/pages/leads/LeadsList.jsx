@@ -101,20 +101,29 @@ export default function LeadsList() {
   const getAssignedName = (assignedTo) => {
     const id = typeof assignedTo === 'object' ? assignedTo?._id : assignedTo
     const user = users.find((u) => u._id === id)
-    return user ? `${user.firstName || user.name || ''} ${user.lastName || ''}`.trim() : '—'
+    return user ? `${user.name || ''}` : 'Unassigned'
   }
 
   const [newLead, setNewLead] = useState({
-    contact: { firstName: '', lastName: '', email: '', phone: '', company: '' }, stage: 'new', source: 'manual',
+    contact: { firstName: '', lastName: '', email: '', phone: '', company: '' },
+    pipeline: { stage: 'new' },
+    stage: 'new',
+    source: 'manual',
     customFields: {}
   })
 
   const handleCreate = async () => {
     try {
-      await createLead(newLead).unwrap()
+      const payload = {
+        contact: newLead.contact,
+        pipeline: { stage: newLead.pipeline?.stage || 'new' },
+        source: newLead.source || 'manual',
+        customFields: newLead.customFields || {}
+      }
+      await createLead(payload).unwrap()
       toast('Lead created successfully', 'success')
       setShowAdd(false)
-      setNewLead({ contact: { firstName: '', lastName: '', email: '', phone: '', company: '' }, stage: 'new', source: 'manual', customFields: {} })
+      setNewLead({ contact: { firstName: '', lastName: '', email: '', phone: '', company: '' }, pipeline: { stage: 'new' }, stage: 'new', source: 'manual', customFields: {} })
     } catch (err) {
       toast(err.data?.message || 'Failed to create lead', 'error')
     }
@@ -353,26 +362,36 @@ export default function LeadsList() {
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)]">{lead.contact?.company || '—'}</td>
                       <td className="px-4 py-3">
-                        <Badge color={stageColors[lead.stage] || 'primary'}>
-                          {stageLabelMap[lead.stage] || lead.stage?.charAt(0).toUpperCase() + lead.stage?.slice(1)}
-                        </Badge>
+                        {(() => {
+                          const currentStage = lead.pipeline?.stage;
+                          return (
+                            <Badge color={stageColors[currentStage] || 'primary'}>
+                              {stageLabelMap[currentStage] || currentStage?.charAt(0).toUpperCase() + currentStage?.slice(1)}
+                            </Badge>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)] text-xs">
                         {sourceLabels[lead.source] || lead.source}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-8 h-1.5 bg-[var(--vz-input-bg)] rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                (lead.score || 0) >= 70 ? 'bg-secondary' :
-                                (lead.score || 0) >= 40 ? 'bg-warning' : 'bg-danger'
-                              }`}
-                              style={{ width: `${lead.score || 0}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-[var(--vz-text-muted)]">{lead.score || 0}</span>
-                        </div>
+                        {(() => {
+                          const s = lead.scoring?.score ?? 0;
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-8 h-1.5 bg-[var(--vz-input-bg)] rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    s >= 70 ? 'bg-secondary' :
+                                    s >= 40 ? 'bg-warning' : 'bg-danger'
+                                  }`}
+                                  style={{ width: `${s}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-[var(--vz-text-muted)]">{s}</span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)] text-xs">
                         {getAssignedName(lead.assignedTo)}

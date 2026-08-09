@@ -65,9 +65,9 @@ const validateRoleAssignment = async ({ tenantId, roleId, callerRole }) => {
 const inviteUser = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const invitedByUserId = req.headers['x-user-id'];
-    const { name, email, phone, roleId, branchId, password } = req.body;
+    const { contact, roleId, branchId } = req.body;
 
-    if (!name || !email) throw ApiError.badRequest('Name and email are required');
+    if (!contact?.name || !contact?.email) throw ApiError.badRequest('Name and email are required');
 
     await Promise.all([
         validateRoleAssignment({
@@ -81,31 +81,49 @@ const inviteUser = asyncHandler(async (req, res) => {
     // Check if user already exists in this tenant
     const existingUser = await User.findOne({
         tenantId,
-        email: email.toLowerCase(),
+        'contact.email': contact.email.toLowerCase(),
     });
     if (existingUser) throw ApiError.conflict('User with this email already exists in this team');
 
     // Generate a temporary password if not provided
-    const tempPassword = password || crypto.randomBytes(8).toString('hex');
+    const tempPassword = contact.password || crypto.randomBytes(8).toString('hex');
 
     const user = await User.create({
         tenantId,
-        name,
-        email: email.toLowerCase(),
-        phone: phone || '',
-        password: tempPassword,
+        contact: {
+            name: contact.name ? String(contact.name).trim() : '',
+            email: contact.email.toLowerCase(),
+            password: tempPassword,
+            phone: contact.phone || '',
+        },
+        authentication: {
+            isEmailVerified: true,
+            lastLoginAt: null,
+            lastLoginIp: '',
+        },
+        twoFactor: {
+            enabled: false,
+            backupCodes: [],
+        },
+        security: {
+            loginAttempts: 0,
+            lockUntil: null,
+        },
+        invitation: {
+            invitedBy: invitedByUserId,
+            accepted: false,
+            acceptedAt: null,
+        },
         roleId: roleId || null,
         branchId: branchId || null,
-        invitedBy: invitedByUserId,
-        inviteAccepted: false,
     });
 
     // Send invite email
     await publishEvent(EVENTS.SEND_EMAIL, {
-        to: user.email,
+        to: user.contact?.email,
         template: 'user_invite',
         data: {
-            name: user.name,
+            name: user.contact?.name || '',
             tempPassword,
             loginLink: `${process.env.DASHBOARD_URL || 'http://localhost:5174'}/login`,
         },
@@ -126,6 +144,8 @@ const getUsers = asyncHandler(async (req, res) => {
     if (search) {
         filter.$or = [
             { name: { $regex: search, $options: 'i' } },
+            { 'profile.name': { $regex: search, $options: 'i' } },
+            { 'contact.email': { $regex: search, $options: 'i' } },
             { email: { $regex: search, $options: 'i' } },
         ];
     }
@@ -141,8 +161,11 @@ const getUsers = asyncHandler(async (req, res) => {
     const usersWithUrls = await Promise.all(
         users.map(async (u) => {
             const userObj = u.toJSON();
-            if (userObj.avatar) {
-                userObj.avatar = await getPresignedDownloadUrl(userObj.avatar);
+            if (userObj.profile?.avatar) {
+                const avatar = userObj.profile?.avatar;
+                const presigned = await getPresignedDownloadUrl(avatar);
+                userObj.avatar = presigned;
+                if (userObj.profile) userObj.profile.avatar = presigned;
             }
             return userObj;
         })
@@ -165,7 +188,12 @@ const getUserById = asyncHandler(async (req, res) => {
     const user = await User.findOne({ _id: req.params.id, tenantId });
     if (!user) throw ApiError.notFound('User not found');
     const userObj = user.toJSON();
-    userObj.avatar = await getPresignedDownloadUrl(userObj.avatar);
+    if (userObj.profile?.avatar) {
+        const avatar = userObj.profile?.avatar;
+        const presigned = await getPresignedDownloadUrl(avatar);
+        userObj.avatar = presigned;
+        if (userObj.profile) userObj.profile.avatar = presigned;
+    }
     ApiResponse.success(res, userObj);
 });
 
@@ -175,30 +203,28 @@ const getUserById = asyncHandler(async (req, res) => {
  */
 const updateUser = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const { name, phone, roleId, isActive, branchId, password, avatar } = req.body;
+    const { contact, roleId, branchId, isActive } = req.body;
 
     const user = await User.findOne({ _id: req.params.id, tenantId });
     if (!user) throw ApiError.notFound('User not found');
-
-    const callerRole = req.headers['x-user-role'];
-    
     await Promise.all([
-        validateRoleAssignment({ tenantId, roleId, callerRole }),
+        validateRoleAssignment({ tenantId, roleId, callerRole: req.headers['x-user-role'] }),
         validateBranchAssignment({ tenantId, branchId }),
     ]);
 
-    if (name) user.name = name;
-    if (phone) user.phone = phone;
-    if (roleId) user.roleId = roleId;
-    if (branchId !== undefined) user.branchId = branchId;
-    if (isActive !== undefined) user.isActive = isActive;
-    if (password) user.password = password;
-    if (avatar && avatar !== user.avatar) {
-        if (user.avatar) {
-            await deleteMedia(user.avatar)
+    if (contact) {
+        if (contact.email && contact.email.toLowerCase() !== user.contact?.email) {
+            const exists = await User.findOne({ tenantId, 'contact.email': contact.email.toLowerCase(), _id: { $ne: user._id } });
+            if (exists) throw ApiError.conflict('User with this email already exists in this team');
+            contact.email = contact.email.toLowerCase();
         }
-        user.avatar = avatar;
+        if (!contact.password) delete contact.password;
+        Object.assign(user.contact ||= {}, contact);
     }
+
+    if (roleId !== undefined) user.roleId = roleId || null;
+    if (branchId !== undefined) user.branchId = branchId || null;
+    if (isActive !== undefined) user.isActive = isActive;
 
     await user.save();
     ApiResponse.success(res, user.toJSON(), 'User updated');

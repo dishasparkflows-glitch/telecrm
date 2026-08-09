@@ -77,10 +77,13 @@ export default function LeadDetail() {
       <div className="text-center py-20 text-[var(--vz-text-muted)]">Lead not found</div>
     )
   }
+  const currentStage = lead.pipeline?.stage
+  const currentExpectedValue = lead.lifecycle?.expectedValue ?? 0
+  const currentFollowUpAt = lead.lifecycle?.followUpAt
 
   const handleStageChange = async (newStage) => {
     try {
-      await updateLead({ id, stage: newStage }).unwrap()
+      await updateLead({ id, pipeline: { stage: newStage } }).unwrap()
       toast('Stage updated', 'success')
     } catch { toast('Failed to update stage', 'error') }
   }
@@ -103,8 +106,12 @@ export default function LeadDetail() {
         phone: lead.contact?.phone || '',
         company: lead.contact?.company || '',
       },
-      expectedValue: lead.expectedValue || 0,
-      followUpAt: lead.followUpAt ? new Date(new Date(lead.followUpAt).getTime() - new Date(lead.followUpAt).getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '',
+      lifecycle: {
+        expectedValue: currentExpectedValue,
+        followUpAt: currentFollowUpAt ? new Date(new Date(currentFollowUpAt).getTime() - new Date(currentFollowUpAt).getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '',
+      },
+      expectedValue: currentExpectedValue,
+      followUpAt: currentFollowUpAt ? new Date(new Date(currentFollowUpAt).getTime() - new Date(currentFollowUpAt).getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '',
       customFields: lead.customFields || {}
     })
     setShowEdit(true)
@@ -141,7 +148,8 @@ export default function LeadDetail() {
     }
   }
 
-  const scoreColor = lead.score >= 70 ? 'text-secondary' : lead.score >= 40 ? 'text-warning' : 'text-danger'
+  const leadScoreVal = lead.scoring?.score ?? lead.score ?? 0
+  const scoreColor = leadScoreVal >= 70 ? 'text-secondary' : leadScoreVal >= 40 ? 'text-warning' : 'text-danger'
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: Activity },
@@ -175,9 +183,9 @@ export default function LeadDetail() {
               </h4>
               {lead.contact?.company && <p className="text-sm text-[var(--vz-text-muted)]">{lead.contact?.company}</p>}
               <div className="flex items-center justify-center gap-2 mt-2">
-                <Badge color={stageColors[lead.stage]}>{lead.stage?.toUpperCase()}</Badge>
+                <Badge color={stageColors[currentStage]}>{currentStage?.toUpperCase()}</Badge>
                 <span className={`text-sm font-semibold ${scoreColor}`}>
-                  <Star size={14} className="inline -mt-0.5" /> {lead.score || 0}
+                  <Star size={14} className="inline -mt-0.5" /> {leadScoreVal}
                 </span>
                 <button onClick={handleEditOpen} className="p-1 rounded hover:bg-primary/10 text-primary transition-colors" title="Edit details">
                   <Edit3 size={14} />
@@ -212,7 +220,7 @@ export default function LeadDetail() {
               )}
               <div className="flex items-center gap-3 text-sm">
                 <Calendar size={15} className="text-[var(--vz-text-muted)] shrink-0" />
-                <span className="text-[var(--vz-text)]">{new Date(lead.meta?.createdAt).toLocaleDateString()}</span>
+                <span className="text-[var(--vz-text)]">{lead.meta?.createdAt || lead.createdAt ? new Date(lead.meta?.createdAt || lead.createdAt).toLocaleDateString() : '—'}</span>
               </div>
             </div>
 
@@ -236,11 +244,11 @@ export default function LeadDetail() {
                   key={s}
                   onClick={() => handleStageChange(s)}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all
-                    ${lead.stage === s
+                    ${currentStage === s
                       ? 'bg-primary text-white font-medium'
                       : 'text-[var(--vz-text)] hover:bg-[var(--vz-input-bg)]'}`}
                 >
-                  <div className={`w-2 h-2 rounded-full ${lead.stage === s ? 'bg-white' : 'bg-[var(--vz-text-muted)]'}`} />
+                  <div className={`w-2 h-2 rounded-full ${currentStage === s ? 'bg-white' : 'bg-[var(--vz-text-muted)]'}`} />
                   {s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
               ))}
@@ -250,9 +258,9 @@ export default function LeadDetail() {
           {/* Assign */}
           <Card>
             <Card.Header><Card.Title>Assigned To</Card.Title></Card.Header>
-            {assignedUser && (
-              <p className="text-xs text-[var(--vz-text-muted)] mb-2">Current: {assignedUser.firstName || assignedUser.name} {assignedUser.lastName || ''}</p>
-            )}
+            <p className="text-xs text-[var(--vz-text-muted)] mb-2">
+              Current: {assignedUser ? `${assignedUser.firstName || assignedUser.name || ''} ${assignedUser.lastName || ''}`.trim() : 'Unassigned'}
+            </p>
             <Select
               value={assignedToId || ''}
               onChange={(val) => handleAssign(val)}
@@ -275,11 +283,11 @@ export default function LeadDetail() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-[var(--vz-input-bg)]">
                     <p className="text-xs text-[var(--vz-text-muted)] mb-1">Lead Score</p>
-                    <p className={`text-xl font-bold ${scoreColor}`}>{lead.score || 0}/100</p>
+                    <p className={`text-xl font-bold ${scoreColor}`}>{leadScoreVal}/100</p>
                   </div>
                   <div className="p-3 rounded-lg bg-[var(--vz-input-bg)]">
                     <p className="text-xs text-[var(--vz-text-muted)] mb-1">Deal Value</p>
-                    <p className="text-xl font-bold text-[var(--vz-heading)]">₹{(lead.expectedValue || 0).toLocaleString()}</p>
+                    <p className="text-xl font-bold text-[var(--vz-heading)]">₹{currentExpectedValue.toLocaleString()}</p>
                   </div>
                 </div>
 
@@ -348,7 +356,7 @@ export default function LeadDetail() {
                         <div>
                           <p className="text-sm text-[var(--vz-heading)]">{note.text}</p>
                           <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">
-                            {note.createdBy?.firstName || 'System'} · {new Date(note.createdAt).toLocaleDateString()}
+                            {note.createdBy?.firstName || 'System'} · {note.createdAt || note.meta?.createdAt ? new Date(note.createdAt || note.meta?.createdAt).toLocaleDateString() : '—'}
                           </p>
                         </div>
                       </div>
@@ -393,7 +401,7 @@ export default function LeadDetail() {
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-medium text-[var(--vz-heading)]">{note.createdBy?.firstName || 'System'}</p>
                             <p className="text-xs text-[var(--vz-text-muted)]">
-                              {new Date(note.createdAt).toLocaleString()}
+                              {note.createdAt || note.meta?.createdAt ? new Date(note.createdAt || note.meta?.createdAt).toLocaleString() : '—'}
                             </p>
                           </div>
                           <p className="text-sm text-[var(--vz-text)] mt-1">{note.text}</p>
@@ -419,7 +427,7 @@ export default function LeadDetail() {
                         <span className="text-[10px] text-[var(--vz-text-muted)]">{message.type} · {message.status}</span>
                       </div>
                       <p className="text-sm text-[var(--vz-heading)]">{message.content || (message.templateName ? `Template: ${message.templateName}` : 'Media message')}</p>
-                      <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{new Date(message.meta?.createdAt).toLocaleString()}</p>
+                      <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{message.createdAt || message.meta?.createdAt ? new Date(message.createdAt || message.meta?.createdAt).toLocaleString() : '—'}</p>
                     </div>
                   </div>
                 ))}
@@ -446,7 +454,7 @@ export default function LeadDetail() {
                         <div className="text-right">
                           {call.disposition && <Badge color="info">{call.disposition}</Badge>}
                           {(call.recordingStatus === 'available' || call.recordingUrl) && <button onClick={() => handlePlayRecording(call._id)} className="block ml-auto text-[10px] text-primary hover:underline mt-1">Play recording</button>}
-                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{new Date(call.startedAt || call.meta?.createdAt).toLocaleString()}</p>
+                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{call.startedAt || call.createdAt || call.meta?.createdAt ? new Date(call.startedAt || call.createdAt || call.meta?.createdAt).toLocaleString() : '—'}</p>
                         </div>
                       </div>
                     ))}
@@ -471,7 +479,7 @@ export default function LeadDetail() {
                           <p className="text-sm font-medium text-[var(--vz-heading)]">{event.title || event.action}</p>
                           {event.description && <p className="text-sm text-[var(--vz-text)] mt-0.5">{event.description}</p>}
                           <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">
-                            {new Date(event.timestamp || event.createdAt).toLocaleString()}
+                            {event.meta?.createdAt ? new Date(event.meta?.createdAt).toLocaleString() : '—'}
                           </p>
                         </div>
                       </div>
@@ -497,8 +505,14 @@ export default function LeadDetail() {
               <Input label="Phone Number" value={editForm.contact.phone} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, phone: e.target.value } })} />
               <Input label="Company" value={editForm.contact.company} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, company: e.target.value } })} />
             </div>
-            <Input label="Expected Deal Value (₹)" type="number" value={editForm.expectedValue} onChange={(e) => setEditForm({ ...editForm, expectedValue: Number(e.target.value) })} />
-            <Input label="Follow-up Reminder" type="datetime-local" value={editForm.followUpAt} onChange={(e) => setEditForm({ ...editForm, followUpAt: e.target.value })} />
+            <Input label="Expected Deal Value (₹)" type="number" value={editForm.lifecycle?.expectedValue ?? editForm.expectedValue ?? ''} onChange={(e) => {
+              const val = Number(e.target.value);
+              setEditForm({ ...editForm, expectedValue: val, lifecycle: { ...(editForm.lifecycle || {}), expectedValue: val } });
+            }} />
+            <Input label="Follow-up Reminder" type="datetime-local" value={editForm.lifecycle?.followUpAt ?? editForm.followUpAt ?? ''} onChange={(e) => {
+              const val = e.target.value;
+              setEditForm({ ...editForm, followUpAt: val, lifecycle: { ...(editForm.lifecycle || {}), followUpAt: val } });
+            }} />
             
             {/* Dynamic Custom Fields in Edit */}
             {fieldsData?.data?.filter(f => f.targetEntity === 'Lead').length > 0 && (

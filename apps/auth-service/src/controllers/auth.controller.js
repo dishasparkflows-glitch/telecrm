@@ -227,24 +227,30 @@ const verifyOtp = asyncHandler(async (req, res) => {
  * Requires OTP verification first
  */
 const registerTenant = asyncHandler(async (req, res) => {
-    const { name, email, phone, password, companyName, referralCode, planSlug } = req.body;
+    const { referralCode, planSlug, company: inputCompany, user: inputUser } = req.body;
 
-    if (!name || !email || !phone || !password || !companyName) {
+    const compName = inputCompany?.name;
+    const userName =  inputUser?.contact?.name;
+    const userEmail = inputUser?.contact?.email;
+    const userPhone = inputUser?.contact?.phone;
+    const userPassword = inputUser?.contact?.password;
+
+    if (!userName || !userEmail || !userPhone || !userPassword || !compName) {
         throw ApiError.badRequest('Name, email, phone, password, and company name are required');
     }
 
     // Validate email format
-    const emailCheck = validateEmail(email);
+    const emailCheck = validateEmail(userEmail);
     if (!emailCheck.valid) throw ApiError.badRequest(emailCheck.reason);
 
     // Validate phone format
-    const phoneCheck = validatePhone(phone);
+    const phoneCheck = validatePhone(userPhone);
     if (!phoneCheck.valid) throw ApiError.badRequest(phoneCheck.reason);
 
     // Verify OTP was completed
     const otpRecord = await OTP.findOne({
-        email: email.toLowerCase(),
-        phone: phone.replace(/[\s-]/g, ''),
+        email: userEmail.toLowerCase(),
+        phone: userPhone.replace(/[\s-]/g, ''),
         emailVerified: true,
         phoneVerified: true,
         expiresAt: { $gt: new Date() },
@@ -254,7 +260,7 @@ const registerTenant = asyncHandler(async (req, res) => {
     }
 
     // Check if email already exists globally
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ email: userEmail.toLowerCase() });
     if (existingUser) {
         throw ApiError.conflict('An account with this email already exists');
     }
@@ -264,9 +270,11 @@ const registerTenant = asyncHandler(async (req, res) => {
     try {
         const path = '/internal/tenants';
         const response = await axios.post(`${env.SERVICES.TENANT}${path}`, {
-            companyName,
-            email: email.toLowerCase(),
-            phone: phone.replace(/[\s-]/g, ''),
+            company: {
+                name: compName,
+                email: userEmail.toLowerCase(),
+                phone: userPhone.replace(/[\s-]/g, ''),
+            },
             referralCode: referralCode || null,
             planSlug: planSlug || null,
         }, {
@@ -281,18 +289,26 @@ const registerTenant = asyncHandler(async (req, res) => {
     // Create superadmin user with roleId and branchId from seeded data
     const user = await User.create({
         tenantId: tenantData._id,
-        name,
-        email: email.toLowerCase(),
-        phone: phone.replace(/[\s-]/g, ''),
-        password,
+        contact: {
+            name: userName ? String(userName).trim() : '',
+            email: userEmail.toLowerCase(),
+            password: userPassword,
+            phone: userPhone.replace(/[\s-]/g, ''),
+            whatsappNumber: '',
+            mobileNumber: '',
+            extensionNumber: '',
+        },
+        authentication: {
+            isEmailVerified: true,
+            lastLoginAt: null,
+            lastLoginIp: req.ip || '',
+        },
         roleId: tenantData.superAdminRoleId || null,
         branchId: tenantData.defaultBranchId || null,
-        isEmailVerified: true,
-        inviteAccepted: true,
     });
 
     // Clean up OTP record
-    await OTP.deleteMany({ email: email.toLowerCase() });
+    await OTP.deleteMany({ email: userEmail.toLowerCase() });
 
     const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
 

@@ -8,7 +8,7 @@ const { pickLeadCreateInput, pickLeadUpdateInput, applyAssignedToFilter } = requ
 const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 
-const LEAD_SORT_FIELDS = new Set(['createdAt', 'updatedAt', 'firstName', 'lastName', 'stage', 'priority', 'score', 'expectedValue', 'followUpAt']);
+const LEAD_SORT_FIELDS = new Set(['createdAt', 'updatedAt', 'firstName', 'lastName', 'stage', 'priority', 'score', 'scoring.score', 'expectedValue', 'followUpAt']);
 
 /**
  * POST /api/leads
@@ -57,9 +57,9 @@ const getLeads = asyncHandler(async (req, res) => {
     if (assignedTo) {
         applyAssignedToFilter(filter, requireObjectId(assignedTo, 'assignedTo'));
     }
-    if (stage) filter.stage = stage;
+    if (stage) filter['pipeline.stage'] = stage;
     if (source) filter.source = source;
-    if (priority) filter.priority = priority;
+    if (priority) filter['lifecycle.priority'] = priority;
     if (tags) filter.tags = { $in: tags.split(',') };
 
     // Text search across name, email, phone, company
@@ -78,6 +78,8 @@ const getLeads = asyncHandler(async (req, res) => {
     if (!['asc', 'desc'].includes(sortOrder)) throw ApiError.badRequest('sortOrder must be asc or desc');
     let dbSortBy = sortBy;
     if (['firstName', 'lastName'].includes(sortBy)) dbSortBy = `contact.${sortBy}`;
+    else if (sortBy === 'stage') dbSortBy = 'pipeline.stage';
+    else if (['priority', 'expectedValue', 'followUpAt'].includes(sortBy)) dbSortBy = `lifecycle.${sortBy}`;
     const sort = { [dbSortBy]: sortOrder === 'asc' ? 1 : -1 };
 
     const [leads, total] = await Promise.all([
@@ -125,8 +127,26 @@ const updateLead = asyncHandler(async (req, res) => {
         throw ApiError.forbidden('You do not have access to this lead');
     }
 
-    const oldStage = lead.stage;
-    const oldFollowUpAt = lead.followUpAt ? new Date(lead.followUpAt).getTime() : null;
+    if (changes.expectedValue !== undefined) {
+        if (!changes.lifecycle) changes.lifecycle = {};
+        changes.lifecycle.expectedValue = Number(changes.expectedValue);
+        delete changes.expectedValue;
+    }
+    if (changes.followUpAt !== undefined) {
+        if (!changes.lifecycle) changes.lifecycle = {};
+        changes.lifecycle.followUpAt = changes.followUpAt ? new Date(changes.followUpAt) : null;
+        delete changes.followUpAt;
+    }
+    if (changes.priority !== undefined) {
+        if (!changes.lifecycle) changes.lifecycle = {};
+        changes.lifecycle.priority = changes.priority;
+        delete changes.priority;
+    }
+
+    const targetStage = changes.pipeline?.stage;
+    const targetFollowUpAt = changes.lifecycle?.followUpAt !== undefined ? changes.lifecycle.followUpAt : undefined;
+    const oldStage = lead.pipeline?.stage || lead.stage;
+    const oldFollowUpAt = (lead.lifecycle?.followUpAt) ? new Date(lead.lifecycle?.followUpAt).getTime() : null;
     const changedFields = Object.keys(changes);
     if (changes.contact) {
         if (changes.contact.email !== undefined) changes.contact.emailNormalized = normalizeEmail(changes.contact.email);
@@ -135,20 +155,31 @@ const updateLead = asyncHandler(async (req, res) => {
         lead.contact = { ...(lead.contact || {}), ...changes.contact };
         delete changes.contact;
     }
+    if (changes.pipeline) {
+        lead.pipeline = { ...(lead.pipeline || {}), ...changes.pipeline };
+        delete changes.pipeline;
+    }
+    if (changes.lifecycle) {
+        lead.lifecycle = { ...(lead.lifecycle || {}), ...changes.lifecycle };
+        delete changes.lifecycle;
+    }
     Object.assign(lead, changes);
 
     // Track stage changes
-    if (changes.stage && changes.stage !== oldStage) {
-        lead.previousStage = oldStage;
-        lead.stageChangedAt = new Date();
-        lead.lastActivityAt = new Date();
+    if (targetStage && targetStage !== oldStage) {
+        if (!lead.pipeline) lead.pipeline = {};
+        lead.pipeline.stage = targetStage;
+        lead.pipeline.previousStage = oldStage;
+        lead.pipeline.stageChangedAt = new Date();
+        if (!lead.lifecycle) lead.lifecycle = {};
+        lead.lifecycle.lastActivityAt = new Date();
 
         await publishEvent(EVENTS.LEAD_STAGE_CHANGED, {
             tenantId,
             branchId: lead.branchId,
             leadId: lead._id,
             oldStage,
-            newStage: changes.stage,
+            newStage: targetStage,
         });
 
         await recordLeadActivity({
@@ -159,28 +190,30 @@ const updateLead = asyncHandler(async (req, res) => {
             actorType: 'user',
             type: ACTIVITY_TYPES.LEAD_STAGE_CHANGED,
             title: 'Stage changed',
-            description: `${oldStage || 'Unknown'} → ${changes.stage}`,
-            metadata: { oldStage, newStage: changes.stage },
+            description: `${oldStage || 'Unknown'} → ${targetStage}`,
+            metadata: { oldStage, newStage: targetStage },
         });
     }
 
     // Recalculate score
     const { score, breakdown } = calculateLeadScore(lead);
-    lead.score = score;
-    lead.scoreBreakdown = breakdown;
-    lead.lastScoredAt = new Date();
+    lead.scoring = {
+        score,
+        scoreBreakdown: breakdown,
+        lastScoredAt: new Date(),
+    };
 
     await lead.save();
 
-    if (Object.prototype.hasOwnProperty.call(changes, 'followUpAt')) {
-        const newFollowUpAt = lead.followUpAt ? new Date(lead.followUpAt).getTime() : null;
+    if (targetFollowUpAt !== undefined) {
+        const newFollowUpAt = (lead.lifecycle?.followUpAt) ? new Date(lead.lifecycle?.followUpAt).getTime() : null;
         if (newFollowUpAt !== oldFollowUpAt) {
             await publishEvent(EVENTS.LEAD_FOLLOWUP_SCHEDULED, {
                 tenantId,
                 branchId: lead.branchId,
                 leadId: lead._id,
                 assignedTo: lead.assignedTo,
-                followUpAt: lead.followUpAt,
+                followUpAt: lead.lifecycle?.followUpAt,
                 leadName: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim(),
             });
         }
@@ -220,12 +253,16 @@ const addNote = asyncHandler(async (req, res) => {
     }
 
     lead.notes.push({ text, createdBy: userId });
-    lead.lastActivityAt = new Date();
+    if (!lead.lifecycle) lead.lifecycle = {};
+    lead.lifecycle.lastActivityAt = new Date();
 
     // Recalculate score (engagement factor changes)
     const { score, breakdown } = calculateLeadScore(lead);
-    lead.score = score;
-    lead.scoreBreakdown = breakdown;
+    lead.scoring = {
+        score,
+        scoreBreakdown: breakdown,
+        lastScoredAt: new Date(),
+    };
 
     await lead.save();
 
@@ -250,7 +287,11 @@ const addNote = asyncHandler(async (req, res) => {
 const assignLead = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const leadId = requireObjectId(req.params.id, 'lead ID');
-    const assignedTo = requireObjectId(req.body?.assignedTo, 'assignedTo');
+    const rawAssignedTo = req.body?.assignedTo;
+    const assignedTo = (rawAssignedTo !== null && rawAssignedTo !== undefined && rawAssignedTo !== '')
+        ? requireObjectId(rawAssignedTo, 'assignedTo')
+        : null;
+
     const lead = await Lead.findOne({ _id: leadId, tenantId });
 
     if (!lead) throw ApiError.notFound('Lead not found');
@@ -259,8 +300,9 @@ const assignLead = asyncHandler(async (req, res) => {
     }
 
     lead.assignedTo = assignedTo;
-    lead.assignedAt = new Date();
-    lead.lastActivityAt = new Date();
+    lead.assignedAt = assignedTo ? new Date() : null;
+    if (!lead.lifecycle) lead.lifecycle = {};
+    lead.lifecycle.lastActivityAt = new Date();
     await lead.save();
 
     await publishEvent(EVENTS.LEAD_ASSIGNED, {
@@ -277,12 +319,12 @@ const assignLead = asyncHandler(async (req, res) => {
         actorId: req.headers['x-user-id'],
         actorType: 'user',
         type: ACTIVITY_TYPES.LEAD_ASSIGNED,
-        title: 'Lead assigned',
-        description: 'Lead assignment changed',
+        title: assignedTo ? 'Lead assigned' : 'Lead unassigned',
+        description: assignedTo ? 'Lead assignment changed' : 'Lead set to unassigned',
         metadata: { assignedTo },
     });
 
-    ApiResponse.success(res, lead, 'Lead assigned');
+    ApiResponse.success(res, lead, assignedTo ? 'Lead assigned' : 'Lead unassigned');
 });
 
 /**
@@ -389,7 +431,7 @@ const getStats = asyncHandler(async (req, res) => {
     const [stageCounts, sourceCounts, totalLeads, avgScore] = await Promise.all([
         Lead.aggregate([
             { $match: match },
-            { $group: { _id: '$stage', count: { $sum: 1 } } },
+            { $group: { _id: { $ifNull: ['$pipeline.stage', '$stage'] }, count: { $sum: 1 } } },
         ]),
         Lead.aggregate([
             { $match: match },
@@ -398,7 +440,7 @@ const getStats = asyncHandler(async (req, res) => {
         Lead.countDocuments(filter),
         Lead.aggregate([
             { $match: match },
-            { $group: { _id: null, avgScore: { $avg: '$score' } } },
+            { $group: { _id: null, avgScore: { $avg: { $ifNull: ['$scoring.score', '$score'] } } } },
         ]),
     ]);
 

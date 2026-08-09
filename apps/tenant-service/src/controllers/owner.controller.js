@@ -102,12 +102,12 @@ const getDashboard = asyncHandler(async (req, res) => {
 
         // Tenants by status
         Tenant.aggregate([
-            { $group: { _id: '$status', count: { $sum: 1 } } },
+            { $group: { _id: { $ifNull: ['$subscription.status', '$status'] }, count: { $sum: 1 } } },
         ]),
 
         // Tenants by plan
         Tenant.aggregate([
-            { $group: { _id: '$planId', count: { $sum: 1 } } },
+            { $group: { _id: { $ifNull: ['$subscription.planId', '$planId'] }, count: { $sum: 1 } } },
             { $lookup: { from: 'plans', localField: '_id', foreignField: '_id', as: 'plan' } },
             { $unwind: { path: '$plan', preserveNullAndEmptyArrays: true } },
             { $project: { planName: '$plan.name', planSlug: '$plan.slug', count: 1 } },
@@ -218,24 +218,41 @@ const listTenants = asyncHandler(async (req, res) => {
     const search = req.query.search || '';
     const status = req.query.status || '';
     const planId = req.query.planId || '';
-    const allowedSorts = new Set(['createdAt', '-createdAt', 'companyName', '-companyName', 'status', '-status']);
-    const sort = allowedSorts.has(req.query.sort) ? req.query.sort : '-createdAt';
+    const allowedSorts = new Map([
+        ['createdAt', { 'meta.createdAt': -1 }],
+        ['-createdAt', { 'meta.createdAt': -1 }],
+        ['companyName', { 'company.name': 1 }],
+        ['-companyName', { 'company.name': -1 }],
+        ['status', { 'subscription.status': 1 }],
+        ['-status', { 'subscription.status': -1 }],
+    ]);
+    const sort = allowedSorts.get(req.query.sort) || { 'meta.createdAt': -1 };
 
     const filter = {};
     if (search) {
         const literalSearch = escapeRegex(search);
         filter.$or = [
+            { 'company.name': { $regex: literalSearch, $options: 'i' } },
             { companyName: { $regex: literalSearch, $options: 'i' } },
+            { 'company.email': { $regex: literalSearch, $options: 'i' } },
             { email: { $regex: literalSearch, $options: 'i' } },
+            { 'company.slug': { $regex: literalSearch, $options: 'i' } },
             { slug: { $regex: literalSearch, $options: 'i' } },
         ];
     }
-    if (status) filter.status = status;
-    if (planId) filter.planId = planId;
+    if (status) {
+        filter.$or = [
+            { 'subscription.status': status },
+            { status },
+        ];
+    }
+    if (planId) {
+        filter['subscription.planId'] = planId;
+    }
 
     const [tenants, total] = await Promise.all([
         Tenant.find(filter)
-            .populate('planId', 'name slug price')
+            .populate('subscription.planId', 'name slug price')
             .sort(sort)
             .skip((page - 1) * limit)
             .limit(limit)
@@ -255,7 +272,7 @@ const listTenants = asyncHandler(async (req, res) => {
  */
 const getTenantDetail = asyncHandler(async (req, res) => {
     const tenant = await Tenant.findById(req.params.id)
-        .populate('planId')
+        .populate('subscription.planId')
         .lean();
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
@@ -328,11 +345,17 @@ const updateTenantPlan = asyncHandler(async (req, res) => {
     const plan = await Plan.findById(planId);
     if (!plan) throw ApiError.notFound('Plan not found');
 
-    tenant.planId = plan._id;
-    if (billingCycle) tenant.billingCycle = billingCycle;
+    if (!tenant.subscription) tenant.subscription = {};
+    if (!tenant.trial) tenant.trial = {};
+    tenant.subscription.planId = plan._id;
+    if (billingCycle) {
+        tenant.subscription.billingCycle = billingCycle;
+    }
 
     // If moving from trial to active
-    if (tenant.status === 'trial') {
+    const currentStatus = tenant.status;
+    if (currentStatus === 'trial') {
+        tenant.trial.status = 'converted';
         tenant.status = 'active';
         tenant.trialStatus = 'converted';
     }
@@ -356,6 +379,7 @@ const updateTenantStatus = asyncHandler(async (req, res) => {
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
+    if (!tenant.subscription) tenant.subscription = {};
     tenant.status = status;
     if (status === 'suspended') {
         tenant.suspendedReason = reason || 'Suspended by owner';
@@ -789,7 +813,7 @@ const { signImpersonationToken } = require('../utils/impersonationToken');
 const impersonateTenant = asyncHandler(async (req, res) => {
     const { tenantId } = req.params;
 
-    const tenant = await Tenant.findById(tenantId).populate('planId').lean();
+    const tenant = await Tenant.findById(tenantId).populate('subscription.planId').lean();
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
     // Find the default branch for this tenant
@@ -819,14 +843,14 @@ const impersonateTenant = asyncHandler(async (req, res) => {
         token,
         tenant: {
             _id: tenant._id,
-            companyName: tenant.companyName,
-            slug: tenant.slug,
-            email: tenant.email,
+            companyName: tenant.company?.name,
+            slug: tenant.company?.slug,
+            email: tenant.company?.email,
             status: tenant.status,
-            plan: tenant.planId,
+            plan: tenant.subscription?.planId,
         },
         branchId: defaultBranch?._id || '',
-    }, `Impersonating tenant: ${tenant.companyName}`);
+    }, `Impersonating tenant: ${tenant.company?.name || 'Tenant'}`);
 });
 
 /**
@@ -839,7 +863,7 @@ const updateTenantFeatures = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { extraFeatures, extraModuleKeys } = req.body;
 
-    const tenant = await Tenant.findById(id).populate('planId', 'features moduleKeys name');
+    const tenant = await Tenant.findById(id).populate('subscription.planId', 'features moduleKeys name');
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
     // Update extraModuleKeys if provided
@@ -857,8 +881,9 @@ const updateTenantFeatures = asyncHandler(async (req, res) => {
     await tenant.save();
     await invalidateTenantCaches(tenant._id);
 
-    const planFeatures = tenant.planId?.features || [];
-    const planModuleKeys = tenant.planId?.moduleKeys || [];
+    const plan = tenant.subscription?.planId;
+    const planFeatures = plan?.features || [];
+    const planModuleKeys = plan?.moduleKeys || [];
     const allFeatures = [...new Set([...planFeatures, ...tenant.extraFeatures])];
     const allModuleKeys = [...new Set([...planModuleKeys, ...tenant.extraModuleKeys])];
 

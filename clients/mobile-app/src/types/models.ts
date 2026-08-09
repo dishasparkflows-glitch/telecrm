@@ -1,10 +1,14 @@
 export type ApiEnvelope<T> = { success: boolean; data: T; message?: string; pagination?: Pagination };
 export type Pagination = { page: number; limit: number; total: number; totalPages: number; unreadCount?: number };
 export type Tokens = { accessToken: string; refreshToken: string };
-export type User = { _id: string; name?: string;  role?: string; tenantId?: string | { _id: string }; mobile?: string };
+export type UserProfile = { name?: string; avatar?: string };
+export type UserContact = { name?: string; email?: string; password?: string; avatar?: string; phone?: string; whatsappNumber?: string; mobileNumber?: string; extensionNumber?: string };
+export type User = { _id: string; profile?: UserProfile; contact?: UserContact; name?: string; email?: string; phone?: string; role?: string; tenantId?: string | { _id: string }; mobile?: string };
 export type Session = { user: User; tokens: Tokens };
-export type Note = { _id?: string; text: string; createdAt?: string };
-export type Lead = { _id: string; contact?: { firstName?: string;     };     stage?: string; priority?: string; source?: string; score?: number; assignedTo?: string; followUpAt?: string; notes?: Note[]; createdAt?: string };
+export type Pipeline = { stage?: string; previousStage?: string | null; stageChangedAt?: string };
+export type Lifecycle = { priority?: string; expectedValue?: number; currency?: string; lastActivityAt?: string | null; lastContactedAt?: string | null; followUpAt?: string | null; convertedAt?: string | null };
+export type LeadScoring = { score?: number; scoreBreakdown?: Record<string, number>; lastScoredAt?: string };
+export type Lead = { _id: string; contact?: { firstName?: string; lastName?: string; email?: string; phone?: string; company?: string }; pipeline?: Pipeline; lifecycle?: Lifecycle; scoring?: LeadScoring; stage?: string; priority?: string; source?: string; score?: number; assignedTo?: string; followUpAt?: string; notes?: Note[]; createdAt?: string };
 export type Notification = { _id: string; title?: string; message?: string; body?: string; type?: string; isRead: boolean; createdAt?: string };
 export type Call = { _id: string; fromNumber?: string; toNumber?: string; direction?: string; status?: string; duration?: number; startedAt?: string; createdAt?: string };
 export type NativeCall = { deviceCallId: string;  type: 'incoming' | 'outgoing' | 'missed' | 'rejected' | 'blocked'; startedAt: string; duration: number; simSlot?: number; simLabel?: string; simPhoneNumber?: string; hasRecording?: boolean };

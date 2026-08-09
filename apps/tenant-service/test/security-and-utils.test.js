@@ -54,10 +54,11 @@ test('tenant module filtering falls back to plan features for legacy plans', () 
 });
 
 test('tenant impersonation tokens satisfy gateway purpose validation', () => {
+    const { ROLES } = require('@sparkcrm/shared-utils');
     const token = signImpersonationToken({
         userId: 'owner-1',
         tenantId: 'tenant-1',
-        role: 'superadmin',
+        role: ROLES.SUPER_ADMIN || 'super_admin',
         originalRole: 'owner',
         isImpersonating: true,
     });

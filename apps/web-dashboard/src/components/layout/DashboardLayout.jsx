@@ -59,7 +59,7 @@ export default function DashboardLayout() {
         >
           <Shield size={14} className="shrink-0" />
           <span className={`truncate ${sidebarCollapsed ? 'md:hidden' : ''}`}>
-            👑 <strong>{impTenant.companyName}</strong>
+            👑 <strong>{impTenant.company?.name}</strong>
           </span>
           <button
             onClick={exitImpersonation}
