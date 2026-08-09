@@ -39,27 +39,32 @@ const userSchema = new mongoose.Schema(
                 required: [true, 'Name is required'],
                 trim: true,
                 default: '',
+                alias: 'name',
             },
             email: {
                 type: String,
                 required: [true, 'Email is required'],
                 lowercase: true,
                 trim: true,
+                alias: 'email',
             },
             password: {
                 type: String,
                 required: [true, 'Password is required'],
                 minlength: [8, 'Password must be at least 8 characters'],
                 select: false,
+                alias: 'password',
             },
             avatar: {
                 type: String,
                 default: '',
+                alias: 'avatar',
             },
             phone: {
                 type: String,
                 trim: true,
                 default: '',
+                alias: 'phone',
             },
             whatsappNumber: {
                 type: String,
@@ -98,6 +103,7 @@ const userSchema = new mongoose.Schema(
             refreshToken: {
                 type: String,
                 select: false,
+                alias: 'refreshToken',
             },
             lastLoginAt: {
                 type: Date,

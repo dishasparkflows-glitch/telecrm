@@ -42,7 +42,7 @@ app.get('/internal/users', requireInternalCaller, async (req, res) => {
   try {
     const { tenantId } = req.query;
     if (!tenantId) return res.status(400).json({ success: false, message: 'tenantId required' });
-    const users = await User.find({ tenantId }).select('name email role isActive branchId createdAt lastLogin').lean();
+    const users = await User.find({ tenantId }).select('contact.name contact.email roleId isActive branchId meta.createdAt authentication.lastLoginAt').lean();
     res.json({ success: true, data: users });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -83,6 +83,20 @@ export const tenantApi = baseApi.injectEndpoints({
             }),
             providesTags: [{ type: 'Audit', id: 'LIST' }],
         }),
+        getRecordAuditHistory: builder.query({
+            query: ({ recordId, ...params }) => ({
+                url: `/audit/record/${encodeURIComponent(recordId)}`,
+                params,
+            }),
+            providesTags: (result, error, { recordId }) => [{ type: 'Audit', id: `RECORD_${recordId}` }],
+        }),
+        getUserAuditLogs: builder.query({
+            query: ({ userId, ...params }) => ({
+                url: `/audit/user/${encodeURIComponent(userId)}`,
+                params,
+            }),
+            providesTags: (result, error, { userId }) => [{ type: 'Audit', id: `USER_${userId}` }],
+        }),
     }),
 })
 
@@ -101,4 +115,6 @@ export const {
     useGetReferralCodeQuery,
     useGetReferralStatsQuery,
     useGetAuditLogsQuery,
+    useGetRecordAuditHistoryQuery,
+    useGetUserAuditLogsQuery,
 } = tenantApi

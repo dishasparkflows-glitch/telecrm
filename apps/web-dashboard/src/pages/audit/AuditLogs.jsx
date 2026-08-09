@@ -2,81 +2,144 @@ import { useState } from 'react'
 import { useGetAuditLogsQuery } from '../../features/tenant/tenantApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
-import Badge from '../../components/ui/Badge'
 import Pagination from '../../components/ui/Pagination'
 import EmptyState from '../../components/ui/EmptyState'
-import { Search, Shield } from 'lucide-react'
+import { Shield, RefreshCw } from 'lucide-react'
+import Button from '../../components/ui/Button'
+import AuditFilters from '../../components/audit/AuditFilters'
+import AuditTable from '../../components/audit/AuditTable'
+import AuditChangeDrawer from '../../components/audit/AuditChangeDrawer'
 
 const PAGE_SIZE = 20
 
 export default function AuditLogs() {
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState({
+    module: 'all',
+    action: 'all',
+    userId: 'all',
+    branchId: 'all',
+    search: '',
+  })
+  const [selectedDrawerEvent, setSelectedDrawerEvent] = useState(null)
 
-  const { data, isLoading } = useGetAuditLogsQuery({ page, limit: PAGE_SIZE })
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
+    setPage(1)
+  }
+
+  const selectedUserId = (filters.userId && filters.userId !== 'all') ? filters.userId : (filters.user && filters.user !== 'all') ? filters.user : undefined
+  const selectedBranchId = (filters.branchId && filters.branchId !== 'all') ? filters.branchId : (filters.branch && filters.branch !== 'all') ? filters.branch : undefined
+
+  const { data, isLoading, isError, refetch } = useGetAuditLogsQuery({
+    page,
+    limit: PAGE_SIZE,
+    module: filters.module !== 'all' ? filters.module : undefined,
+    action: filters.action !== 'all' ? filters.action : undefined,
+    userId: selectedUserId,
+    branchId: selectedBranchId,
+    search: filters.search || undefined,
+  })
+
   const logs = data?.data || []
-  const pagination = data?.pagination || {}
+  const pagination = data?.pagination || { total: logs.length, page: 1, totalPages: 1 }
 
-  const actionColors = { create: 'success', update: 'info', delete: 'danger', login: 'primary', export: 'warning' }
+  const handleExport = () => {
+    const queryParams = new URLSearchParams()
+    if (filters.module !== 'all') queryParams.append('module', filters.module)
+    if (filters.action !== 'all') queryParams.append('action', filters.action)
+    if (selectedUserId) queryParams.append('userId', selectedUserId)
+    if (selectedBranchId) queryParams.append('branchId', selectedBranchId)
+    if (filters.search) queryParams.append('search', filters.search)
+    window.open(`/api/audit/export?${queryParams.toString()}`, '_blank')
+  }
 
   return (
-    <>
-      <PageHeader title="Audit Logs" breadcrumbs={[{ label: 'CRM', path: '/dashboard' }, { label: 'Audit Logs' }]} />
+    <div className="space-y-4">
+      {/* Page Header */}
+      <PageHeader
+        title="Audit Logs"
+        subtitle="Track all changes made to records in the system"
+        breadcrumbs={[{ label: 'CRM', path: '/dashboard' }, { label: 'Audit Logs' }]}
+      />
 
+      {/* Main Card */}
       <Card noPadding>
-        <div className="p-4 border-b border-[var(--vz-border)]">
-          <div className="relative w-full sm:w-[280px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]" />
-            <input type="text" placeholder="Search activity..." value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)]
-                text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] outline-none focus:border-primary" />
+        {/* Top Filters Header */}
+        <div className="p-4 border-b border-[var(--vz-border)] space-y-3">
+          <AuditFilters
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onExport={handleExport}
+          />
+
+          <div className="flex items-center justify-between text-xs text-[var(--vz-text-muted)] pt-1">
+            <div>
+              Showing <span className="font-semibold text-[var(--vz-heading)]">{logs.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}</span> to{' '}
+              <span className="font-semibold text-[var(--vz-heading)]">{Math.min(page * PAGE_SIZE, pagination.total || logs.length)}</span> of{' '}
+              <span className="font-semibold text-[var(--vz-heading)]">{pagination.total || logs.length}</span> entries
+            </div>
+
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+            >
+              <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
+              <span>Refresh</span>
+            </button>
           </div>
         </div>
 
+        {/* Loading / Error / Empty / Content State */}
         {isLoading ? (
-          <div className="p-8 text-center text-[var(--vz-text-muted)]">Loading...</div>
+          <div className="p-8 text-center text-[var(--vz-text-muted)] space-y-3">
+            <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="text-xs">Loading audit activity logs...</div>
+          </div>
+        ) : isError ? (
+          <div className="p-8 text-center space-y-3">
+            <div className="text-sm font-semibold text-rose-600">Unable to load audit logs</div>
+            <div className="text-xs text-[var(--vz-text-muted)]">Please check your connection and try again.</div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => refetch()}
+            >
+              Retry
+            </Button>
+          </div>
         ) : logs.length === 0 ? (
-          <EmptyState icon={Shield} title="No audit logs" description="Activity will be recorded here automatically" />
+          <div className="p-8 text-center">
+            <EmptyState
+              icon={Shield}
+              title="No audit activity recorded"
+              description="Activity will be recorded automatically when users create, update or delete records."
+            />
+          </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-[var(--vz-table-header-bg)]">
-                    {['User', 'Action', 'Resource', 'Details', 'IP Address', 'Date'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <tr key={log._id} className="border-t border-[var(--vz-border)] hover:bg-[var(--vz-table-hover-bg)] transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
-                            {log.userName?.[0] || 'S'}
-                          </div>
-                          <span className="text-[var(--vz-heading)] text-xs font-medium">{log.userName || 'System'}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge color={actionColors[log.action] || 'primary'}>{log.action}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-[var(--vz-text)] capitalize">{log.resource}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)] text-xs max-w-[200px] truncate">{log.details || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs font-mono">{log.ipAddress || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{new Date(log.meta?.createdAt).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-4 pb-3">
-              <Pagination currentPage={page} totalPages={pagination.totalPages || 1} totalItems={pagination.total} pageSize={PAGE_SIZE} onPageChange={setPage} />
+            <AuditTable logs={logs} onViewChanges={(log) => setSelectedDrawerEvent(log)} />
+
+            <div className="px-4 py-3 border-t border-[var(--vz-border)]">
+              <Pagination
+                currentPage={page}
+                totalPages={pagination.totalPages || 1}
+                totalItems={pagination.total || logs.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
+              />
             </div>
           </>
         )}
       </Card>
-    </>
+
+      {/* Change Details Drawer */}
+      <AuditChangeDrawer
+        isOpen={Boolean(selectedDrawerEvent)}
+        onClose={() => setSelectedDrawerEvent(null)}
+        event={selectedDrawerEvent}
+      />
+    </div>
   )
 }

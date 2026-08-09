@@ -24,6 +24,7 @@ const Analytics = lazy(() => import('../pages/analytics/Analytics'))
 const Settings = lazy(() => import('../pages/settings/Settings'))
 const Billing = lazy(() => import('../pages/billing/Billing'))
 const AuditLogs = lazy(() => import('../pages/audit/AuditLogs'))
+const RecordAuditHistory = lazy(() => import('../pages/audit/RecordAuditHistory'))
 const Notifications = lazy(() => import('../pages/notifications/Notifications'))
 const RolesList = lazy(() => import('../pages/admin/RolesList'))
 const RolePermissions = lazy(() => import('../pages/admin/RolePermissions'))
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/audit" element={<AuditLogs />} />
+          <Route path="/audit/record/:recordId" element={<RecordAuditHistory />} />
           <Route path="/notifications" element={<Notifications />} />
 
           {/* Admin routes — permission-gated */}

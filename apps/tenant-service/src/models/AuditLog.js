@@ -2,54 +2,47 @@ const mongoose = require('mongoose');
 
 const auditLogSchema = new mongoose.Schema(
     {
-        tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-        userId: { type: mongoose.Schema.Types.ObjectId, index: true },
-        branchId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
-        userName: { type: String, default: '' },
-        userRole: { type: String, default: '' },
-        action: {
-            type: String,
-            required: true,
-            enum: [
-                'user.login', 'user.logout', 'user.password_change', 'user.invited', 'user.deactivated',
-                'lead.created', 'lead.updated', 'lead.deleted', 'lead.assigned', 'lead.imported',
-                'tenant.settings_changed', 'tenant.plan_upgraded', 'tenant.plan_downgraded',
-                'call.initiated', 'call.completed',
-                'whatsapp.sent', 'whatsapp.template_created',
-                'form.created', 'form.deleted',
-                'automation.created', 'automation.toggled', 'automation.deleted',
-                'billing.payment', 'billing.refund',
-                'feature.purchased', 'feature.cancelled',
-                'meeting.scheduled', 'meeting.cancelled',
-                'data.exported', 'data.imported',
-                'api.key_generated', 'api.key_revoked',
-            ],
-        },
-        resource: { type: String, default: '' }, // e.g., 'Lead', 'User', 'Automation'
-        resourceId: { type: mongoose.Schema.Types.ObjectId, default: null },
-        details: { type: mongoose.Schema.Types.Mixed, default: {} },
+        tenantId: { type: mongoose.Schema.Types.Mixed, required: true, index: true },
+        branchId: { type: mongoose.Schema.Types.Mixed, default: null, index: true },
+        userId: { type: mongoose.Schema.Types.Mixed, default: null, index: true },
+        userName: { type: String, default: 'System' },
+        userRole: { type: String, default: 'user' },
+        module: { type: String, required: true, index: true },
+        action: { type: String, required: true, index: true },
+        recordId: { type: String, default: null, index: true },
+        recordType: { type: String, default: 'Record' },
+        recordName: { type: String, default: 'Record' },
+        changes: [
+            {
+                field: { type: String },
+                oldValue: { type: mongoose.Schema.Types.Mixed },
+                newValue: { type: mongoose.Schema.Types.Mixed },
+            },
+        ],
+
+        description: { type: String, default: '' },
         ipAddress: { type: String, default: '' },
         userAgent: { type: String, default: '' },
         severity: { type: String, enum: ['info', 'warning', 'critical'], default: 'info' },
-        meta: {
-            createdBy: { type: mongoose.Schema.Types.ObjectId },
-            updatedBy: { type: mongoose.Schema.Types.ObjectId },
-            deletedBy: { type: mongoose.Schema.Types.ObjectId },
-            createdAt: { type: Date, default: Date.now },
-            updatedAt: { type: Date, default: Date.now },
-            deletedAt: { type: Date },
-        },
+        metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+        resource: { type: String, default: '' },
+        resourceId: { type: mongoose.Schema.Types.Mixed, default: null },
+        details: { type: mongoose.Schema.Types.Mixed, default: {} },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { timestamps: true, versionKey: false }
 );
 
+// Performance compound indexes (Requirement 27)
 auditLogSchema.index({ tenantId: 1, createdAt: -1 });
-auditLogSchema.index({ tenantId: 1, action: 1, createdAt: -1 });
+auditLogSchema.index({ tenantId: 1, recordId: 1, createdAt: -1 });
 auditLogSchema.index({ tenantId: 1, userId: 1, createdAt: -1 });
-auditLogSchema.index({ tenantId: 1, severity: 1 });
+auditLogSchema.index({ tenantId: 1, module: 1, createdAt: -1 });
+auditLogSchema.index({ tenantId: 1, branchId: 1, createdAt: -1 });
+auditLogSchema.index({ tenantId: 1, action: 1, createdAt: -1 });
 
 // TTL index — auto-delete after 90 days
 auditLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
+global.__AUDIT_LOG_MODEL__ = AuditLog;
 module.exports = AuditLog;

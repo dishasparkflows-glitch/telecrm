@@ -109,7 +109,7 @@ const sendOtp = asyncHandler(async (req, res) => {
     if (!phoneCheck.valid) throw ApiError.badRequest(phoneCheck.reason);
 
     // Check if email already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ 'contact.email': email.toLowerCase() });
     if (existingUser) {
         throw ApiError.conflict('An account with this email already exists');
     }
@@ -260,7 +260,7 @@ const registerTenant = asyncHandler(async (req, res) => {
     }
 
     // Check if email already exists globally
-    const existingUser = await User.findOne({ email: userEmail.toLowerCase() });
+    const existingUser = await User.findOne({ 'contact.email': userEmail.toLowerCase() });
     if (existingUser) {
         throw ApiError.conflict('An account with this email already exists');
     }
@@ -316,7 +316,8 @@ const registerTenant = asyncHandler(async (req, res) => {
     const tokens = generateTokenPair(user, roleSlug);
 
     // Save refresh token
-    user.refreshToken = tokens.refreshToken;
+    if (!user.authentication) user.authentication = {};
+    user.authentication.refreshToken = tokens.refreshToken;
     await user.save();
 
     ApiResponse.created(res, {
@@ -343,8 +344,8 @@ const login = asyncHandler(async (req, res) => {
         throw ApiError.badRequest('Email and password are required');
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() })
-        .select('+password +refreshToken +lockUntil +loginAttempts');
+    const user = await User.findOne({ 'contact.email': email.toLowerCase() })
+        .select('+contact.password +authentication.refreshToken +security.lockUntil +security.loginAttempts');
 
     if (!user) throw ApiError.unauthorized('Invalid email or password');
     if (!user.isActive) throw ApiError.forbidden('Your account has been deactivated');
@@ -407,8 +408,9 @@ const login = asyncHandler(async (req, res) => {
 
     // Generate new token pair
     const tokens = generateTokenPair(user, roleSlug);
-    user.refreshToken = tokens.refreshToken;
-    user.lastLoginIp = req.ip || req.headers['x-forwarded-for'] || '';
+    if (!user.authentication) user.authentication = {};
+    user.authentication.refreshToken = tokens.refreshToken;
+    user.authentication.lastLoginIp = req.ip || req.headers['x-forwarded-for'] || '';
     await user.save();
 
     ApiResponse.success(res, {
@@ -438,12 +440,13 @@ const refreshToken = asyncHandler(async (req, res) => {
         throw ApiError.unauthorized('Invalid or expired refresh token');
     }
 
-    const user = await User.findById(decoded.userId).select('+refreshToken');
-    if (!user || user.refreshToken !== token) {
+    const user = await User.findById(decoded.userId).select('+authentication.refreshToken');
+    if (!user || user.authentication?.refreshToken !== token) {
         throw ApiError.unauthorized('Invalid refresh token');
     }
     if (!user.isActive) {
-        user.refreshToken = null;
+        if (!user.authentication) user.authentication = {};
+        user.authentication.refreshToken = null;
         await user.save();
         throw ApiError.forbidden('Your account has been deactivated');
     }
@@ -452,7 +455,8 @@ const refreshToken = asyncHandler(async (req, res) => {
     }
 
     const tokens = generateTokenPair(user);
-    user.refreshToken = tokens.refreshToken;
+    if (!user.authentication) user.authentication = {};
+    user.authentication.refreshToken = tokens.refreshToken;
     await user.save();
 
     ApiResponse.success(res, { tokens }, 'Token refreshed');
@@ -466,7 +470,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     const { email } = req.body;
     if (!email) throw ApiError.badRequest('Email is required');
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ 'contact.email': email.toLowerCase() });
     if (!user) {
         // Don't reveal if email exists
         return ApiResponse.success(res, null, 'If the email exists, a reset link has been sent');
@@ -506,12 +510,13 @@ const resetPassword = asyncHandler(async (req, res) => {
 
     if (!user) throw ApiError.badRequest('Invalid or expired reset token');
 
-    user.password = newPassword;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    user.refreshToken = null;
-    user.loginAttempts = 0;
-    user.lockUntil = null;
+    if (!user.contact) user.contact = {};
+    if (!user.authentication) user.authentication = {};
+    user.contact.password = newPassword;
+    user.authentication.passwordResetToken = undefined;
+    user.authentication.passwordResetExpires = undefined;
+    user.authentication.refreshToken = null;
+    user.security = { ...(user.security || {}), loginAttempts: 0, lockUntil: null };
     await user.save();
 
     // Revoke all trusted devices
@@ -530,7 +535,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 const logout = asyncHandler(async (req, res) => {
     const userId = req.headers['x-user-id'];
     if (userId) {
-        await User.findByIdAndUpdate(userId, { refreshToken: null });
+        await User.findByIdAndUpdate(userId, { 'authentication.refreshToken': null });
     }
     ApiResponse.success(res, null, 'Logged out successfully');
 });
@@ -701,7 +706,7 @@ const updatePassword = asyncHandler(async (req, res) => {
         throw ApiError.badRequest('Current password and new password are required');
     }
 
-    const user = await User.findById(userId).select('+password');
+    const user = await User.findById(userId).select('+contact.password');
     if (!user) throw ApiError.notFound('User not found');
 
     const isPasswordValid = await user.comparePassword(currentPassword);
@@ -709,7 +714,8 @@ const updatePassword = asyncHandler(async (req, res) => {
         throw ApiError.unauthorized('Invalid current password');
     }
 
-    user.password = newPassword;
+    if (!user.contact) user.contact = {};
+    user.contact.password = newPassword;
     await user.save();
 
     // Revoke all trusted devices

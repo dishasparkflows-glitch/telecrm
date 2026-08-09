@@ -8,6 +8,7 @@ const { validateEmail, validatePhone } = require('./emailValidator');
 const cryptoUtils = require('./crypto');
 const cloudStorage = require('./cloudStorage');
 const metaPlugin = require('./metaPlugin');
+const { computeChanges, formatValue } = require('./diffUtils');
 
 module.exports = {
     ApiResponse,
@@ -22,4 +23,6 @@ module.exports = {
     ...cryptoUtils,
     ...cloudStorage,
     metaPlugin,
+    computeChanges,
+    formatValue,
 };

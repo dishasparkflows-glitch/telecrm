@@ -143,10 +143,9 @@ const getUsers = asyncHandler(async (req, res) => {
     const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
     if (search) {
         filter.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { 'profile.name': { $regex: search, $options: 'i' } },
+            { 'contact.name': { $regex: search, $options: 'i' } },
             { 'contact.email': { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
+            { 'contact.phone': { $regex: search, $options: 'i' } },
         ];
     }
     if (roleId) filter.roleId = roleId;
@@ -267,7 +266,10 @@ const updateUserStatus = asyncHandler(async (req, res) => {
     if (!user) throw ApiError.notFound('User not found');
 
     user.isActive = isActive;
-    if (!isActive) user.refreshToken = null;
+    if (!isActive) {
+        if (!user.authentication) user.authentication = {};
+        user.authentication.refreshToken = null;
+    }
     await user.save();
 
     ApiResponse.success(res, user.toJSON(), `User ${isActive ? 'activated' : 'deactivated'}`);
@@ -283,7 +285,8 @@ const deleteUser = asyncHandler(async (req, res) => {
     if (!user) throw ApiError.notFound('User not found');
 
     user.isActive = false;
-    user.refreshToken = null;
+    if (!user.authentication) user.authentication = {};
+    user.authentication.refreshToken = null;
     await user.save();
 
     ApiResponse.success(res, null, 'User deactivated');
