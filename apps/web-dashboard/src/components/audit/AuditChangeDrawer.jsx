@@ -67,7 +67,7 @@ const KeyValueTable = ({ data }) => {
 }
 
 export default function AuditChangeModal({ isOpen, onClose, event }) {
-  const [drawerWidth, setDrawerWidth] = useState(600)
+  const [drawerWidth, setDrawerWidth] = useState(800)
   const [isResizing, setIsResizing] = useState(false)
 
   const startResizing = useCallback((e) => {
@@ -101,7 +101,7 @@ export default function AuditChangeModal({ isOpen, onClose, event }) {
   // Reset width when closed
   useEffect(() => {
     if (!isOpen) {
-      setDrawerWidth(600)
+      setDrawerWidth(800)
       setIsResizing(false)
     }
   }, [isOpen])
@@ -125,7 +125,7 @@ export default function AuditChangeModal({ isOpen, onClose, event }) {
 
       {/* Modal Card Panel */}
       <div 
-        className="relative bg-[var(--vz-card-bg)] max-h-[95vh] shadow-2xl flex flex-col rounded-xl border border-[var(--vz-border)] z-10 transition-transform duration-300"
+        className="relative bg-[var(--vz-card-bg)] max-h-[80vh] shadow-2xl flex flex-col rounded-xl border border-[var(--vz-border)] z-10 transition-transform duration-300"
         style={{ width: `${drawerWidth}px`, maxWidth: '100%' }}
       >
         {/* Resize Drag Handle (Right Edge) */}
@@ -182,7 +182,7 @@ export default function AuditChangeModal({ isOpen, onClose, event }) {
         )}
 
         {/* Drawer Body - Changes List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
 
           {!details.body && !details.existingdata && !details.updateddata && (!event.changes || event.changes.length === 0) ? (
             <div className="p-4 text-center text-xs text-[var(--vz-text-muted)] italic bg-[var(--vz-table-header-bg)] rounded-md border border-[var(--vz-border)]">

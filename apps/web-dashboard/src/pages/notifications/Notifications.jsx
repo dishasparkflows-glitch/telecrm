@@ -222,7 +222,7 @@ export default function Notifications() {
                 </button>
                 <button
                   onClick={handleDeleteSelected}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg text-[var(--vz-danger)] hover:bg-red-500/10 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white transition-colors"
                 >
                   <Trash2 size={15} /> Delete
                 </button>
@@ -314,7 +314,7 @@ export default function Notifications() {
                   <button
                     onClick={(e) => handleDelete(e, notif._id)}
                     title="Delete notification"
-                    className="shrink-0 w-9 h-9 rounded-lg border border-red-200 dark:border-red-900/40 flex items-center justify-center text-[var(--vz-danger)] hover:bg-red-500/10 transition-colors"
+                    className="shrink-0 w-9 h-9 rounded-lg border border-red-200 dark:border-red-900/40 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white transition-colors"
                   >
                     <Trash2 size={16} />
                   </button>

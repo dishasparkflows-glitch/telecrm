@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Search, Filter, UserPlus, Building2, Trash2, Edit3, X } from 'lucide-react'
+import { User, Search, Filter, UserPlus, Building2, Trash2, Edit3, X, Users, Shield, Circle, Download, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useListUsersQuery, useInviteUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../features/users/userApi'
 import { useListRolesQuery } from '../../features/roles/roleApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
@@ -24,8 +24,9 @@ const formatLastLogin = (dateStr) => {
 function UserRowSkeleton() {
   return (
     <tr className="border-b border-[var(--vz-border)] animate-pulse">
-      <td className="px-6 py-2.5">
-        <div className="flex items-center gap-2.5">
+      <td className="px-6 py-3 w-12"><div className="w-4 h-4 rounded bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-3">
+        <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-[var(--vz-border)]" />
           <div className="space-y-1.5">
             <div className="h-3.5 w-24 rounded bg-[var(--vz-border)]" />
@@ -33,15 +34,15 @@ function UserRowSkeleton() {
           </div>
         </div>
       </td>
-      <td className="px-6 py-2.5"><div className="h-6 w-28 rounded-full bg-[var(--vz-border)]" /></td>
-      <td className="px-6 py-2.5"><div className="h-3.5 w-24 rounded bg-[var(--vz-border)]" /></td>
-      <td className="px-6 py-2.5"><div className="h-6 w-16 rounded-full bg-[var(--vz-border)]" /></td>
-      <td className="px-6 py-2.5"><div className="h-3.5 w-32 rounded bg-[var(--vz-border)]" /></td>
-      <td className="px-6 py-2.5">
-        <div className="flex justify-end gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--vz-border)]" />
-          <div className="w-8 h-8 rounded-lg bg-[var(--vz-border)]" />
-          <div className="w-8 h-8 rounded-lg bg-[var(--vz-border)]" />
+      <td className="px-6 py-3"><div className="h-6 w-28 rounded-full bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-3"><div className="h-4 w-24 rounded bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-3"><div className="h-6 w-20 rounded-full bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-3"><div className="h-4 w-32 rounded bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-3">
+        <div className="flex justify-end gap-1.5">
+          <div className="w-7 h-7 rounded bg-[var(--vz-border)]" />
+          <div className="w-7 h-7 rounded bg-[var(--vz-border)]" />
+          <div className="w-7 h-7 rounded bg-[var(--vz-border)]" />
         </div>
       </td>
     </tr>
@@ -200,10 +201,15 @@ export default function UsersList() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--vz-heading)]">Users</h1>
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Users size={20} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--vz-heading)]">Users</h1>
+          </div>
         </div>
-        <Button onClick={() => setShowInvite(true)} variant="primary" size="md" className="shrink-0 rounded-lg">
+        <Button onClick={() => setShowInvite(true)} variant="primary" size="md" className="shrink-0 rounded-lg shadow-sm font-medium px-4">
           <UserPlus size={16} /> Add User
         </Button>
       </div>
@@ -211,100 +217,47 @@ export default function UsersList() {
       {/* Main Card */}
       <div className="bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-xl overflow-hidden" style={{ boxShadow: 'var(--vz-shadow)' }}>
 
-        {/* Search & Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 border-b border-[var(--vz-border)]">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="relative flex-1 max-w-md">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]" />
-              <input
-                type="text"
-                placeholder="Search users by name, email, or role..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-lg text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] focus:outline-none focus:border-primary transition-colors"
-              />
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors shrink-0
-                ${showFilters || hasActiveFilters
-                  ? 'border-primary bg-primary/5 text-primary'
-                  : 'border-[var(--vz-border)] text-[var(--vz-heading)] hover:bg-[var(--vz-input-bg)]'
-                }`}
-            >
-              <Filter size={15} />
-              Filter
-              {hasActiveFilters && (
-                <span className="w-2 h-2 rounded-full bg-primary" />
-              )}
-            </button>
+        {/* Search Toolbar */}
+        <div className="px-6 py-4 border-b border-[var(--vz-border)]">
+          <div className="relative max-w-md">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]" />
+            <input
+              type="text"
+              placeholder="Search by name, email, or role..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-lg text-sm font-medium text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition-colors"
+            />
           </div>
-          <span className="text-sm text-[var(--vz-text-muted)] shrink-0">
-            Total {usersPagination.total || filteredUsers.length} users
-          </span>
         </div>
 
-        {/* Filter Panel */}
-        {showFilters && (
-          <div className="px-6 py-4 border-b border-[var(--vz-border)] bg-[var(--vz-body-bg)]/40">
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="w-44">
-                <label className="block text-xs font-medium text-[var(--vz-text-muted)] mb-1.5">Role</label>
-                <Select
-                  value={roleFilter}
-                  onChange={(val) => { setRoleFilter(val); setPage(1) }}
-                  options={[
-                    { value: '', label: 'All Roles' },
-                    ...roles.map(r => ({ value: r._id, label: r.name })),
-                  ]}
-                />
-              </div>
-              <div className="w-44">
-                <label className="block text-xs font-medium text-[var(--vz-text-muted)] mb-1.5">Branch</label>
-                <Select
-                  value={branchFilter}
-                  onChange={(val) => { setBranchFilter(val); setPage(1) }}
-                  options={[
-                    { value: '', label: 'All Branches' },
-                    ...branches.map(b => ({ value: b._id, label: b.name })),
-                  ]}
-                />
-              </div>
-              <div className="w-36">
-                <label className="block text-xs font-medium text-[var(--vz-text-muted)] mb-1.5">Status</label>
-                <Select
-                  value={statusFilter}
-                  onChange={(val) => { setStatusFilter(val); setPage(1) }}
-                  options={[
-                    { value: '', label: 'All Status' },
-                    { value: 'true', label: 'Active' },
-                    { value: 'false', label: 'Inactive' },
-                  ]}
-                />
-              </div>
-              {hasActiveFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="inline-flex items-center gap-1.5 text-sm text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] transition-colors pb-2"
-                >
-                  <X size={14} /> Clear filters
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Users Table */}
-        <div className="overflow-x-auto">
+        <div className="px-6 py-4 flex items-center justify-between">
+          <span className="text-sm font-medium text-[var(--vz-text-muted)]">
+            Total <span className="font-bold text-[var(--vz-heading)]">{usersPagination.total || filteredUsers.length}</span> users
+          </span>
+        </div>
+        <div className="overflow-x-auto border-t border-[var(--vz-border)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--vz-border)] bg-[var(--vz-body-bg)]/30">
+              <tr className="border-b border-[var(--vz-border)] bg-gray-50/50 dark:bg-[var(--vz-body-bg)]/30">
+                <th className="px-6 py-3 w-12 text-center">
+                  <input type="checkbox" className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer" />
+                </th>
                 {['User', 'Role', 'Branch', 'Status', 'Last Login', 'Actions'].map((col) => (
                   <th
                     key={col}
-                    className={`px-6 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--vz-text-muted)] ${col === 'Actions' ? 'text-right' : 'text-left'}`}
+                    className={`px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-[var(--vz-text-muted)] ${col === 'Actions' ? 'text-right' : 'text-left'}`}
                   >
-                    {col}
+                    <div className={`flex items-center gap-1.5 ${col === 'Actions' ? 'justify-end' : ''}`}>
+                      {col}
+                      {col !== 'Actions' && (
+                        <div className="flex flex-col text-[var(--vz-border)] hover:text-[var(--vz-text-muted)] cursor-pointer">
+                          <ChevronUp size={8} className="translate-y-[2px]" />
+                          <ChevronDown size={8} className="-translate-y-[2px]" />
+                        </div>
+                      )}
+                    </div>
                   </th>
                 ))}
               </tr>
@@ -326,10 +279,13 @@ export default function UsersList() {
                   const userLastLogin = user.authentication?.lastLoginAt
 
                   return (
-                    <tr key={user._id} className="border-b border-[var(--vz-border)] last:border-b-0 hover:bg-[var(--vz-body-bg)]/40 transition-colors">
-                      <td className="px-6 py-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-full bg-[var(--vz-input-bg)] text-[var(--vz-text-muted)] flex items-center justify-center text-sm font-semibold overflow-hidden shrink-0 border border-[var(--vz-border)]">
+                    <tr key={user._id} className="border-b border-[var(--vz-border)] last:border-b-0 hover:bg-gray-50/50 dark:hover:bg-[var(--vz-body-bg)]/40 transition-colors">
+                      <td className="px-6 py-3 text-center">
+                        <input type="checkbox" className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer" />
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-[#f3f0ff] dark:bg-purple-900/20 text-[#6d28d9] dark:text-purple-400 flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 border border-[#e9d5ff] dark:border-purple-800">
                             {userAvatar ? (
                               <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
                             ) : (
@@ -337,48 +293,46 @@ export default function UsersList() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-semibold text-[var(--vz-heading)] truncate leading-tight">{userName || 'Unnamed User'}</div>
-                            <div className="text-xs text-[var(--vz-text-muted)] truncate leading-tight">{userEmail}</div>
+                            <div className="font-bold text-[var(--vz-heading)] truncate leading-tight">{userName || 'Unnamed User'}</div>
+                            <div className="text-xs text-[var(--vz-text-muted)] font-medium truncate leading-tight mt-0.5">{userEmail}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-2.5">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                          <User size={13} />
+                      <td className="px-6 py-3">
+                        <span className="text-sm font-medium text-[var(--vz-text-muted)]">
                           {getRoleName(user.roleId) || user.role || 'No role'}
                         </span>
                       </td>
-                      <td className="px-6 py-2.5">
-                        <span className="inline-flex items-center gap-1.5 text-sm text-[var(--vz-text)]">
-                          <Building2 size={14} className="text-[var(--vz-text-muted)] shrink-0" />
+                      <td className="px-6 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--vz-text-muted)]">
+                          <Building2 size={14} className="shrink-0" />
                           {getBranchName(user.branchId)}
                         </span>
                       </td>
-                      <td className="px-6 py-2.5">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
-                          user.isActive
-                            ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-                            : 'bg-red-500/10 text-red-500'
-                        }`}>
+                      <td className="px-6 py-3">
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${user.isActive
+                          ? 'bg-green-50 text-green-600 border border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
+                          : 'bg-red-50 text-red-500 border border-red-200 dark:bg-red-500/10 dark:border-red-500/20'
+                          }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
                           {user.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-6 py-2.5 text-sm text-[var(--vz-text-muted)] whitespace-nowrap">
+                      <td className="px-6 py-3 text-sm text-[var(--vz-text-muted)] font-medium whitespace-nowrap">
                         {formatLastLogin(userLastLogin)}
                       </td>
-                      <td className="px-6 py-2.5">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-6 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleEdit(user)}
-                            className="w-8 h-8 rounded-lg border border-[var(--vz-border)] flex items-center justify-center text-[var(--vz-text-muted)] hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                            className="p-1.5 text-[var(--vz-text-muted)] hover:text-primary hover:bg-primary/5 rounded transition-colors"
                             title="Edit User"
                           >
                             <Edit3 size={15} />
                           </button>
                           <button
                             onClick={() => handlePermissions(user)}
-                            className="w-8 h-8 rounded-lg border border-[var(--vz-border)] flex items-center justify-center text-[var(--vz-text-muted)] hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                            className="p-1.5 text-[var(--vz-text-muted)] hover:text-primary hover:bg-primary/5 rounded transition-colors"
                             title="Role Permissions"
                           >
                             <UserPlus size={15} />
@@ -386,7 +340,7 @@ export default function UsersList() {
                           {user._id !== currentUser?._id && (
                             <button
                               onClick={() => setConfirmDelete({ isOpen: true, user })}
-                              className="w-8 h-8 rounded-lg border border-red-200 dark:border-red-900/40 flex items-center justify-center text-[var(--vz-danger)] hover:bg-red-500/10 transition-colors"
+                              className="p-1.5 text-[var(--vz-text-muted)] hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                               title="Delete User"
                             >
                               <Trash2 size={15} />
@@ -404,53 +358,70 @@ export default function UsersList() {
 
         {/* Pagination Footer */}
         {totalItems > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-[var(--vz-border)]">
-            <p className="text-sm text-[var(--vz-text-muted)]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-[var(--vz-border)] bg-white dark:bg-[var(--vz-card-bg)]">
+            <p className="text-sm font-medium text-[var(--vz-text-muted)] w-full sm:w-1/3 text-left">
               Showing {startItem} to {endItem} of {totalItems} users
             </p>
 
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
+            <div className="w-full sm:w-1/3 flex justify-center">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                  className="w-8 h-8 flex items-center justify-center rounded border border-[var(--vz-border)] text-[#3b548b] hover:border-[#3b548b] disabled:opacity-40 disabled:hover:border-[var(--vz-border)] disabled:text-[var(--vz-text-muted)] transition-colors shadow-sm bg-white dark:bg-transparent"
+                >
+                  <ChevronsLeft size={16} />
+                </button>
                 <button
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
-                  className="p-2 rounded-lg text-[var(--vz-text-muted)] hover:bg-[var(--vz-input-bg)] disabled:opacity-40 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded border border-[var(--vz-border)] text-[#3b548b] hover:border-[#3b548b] disabled:opacity-40 disabled:hover:border-[var(--vz-border)] disabled:text-[var(--vz-text-muted)] transition-colors shadow-sm bg-white dark:bg-transparent"
                 >
-                  ‹
+                  <ChevronLeft size={16} />
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                {Array.from({ length: totalPages || 1 }, (_, i) => i + 1).map((p) => (
                   <button
                     key={p}
                     onClick={() => setPage(p)}
-                    className={`min-w-[36px] h-9 rounded-lg text-sm font-medium transition-colors ${
-                      page === p
-                        ? 'bg-primary text-white'
-                        : 'text-[var(--vz-text)] hover:bg-[var(--vz-input-bg)]'
-                    }`}
+                    className={`w-8 h-8 flex items-center justify-center rounded text-sm font-bold transition-colors shadow-sm ${page === p
+                      ? 'bg-[#3b548b] text-white border border-[#3b548b]'
+                      : 'bg-white dark:bg-transparent text-[#3b548b] border border-[var(--vz-border)] hover:border-[#3b548b]'
+                      }`}
                   >
                     {p}
                   </button>
                 ))}
                 <button
                   onClick={() => setPage(page + 1)}
-                  disabled={page === totalPages}
-                  className="p-2 rounded-lg text-[var(--vz-text-muted)] hover:bg-[var(--vz-input-bg)] disabled:opacity-40 transition-colors"
+                  disabled={page === (totalPages || 1)}
+                  className="w-8 h-8 flex items-center justify-center rounded border border-[var(--vz-border)] text-[#3b548b] hover:border-[#3b548b] disabled:opacity-40 disabled:hover:border-[var(--vz-border)] disabled:text-[var(--vz-text-muted)] transition-colors shadow-sm bg-white dark:bg-transparent"
                 >
-                  ›
+                  <ChevronRight size={16} />
+                </button>
+                <button
+                  onClick={() => setPage(totalPages || 1)}
+                  disabled={page === (totalPages || 1)}
+                  className="w-8 h-8 flex items-center justify-center rounded border border-[var(--vz-border)] text-[#3b548b] hover:border-[#3b548b] disabled:opacity-40 disabled:hover:border-[var(--vz-border)] disabled:text-[var(--vz-text-muted)] transition-colors shadow-sm bg-white dark:bg-transparent"
+                >
+                  <ChevronsRight size={16} />
                 </button>
               </div>
-            )}
+            </div>
 
-            <div className="flex items-center gap-2">
-              <select
-                value={pageSize}
-                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
-                className="text-sm bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-lg px-3 py-2 text-[var(--vz-heading)] focus:outline-none focus:border-primary cursor-pointer"
-              >
-                {[10, 20, 50].map((size) => (
-                  <option key={size} value={size}>{size} per page</option>
-                ))}
-              </select>
+            <div className="w-full sm:w-1/3 flex justify-end items-center gap-3">
+              <span className="text-sm font-medium text-[var(--vz-text-muted)]">Rows per page</span>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
+                  className="text-sm font-medium text-[var(--vz-heading)] bg-white dark:bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-md pl-3 pr-8 py-1.5 focus:outline-none focus:border-primary shadow-sm appearance-none cursor-pointer"
+                >
+                  {[10, 20, 50].map((size) => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-2.5 text-[var(--vz-text-muted)] pointer-events-none" />
+              </div>
             </div>
           </div>
         )}

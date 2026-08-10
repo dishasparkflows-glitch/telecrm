@@ -20,7 +20,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import {
   Search, Plus, Upload, Filter, Phone, Mail as MailIcon,
-  Users, Trash2, Eye, X
+  Users, Trash2, Eye, X, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react'
 
 const stageColors = {
@@ -34,7 +34,7 @@ const sourceLabels = {
   smart_form: 'Smart Form', referral: 'Referral',
 }
 
-const PAGE_SIZE = 15
+
 
 const IMPORT_FIELDS = [
   { value: '', label: 'Do not import' },
@@ -61,6 +61,7 @@ export default function LeadsList() {
   const dispatch = useDispatch()
   const toast = useToast()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState('')
   const [sourceFilter, setSourceFilter] = useState('')
@@ -76,7 +77,7 @@ export default function LeadsList() {
   const debouncedSearch = useDebounce(search)
 
   const { data, isLoading } = useGetLeadsQuery({
-    page, limit: PAGE_SIZE,
+    page, limit: pageSize,
     ...(debouncedSearch && { search: debouncedSearch }),
     ...(stageFilter && { stage: stageFilter }),
     ...(sourceFilter && { source: sourceFilter }),
@@ -418,15 +419,75 @@ export default function LeadsList() {
               </table>
             </div>
 
-            <div className="px-4 pb-3">
-              <Pagination
-                currentPage={page}
-                totalPages={pagination.totalPages || 1}
-                totalItems={pagination.total}
-                pageSize={PAGE_SIZE}
-                onPageChange={setPage}
-              />
-            </div>
+            {pagination.total > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-[var(--vz-border)] bg-white dark:bg-[var(--vz-card-bg)]">
+                <p className="text-sm font-medium text-[var(--vz-text-muted)] w-full sm:w-1/3 text-left">
+                  Showing {Math.min((page - 1) * pageSize + 1, pagination.total)} to {Math.min(page * pageSize, pagination.total)} of {pagination.total} leads
+                </p>
+
+                <div className="w-full sm:w-1/3 flex justify-center">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPage(1)}
+                      disabled={page === 1}
+                      className="w-8 h-8 flex items-center justify-center rounded border border-[var(--vz-border)] text-[#3b548b] hover:border-[#3b548b] disabled:opacity-40 disabled:hover:border-[var(--vz-border)] disabled:text-[var(--vz-text-muted)] transition-colors shadow-sm bg-white dark:bg-transparent"
+                    >
+                      <ChevronsLeft size={16} />
+                    </button>
+                    <button
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 1}
+                      className="w-8 h-8 flex items-center justify-center rounded border border-[var(--vz-border)] text-[#3b548b] hover:border-[#3b548b] disabled:opacity-40 disabled:hover:border-[var(--vz-border)] disabled:text-[var(--vz-text-muted)] transition-colors shadow-sm bg-white dark:bg-transparent"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    {Array.from({ length: pagination.totalPages || 1 }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`w-8 h-8 flex items-center justify-center rounded text-sm font-bold transition-colors shadow-sm ${
+                          page === p
+                            ? 'bg-[#3b548b] text-white border border-[#3b548b]'
+                            : 'bg-white dark:bg-transparent text-[#3b548b] border border-[var(--vz-border)] hover:border-[#3b548b]'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setPage(page + 1)}
+                      disabled={page === (pagination.totalPages || 1)}
+                      className="w-8 h-8 flex items-center justify-center rounded border border-[var(--vz-border)] text-[#3b548b] hover:border-[#3b548b] disabled:opacity-40 disabled:hover:border-[var(--vz-border)] disabled:text-[var(--vz-text-muted)] transition-colors shadow-sm bg-white dark:bg-transparent"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                    <button
+                      onClick={() => setPage(pagination.totalPages || 1)}
+                      disabled={page === (pagination.totalPages || 1)}
+                      className="w-8 h-8 flex items-center justify-center rounded border border-[var(--vz-border)] text-[#3b548b] hover:border-[#3b548b] disabled:opacity-40 disabled:hover:border-[var(--vz-border)] disabled:text-[var(--vz-text-muted)] transition-colors shadow-sm bg-white dark:bg-transparent"
+                    >
+                      <ChevronsRight size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="w-full sm:w-1/3 flex justify-end items-center gap-3">
+                  <span className="text-sm font-medium text-[var(--vz-text-muted)]">Rows per page</span>
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
+                      className="text-sm font-medium text-[var(--vz-heading)] bg-white dark:bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-md pl-3 pr-8 py-1.5 focus:outline-none focus:border-primary shadow-sm appearance-none cursor-pointer"
+                    >
+                      {[10, 20, 50, 100].map((size) => (
+                        <option key={size} value={size}>{size}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-2.5 text-[var(--vz-text-muted)] pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </Card>
