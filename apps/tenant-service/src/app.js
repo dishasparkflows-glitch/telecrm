@@ -51,7 +51,7 @@ app.use('/api/branches', requireGatewayUser, branchRoutes);
 app.use('/api/custom-fields', requireGatewayUser, customFieldRoutes);
 app.use('/api/integrations', requireGatewayUser, integrationRoutes);
 app.use('/internal', requireInternalCaller, internalRoutes);
-app.use('/api/audit', requireGatewayUser, auditRoutes);
+app.use('/api/audit', requireServiceIdentity('tenant-service', { requireUser: false }), auditRoutes);
 app.use('/api/owner', requireGatewayUser, ownerRoutes);
 
 app.use(errorHandler);

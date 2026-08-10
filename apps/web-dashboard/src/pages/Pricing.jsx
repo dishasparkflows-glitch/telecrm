@@ -7,7 +7,7 @@ import { setCredentials } from '../slices/authSlice'
 import {
   Zap, Star, Crown, Shield, ArrowRight, ArrowLeft, Check, X,
   Building2, User, Mail, Phone, Lock, Loader2, ShieldCheck,
-  Users, BarChart3, MessageCircle, HardDrive
+  Users, BarChart3, MessageCircle, HardDrive, Eye, EyeOff
 } from 'lucide-react'
 import './pricing.css'
 
@@ -159,6 +159,7 @@ function RegistrationForm({ selectedPlan, onBack, onOtpRequired }) {
   const meta = PLAN_META[selectedPlan?.slug] || PLAN_META.basic
   const Icon = meta.icon
   const [form, setForm] = useState({ companyName: '', name: '', email: '', phone: '', password: '' })
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [sendOtp, { isLoading }] = useSendOtpMutation()
 
@@ -212,7 +213,17 @@ function RegistrationForm({ selectedPlan, onBack, onOtpRequired }) {
           </div>
           <div className="reg-field">
             <label><Lock size={14} /> Password *</label>
-            <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Min. 8 characters" required minLength={8} />
+            <div style={{ position: 'relative' }}>
+              <input name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Min. 8 characters" required minLength={8} style={{ paddingRight: '40px' }} />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                tabIndex="-1"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
           <div className="reg-payment-skip">
             <ShieldCheck size={18} />

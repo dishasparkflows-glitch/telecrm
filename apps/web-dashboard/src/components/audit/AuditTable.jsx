@@ -33,8 +33,18 @@ const ACTION_BADGES = {
   LOGOUT: 'bg-slate-100 text-slate-700 font-medium',
 }
 
-const formatUserName = (rawName) => {
-  if (!rawName) return 'System'
+const formatUserName = (log, users = []) => {
+  const rawName = log.userName;
+  if (!rawName) {
+    if (log.userId) {
+      const user = users.find((u) => String(u._id || u.id || u.userId) === String(log.userId));
+      if (user) {
+        return user.name || user.userName || (user.email ? user.email.split('@')[0] : 'User');
+      }
+      return String(log.userId).substring(0, 8) + '...';
+    }
+    return 'System';
+  }
   if (rawName.includes('@')) {
     const prefix = rawName.split('@')[0]
     return prefix
@@ -45,7 +55,7 @@ const formatUserName = (rawName) => {
   return rawName
 }
 
-export default function AuditTable({ logs = [], onViewChanges }) {
+export default function AuditTable({ logs = [], users = [], onViewChanges }) {
   const navigate = useNavigate()
   const [openMenuId, setOpenMenuId] = useState(null)
 
@@ -55,7 +65,7 @@ export default function AuditTable({ logs = [], onViewChanges }) {
   }
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '—'
+    if (!dateStr) return { formattedDate: '—', formattedTime: '' }
     const date = new Date(dateStr)
     const formattedDate = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
@@ -73,25 +83,22 @@ export default function AuditTable({ logs = [], onViewChanges }) {
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-[var(--vz-table-header-bg)] border-b border-[var(--vz-border)]">
-            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider">
+            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider w-40">
               Date & Time
             </th>
-            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider">
+            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider w-48">
               User
             </th>
-            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider">
+            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider w-32">
               Module
             </th>
-            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider">
-              Record
-            </th>
-            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider">
+            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider w-24">
               Action
             </th>
-            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider">
+            <th className="px-4 py-3 text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider w-full">
               Changes
             </th>
-            <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider">
+            <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase text-[var(--vz-text-muted)] tracking-wider w-12">
               
             </th>
           </tr>
@@ -100,9 +107,8 @@ export default function AuditTable({ logs = [], onViewChanges }) {
           {logs.map((log) => {
             const modKey = (log.module || 'system').toLowerCase()
             const ModuleIcon = MODULE_ICONS[modKey] || Users
-            const { formattedDate, formattedTime } = formatDate(log.createdAt)
-            const recordIdStr = log.recordId || log.resourceId || 'LEAD-2025-00125'
-
+            const { formattedDate, formattedTime } = formatDate(log.meta?.createdAt || log.createdAt)
+            const recordIdStr = log.recordId || 'Unknown'
             return (
               <tr
                 key={log._id || Math.random()}
@@ -110,17 +116,16 @@ export default function AuditTable({ logs = [], onViewChanges }) {
               >
                 {/* DATE & TIME */}
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="font-semibold text-[var(--vz-heading)]">{formattedDate}, {formattedTime}</div>
+                  <div className="font-semibold text-[var(--vz-heading)]">
+                    {formattedDate}{formattedTime ? `, ${formattedTime}` : ''}
+                  </div>
                 </td>
 
                 {/* USER */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div>
                     <div className="font-semibold text-[var(--vz-heading)] leading-snug">
-                      {formatUserName(log.userName)}
-                    </div>
-                    <div className="text-[11px] text-[var(--vz-text-muted)] capitalize">
-                      {log.userRole || 'User'}
+                      {formatUserName(log, users)}
                     </div>
                   </div>
                 </td>
@@ -135,20 +140,6 @@ export default function AuditTable({ logs = [], onViewChanges }) {
                     <ModuleIcon size={14} />
                     {log.module ? log.module.charAt(0).toUpperCase() + log.module.slice(1) : 'System'}
                   </span>
-                </td>
-
-                {/* RECORD */}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <button
-                    type="button"
-                    onClick={() => handleRecordClick(recordIdStr)}
-                    className="text-left font-bold text-[#3577f1] hover:underline block leading-tight cursor-pointer"
-                  >
-                    {recordIdStr}
-                  </button>
-                  <div className="text-[11px] text-[var(--vz-text-muted)] truncate max-w-[140px] mt-0.5">
-                    {log.recordName || log.resource || 'Record'}
-                  </div>
                 </td>
 
                 {/* ACTION */}
@@ -167,13 +158,15 @@ export default function AuditTable({ logs = [], onViewChanges }) {
                   <div className="font-semibold text-[var(--vz-heading)]">
                     {log.description || (log.changes?.length ? `${log.changes.length} fields updated` : 'No changes')}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onViewChanges?.(log)}
-                    className="text-[11px] font-medium text-[#3577f1] hover:underline cursor-pointer"
-                  >
-                    View changes
-                  </button>
+                  {log.action !== 'DELETE' && (
+                    <button
+                      type="button"
+                      onClick={() => onViewChanges?.(log)}
+                      className="text-[11px] font-medium text-[#3577f1] hover:underline cursor-pointer"
+                    >
+                      View changes
+                    </button>
+                  )}
                 </td>
 
                 {/* ACTION MENU (3 DOTS & EYE) */}
@@ -187,39 +180,9 @@ export default function AuditTable({ logs = [], onViewChanges }) {
                     >
                       <Eye size={15} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setOpenMenuId(openMenuId === log._id ? null : log._id)}
-                      className="p-1 rounded text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-                    >
-                      <MoreVertical size={15} />
-                    </button>
                   </div>
 
-                  {openMenuId === log._id && (
-                    <div className="absolute right-4 top-10 w-44 bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-md shadow-lg py-1 z-20 text-left">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenMenuId(null)
-                          handleRecordClick(recordIdStr)
-                        }}
-                        className="w-full px-3 py-1.5 text-xs text-[var(--vz-heading)] hover:bg-[var(--vz-table-hover-bg)] text-left cursor-pointer"
-                      >
-                        View Record History
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenMenuId(null)
-                          onViewChanges?.(log)
-                        }}
-                        className="w-full px-3 py-1.5 text-xs text-[var(--vz-heading)] hover:bg-[var(--vz-table-hover-bg)] text-left cursor-pointer"
-                      >
-                        View Change Details
-                      </button>
-                    </div>
-                  )}
+
                 </td>
               </tr>
             )

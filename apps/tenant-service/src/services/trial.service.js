@@ -61,7 +61,6 @@ const createTenantWithTrial = async ({ company, companyName, email, phone, refer
         startedAt: now,
         expiresAt: trialExpiresAt,
         convertedAt: null,
-        suspendedReason: null,
     };
 
     const trial = {

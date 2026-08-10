@@ -7,6 +7,7 @@ const { pagination, requireObjectId, escapeRegex } = require('../utils/input');
 const { pickLeadCreateInput, pickLeadUpdateInput, applyAssignedToFilter } = require('../utils/leadDto');
 const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
+const { auditLogger } = require('@sparkcrm/shared-middleware');
 
 const LEAD_SORT_FIELDS = new Set(['createdAt', 'updatedAt', 'firstName', 'lastName', 'stage', 'priority', 'score', 'scoring.score', 'expectedValue', 'followUpAt']);
 
@@ -35,6 +36,15 @@ const createLead = asyncHandler(async (req, res) => {
     if (!result.created && result.duplicate) {
         return ApiResponse.success(res, result.lead, 'Lead already exists (duplicate detected)', 200);
     }
+
+    await auditLogger.log({
+        req,
+        action: 'CREATE',
+        module: 'leads',
+        recordId: result.lead._id,
+        recordType: 'Lead',
+        details: { body: req.body, existingdata: null, updateddata: result.lead.toObject ? result.lead.toObject() : result.lead }
+    });
 
     ApiResponse.created(res, result.lead, 'Lead created');
 });
@@ -116,11 +126,13 @@ const getLead = asyncHandler(async (req, res) => {
  * Update a lead
  */
 const updateLead = asyncHandler(async (req, res) => {
+    console.log("heeyyyyy")
     const tenantId = req.headers['x-tenant-id'];
     const leadId = requireObjectId(req.params.id, 'lead ID');
     const changes = pickLeadUpdateInput(req.body);
     const lead = await Lead.findOne({ _id: leadId, tenantId });
     if (!lead) throw ApiError.notFound('Lead not found');
+    const existingdata = lead.toObject();
 
     // Check access — agents can only edit their assigned leads
     if (!canAccessRecord(req, lead, { ownerField: 'assignedTo', module: 'leads' })) {
@@ -204,6 +216,15 @@ const updateLead = asyncHandler(async (req, res) => {
     };
 
     await lead.save();
+    console.log("auditLogger")
+    await auditLogger.log({
+        req,
+        action: 'UPDATE',
+        module: 'leads',
+        recordId: lead._id,
+        recordType: 'Lead',
+        details: { body: req.body, existingdata, updateddata: lead.toObject() }
+    });
 
     if (targetFollowUpAt !== undefined) {
         const newFollowUpAt = (lead.lifecycle?.followUpAt) ? new Date(lead.lifecycle?.followUpAt).getTime() : null;
@@ -477,7 +498,11 @@ const getLeadTimeline = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [activities, total] = await Promise.all([
-        LeadActivity.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
+        LeadActivity.find(filter)
+            .select('meta.createdAt _id tenantId leadId actorId type title description')
+            .sort({ 'meta.createdAt': -1 })
+            .skip(skip)
+            .limit(parseInt(limit)),
         LeadActivity.countDocuments(filter),
     ]);
 

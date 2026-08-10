@@ -22,11 +22,7 @@ const createBranch = asyncHandler(async (req, res) => {
         action: 'CREATE',
         recordId: String(branch._id),
         recordType: 'Branch',
-        recordName: branch.name,
-        changes: [
-            { field: 'name', oldValue: null, newValue: branch.name },
-            { field: 'code', oldValue: null, newValue: branch.code },
-        ],
+        details: { body: req.body, existingdata: null, updateddata: branch.toObject() },
         description: 'New branch created',
         req,
     });
@@ -64,15 +60,17 @@ const updateBranch = asyncHandler(async (req, res) => {
 
     await branch.save();
 
-    const changes = computeChanges(oldDoc, branch.toObject());
     await auditLogger.log({
         module: 'branches',
         action: 'UPDATE',
         recordId: String(branch._id),
         recordType: 'Branch',
-        recordName: branch.name,
-        changes,
-        description: `${changes.length} field${changes.length === 1 ? '' : 's'} updated`,
+        details: {
+            body: req.body,
+            existingdata: oldDoc,
+            updateddata: branch.toObject(),
+        },
+        description: 'Branch updated',
         req,
     });
 
@@ -93,8 +91,9 @@ const deleteBranch = asyncHandler(async (req, res) => {
         action: 'DELETE',
         recordId: String(branch._id),
         recordType: 'Branch',
-        recordName: branch.name,
-        changes: [{ field: 'isActive', oldValue: true, newValue: false }],
+        details: {
+            body: branch.toObject(),
+        },
         description: 'Branch deactivated',
         req,
     });

@@ -379,7 +379,6 @@ const updateTenantStatus = asyncHandler(async (req, res) => {
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) throw ApiError.notFound('Tenant not found');
 
-    if (!tenant.subscription) tenant.subscription = {};
     tenant.status = status;
     if (status === 'suspended') {
         tenant.suspendedReason = reason || 'Suspended by owner';

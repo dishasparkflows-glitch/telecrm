@@ -26,7 +26,34 @@ export default function AuditFieldHistory({ history = [] }) {
   const fieldMap = {}
 
   history.forEach((event) => {
-    const changes = event.changes || []
+    let changes = []
+    
+    if (event.changes && event.changes.length > 0) {
+      changes = event.changes
+    } else if (event.details?.existingdata && event.details?.updateddata) {
+      const existing = event.details.existingdata
+      const updated = event.details.updateddata
+      const allKeys = new Set([...Object.keys(existing), ...Object.keys(updated)])
+      
+      allKeys.forEach(key => {
+        if (['updatedAt', 'updatedBy', '__v'].includes(key)) return;
+        
+        const oldV = existing[key]
+        const newV = updated[key]
+        
+        const strOld = typeof oldV === 'object' ? JSON.stringify(oldV) : String(oldV)
+        const strNew = typeof newV === 'object' ? JSON.stringify(newV) : String(newV)
+        
+        if (strOld !== strNew) {
+          changes.push({
+            field: key,
+            oldValue: oldV,
+            newValue: newV
+          })
+        }
+      })
+    }
+    
     changes.forEach((c) => {
       const fname = c.field || 'Unspecified'
       if (!fieldMap[fname]) {

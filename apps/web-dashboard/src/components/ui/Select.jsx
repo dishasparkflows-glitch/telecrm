@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 
 export default function Select({
   label,
@@ -12,7 +12,8 @@ export default function Select({
   disabled = false,
   error,
   className = '',
-  icon: Icon
+  icon: Icon,
+  multiple = false,
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef(null)
@@ -20,8 +21,20 @@ export default function Select({
   const dropdownRef = useRef(null)
   const [dropdownStyle, setDropdownStyle] = useState({})
 
-  const selectedOption = options.find((opt) => opt.value === value)
-  const displayValue = selectedOption ? selectedOption.label : placeholder
+  const selectedOption = !multiple ? options.find((opt) => opt.value === value) : null
+  
+  let displayValue = placeholder
+  if (multiple) {
+    if (Array.isArray(value) && value.length > 0) {
+      if (value.length === 1) {
+        displayValue = options.find(opt => opt.value === value[0])?.label || value[0]
+      } else {
+        displayValue = `${value.length} selected`
+      }
+    }
+  } else {
+    displayValue = selectedOption ? selectedOption.label : placeholder
+  }
 
   const updatePosition = () => {
     if (buttonRef.current && isOpen) {
@@ -67,8 +80,19 @@ export default function Select({
 
   const handleSelect = (option) => {
     if (disabled) return
-    onChange(option.value)
-    setIsOpen(false)
+    
+    if (multiple) {
+      const currentValues = Array.isArray(value) ? value : []
+      if (currentValues.includes(option.value)) {
+        onChange(currentValues.filter(v => v !== option.value))
+      } else {
+        onChange([...currentValues, option.value])
+      }
+      // Do not close dropdown on multi-select
+    } else {
+      onChange(option.value)
+      setIsOpen(false)
+    }
   }
 
   return (
@@ -122,17 +146,23 @@ export default function Select({
                       No options available
                     </li>
                   ) : (
-                    options.map((option) => (
-                      <li
-                        key={option.value}
-                        onClick={() => handleSelect(option)}
-                        className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors
-                          ${value === option.value ? 'bg-primary/10 text-primary font-medium' : 'text-[var(--vz-heading)] hover:bg-primary/10 hover:text-primary'}`}
-                      >
-                        <span className="truncate">{option.label}</span>
-                        {value === option.value && <Check size={14} className="text-primary flex-shrink-0" />}
-                      </li>
-                    ))
+                    options.map((option) => {
+                      const isSelected = multiple 
+                        ? (Array.isArray(value) && value.includes(option.value))
+                        : (value === option.value)
+                        
+                      return (
+                        <li
+                          key={option.value}
+                          onClick={() => handleSelect(option)}
+                          className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors
+                            ${isSelected ? 'bg-primary/10 text-primary font-medium' : 'text-[var(--vz-heading)] hover:bg-primary/10 hover:text-primary'}`}
+                        >
+                          <span className="truncate">{option.label}</span>
+                          {isSelected && <Check size={14} className="text-primary flex-shrink-0" />}
+                        </li>
+                      )
+                    })
                   )}
                 </ul>
               </motion.div>

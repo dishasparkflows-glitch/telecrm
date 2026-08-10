@@ -274,33 +274,7 @@ export default function Profile() {
                 </div>
               </Card>
 
-              {/* Recent Activity */}
-              <Card>
-                <Card.Header>
-                  <Card.Title>Recent Activity</Card.Title>
-                </Card.Header>
-                <div className="relative">
-                  <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-[var(--vz-border)]" />
-                  <div className="space-y-4">
-                    {[
-                      { icon: User, color: 'primary', text: 'Registered on SparkCRM', time: joinDate },
-                      { icon: Building2, color: 'success', text: `Branch "${activeBranch?.name || 'Head Office'}" created`, time: joinDate },
-                      { icon: Shield, color: 'warning', text: 'Default roles and permissions configured', time: joinDate },
-                      { icon: Activity, color: 'info', text: 'Last login recorded', time: lastLogin },
-                    ].map((item, i) => (
-                      <div key={i} className="flex gap-3 relative">
-                        <div className={`w-[30px] h-[30px] rounded-full bg-${item.color}/10 border-2 border-[var(--vz-card-bg)] flex items-center justify-center z-10 shrink-0`}>
-                          <item.icon size={12} className={`text-${item.color}`} />
-                        </div>
-                        <div className="pb-1">
-                          <p className="text-sm text-[var(--vz-heading)]">{item.text}</p>
-                          <p className="text-[11px] text-[var(--vz-text-muted)]">{item.time}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
+
             </div>
           </div>
         )}

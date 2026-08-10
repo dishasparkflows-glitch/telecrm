@@ -19,7 +19,7 @@ const seedPlans = async () => {
             yearlyPrice: 0,
             isTrial: true,
             trialDurationDays: 30,
-            moduleKeys: ['leads', 'calls', 'whatsapp', 'forms', 'meetings', 'automations', 'analytics', 'tasks'],
+            moduleKeys: ['leads', 'calls', 'whatsapp', 'forms', 'meetings', 'automations', 'analytics', 'tasks', 'notifications'],
             features: [
                 'lead_management', 'calling_basic', 'call_recording', 'call_reminders',
                 'whatsapp_templates', 'whatsapp_session', 'whatsapp_chatbot', 'whatsapp_media',
@@ -42,7 +42,7 @@ const seedPlans = async () => {
             description: 'Basic CRM features for individuals',
             price: 0,
             yearlyPrice: 0,
-            moduleKeys: ['leads', 'analytics'],
+            moduleKeys: ['leads', 'analytics', 'notifications'],
             features: ['lead_management', 'analytics_basic', 'notifications'],
             limits: {
                 maxUsers: 1,
@@ -60,7 +60,7 @@ const seedPlans = async () => {
             price: 999,
             yearlyPrice: 9990,
             perUserPrice: 199,
-            moduleKeys: ['leads', 'calls', 'forms', 'automations', 'analytics'],
+            moduleKeys: ['leads', 'calls', 'forms', 'automations', 'analytics', 'notifications'],
             features: [
                 'lead_management', 'calling_basic', 'call_reminders',
                 'whatsapp_templates', 'automation_basic', 'analytics_basic',
@@ -82,7 +82,7 @@ const seedPlans = async () => {
             price: 1999,
             yearlyPrice: 19990,
             perUserPrice: 149,
-            moduleKeys: ['leads', 'calls', 'whatsapp', 'forms', 'meetings', 'automations', 'analytics', 'tasks'],
+            moduleKeys: ['leads', 'calls', 'whatsapp', 'forms', 'meetings', 'automations', 'analytics', 'tasks', 'notifications'],
             features: [
                 'lead_management', 'calling_basic', 'call_recording', 'call_reminders',
                 'whatsapp_templates', 'whatsapp_session', 'whatsapp_chatbot', 'whatsapp_media',
@@ -106,7 +106,7 @@ const seedPlans = async () => {
             price: 4999,
             yearlyPrice: 49990,
             perUserPrice: 0,
-            moduleKeys: ['leads', 'calls', 'whatsapp', 'forms', 'meetings', 'automations', 'analytics', 'tasks'],
+            moduleKeys: ['leads', 'calls', 'whatsapp', 'forms', 'meetings', 'automations', 'analytics', 'tasks', 'notifications'],
             features: [
                 'lead_management', 'calling_basic', 'call_recording', 'call_reminders',
                 'auto_dialer', 'power_dialer',

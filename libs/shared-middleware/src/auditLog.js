@@ -16,12 +16,10 @@ const auditLogger = {
         action,
         recordId,
         recordType,
-        recordName,
-        changes = [],
+        details = {},
         description,
         req,
         metadata = {},
-        severity = 'info',
     }) => {
         try {
             // Extract context from req if provided
@@ -31,13 +29,7 @@ const auditLogger = {
             }
 
             const finalBranchId = branchId || req?.userBranchId || req?.headers?.['x-user-branch-id'] || req?.headers?.['x-branch-id'] || null;
-            let rawName = user?.name || user?.userName || req?.userName || req?.headers?.['x-user-name'] || user?.email || req?.userEmail || req?.headers?.['x-user-email'] || 'System';
-            if (typeof rawName === 'string' && rawName.includes('@')) {
-                const prefix = rawName.split('@')[0];
-                rawName = prefix.split(/[._-]/).map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-            }
-            const finalUserName = rawName;
-            const finalUserRole = user?.role || user?.userRole || req?.userRole || req?.headers?.['x-user-role'] || 'user';
+            const finalUserId = user?.id || user?.userId || req?.userId || req?.headers?.['x-user-id'] || null;
 
             const rawIp = req?.ip || req?.headers?.['x-forwarded-for'] || req?.socket?.remoteAddress || '';
             const ipAddress = typeof rawIp === 'string' ? rawIp.split(',')[0].trim() : '';
@@ -45,20 +37,14 @@ const auditLogger = {
 
             const normalizedAction = (action || '').toUpperCase();
 
-            // Rule: For UPDATE, do NOT create an audit record when changes array is empty
-            if (normalizedAction === 'UPDATE' && (!changes || changes.length === 0)) {
+            // Rule: For UPDATE, do NOT create an audit record when details.updateddata is empty or not provided
+            if (normalizedAction === 'UPDATE' && (!details || !details.updateddata)) {
                 return null;
             }
 
-            const formattedChanges = Array.isArray(changes) ? changes.map((c) => ({
-                field: String(c.field || c.name || 'field'),
-                oldValue: c.oldValue !== undefined ? c.oldValue : null,
-                newValue: c.newValue !== undefined ? c.newValue : null,
-            })) : [];
-
             const defaultDesc = description || (
                 normalizedAction === 'CREATE' ? `${recordType || module || 'Record'} created` :
-                normalizedAction === 'UPDATE' ? `${formattedChanges.length} field${formattedChanges.length === 1 ? '' : 's'} updated` :
+                normalizedAction === 'UPDATE' ? `${recordType || module || 'Record'} updated` :
                 normalizedAction === 'DELETE' ? `${recordType || module || 'Record'} deleted` :
                 `${normalizedAction} performed`
             );
@@ -67,33 +53,26 @@ const auditLogger = {
                 tenantId: finalTenantId,
                 branchId: finalBranchId,
                 userId: finalUserId,
-                userName: finalUserName,
-                userRole: finalUserRole,
                 module: module ? String(module).toLowerCase() : 'system',
                 action: normalizedAction,
                 recordId: recordId ? String(recordId) : null,
                 recordType: recordType || (module ? module.charAt(0).toUpperCase() + module.slice(1) : 'Record'),
-                recordName: recordName || (recordId ? `${recordType || 'Record'} ${recordId}` : 'Record'),
-                changes: formattedChanges,
+                details: details,
                 description: defaultDesc,
-                ipAddress,
-                userAgent,
-                severity,
-                metadata: metadata || {},
-                createdAt: new Date(),
+                systemInfo: { ipAddress, userAgent },
+                meta: { ...metadata, createdAt: new Date() },
             };
 
-            // Direct model invocation if registered globally or loadable in tenant-service
-            if (global.__AUDIT_LOG_MODEL__) {
-                return await global.__AUDIT_LOG_MODEL__.create(logData);
-            }
-            try {
-                const AuditLogModel = require('../../../apps/tenant-service/src/models/AuditLog');
-                if (AuditLogModel && AuditLogModel.create) {
-                    return await AuditLogModel.create(logData);
+            // Direct model invocation only if we are actually running inside the tenant-service
+            if (process.env.SERVICE_NAME === 'tenant-service' || global.__AUDIT_LOG_MODEL__) {
+                try {
+                    const AuditLogModel = global.__AUDIT_LOG_MODEL__ || require('../../../apps/tenant-service/src/models/AuditLog');
+                    if (AuditLogModel && AuditLogModel.create) {
+                        return await AuditLogModel.create(logData);
+                    }
+                } catch (e) {
+                    // Fall back to HTTP
                 }
-            } catch (e) {
-                // Service isolated, proceed to HTTP dispatch
             }
 
             // Async HTTP POST to tenant-service

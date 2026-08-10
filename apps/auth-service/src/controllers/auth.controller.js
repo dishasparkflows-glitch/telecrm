@@ -8,7 +8,7 @@ const axios = require('axios');
 const { env } = require('@sparkcrm/shared-config');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { createServiceHeaders } = require('@sparkcrm/shared-middleware');
+const { createServiceHeaders, auditLogger } = require('@sparkcrm/shared-middleware');
 const { generateSecret, verify, generateURI } = require('otplib');
 const qrcode = require('qrcode');
 const bcrypt = require('bcryptjs');
@@ -405,13 +405,22 @@ const login = asyncHandler(async (req, res) => {
 
     // Fetch permissions, modules, branches, and features
     const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
-
     // Generate new token pair
     const tokens = generateTokenPair(user, roleSlug);
     if (!user.authentication) user.authentication = {};
     user.authentication.refreshToken = tokens.refreshToken;
     user.authentication.lastLoginIp = req.ip || req.headers['x-forwarded-for'] || '';
     await user.save();
+
+    // Log the login action
+    auditLogger.log({
+        action: 'LOGIN',
+        recordId: user._id,
+        recordType: 'User',
+        details: { body: { email: user.contact?.email || user.email } },
+        req,
+        description: 'User logged in successfully',
+    });
 
     ApiResponse.success(res, {
         user: { ...user.toJSON(), role: roleSlug },

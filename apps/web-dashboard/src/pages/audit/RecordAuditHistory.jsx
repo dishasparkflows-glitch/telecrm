@@ -1,18 +1,24 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useGetRecordAuditHistoryQuery } from '../../features/tenant/tenantApi'
+import * as XLSX from 'xlsx'
+import { useListUsersQuery } from '../../features/users/userApi'
 import Card from '../../components/ui/Card'
 import Tabs from '../../components/ui/Tabs'
 import EmptyState from '../../components/ui/EmptyState'
 import { Shield, Clock, Table as TableIcon, Layers, Users, Download, Calendar } from 'lucide-react'
 import Button from '../../components/ui/Button'
+import Select from '../../components/ui/Select'
 import AuditRecordHeader from '../../components/audit/AuditRecordHeader'
 import AuditTimeline from '../../components/audit/AuditTimeline'
 import AuditTable from '../../components/audit/AuditTable'
-import AuditFieldHistory from '../../components/audit/AuditFieldHistory'
-import AuditUserView from '../../components/audit/AuditUserView'
-import AuditRecordInfo from '../../components/audit/AuditRecordInfo'
 import AuditChangeDrawer from '../../components/audit/AuditChangeDrawer'
+
+const ACTION_OPTIONS = [
+  { value: 'CREATE', label: 'Create' },
+  { value: 'UPDATE', label: 'Update' },
+  { value: 'DELETE', label: 'Delete' },
+]
 
 export default function RecordAuditHistory() {
   const { recordId } = useParams()
@@ -20,20 +26,20 @@ export default function RecordAuditHistory() {
   const [selectedDrawerEvent, setSelectedDrawerEvent] = useState(null)
 
   const [filters, setFilters] = useState({
-    action: 'all',
-    userId: 'all',
+    action: [],
+    userId: [],
   })
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
 
-  const selectedUserId = (filters.userId && filters.userId !== 'all') ? filters.userId : (filters.user && filters.user !== 'all') ? filters.user : undefined
+  const selectedUserId = (Array.isArray(filters.userId) && filters.userId.length > 0) ? filters.userId.join(',') : undefined
 
   const { data, isLoading, isError, refetch } = useGetRecordAuditHistoryQuery(
     {
       recordId,
-      action: filters.action !== 'all' ? filters.action : undefined,
+      action: Array.isArray(filters.action) && filters.action.length > 0 ? filters.action.join(',') : undefined,
       userId: selectedUserId,
     },
     { skip: !recordId }
@@ -42,7 +48,6 @@ export default function RecordAuditHistory() {
   const historyEvents = data?.data?.history || []
   const recordSummary = data?.data?.record || {
     recordId: recordId || 'Record',
-    recordName: 'Record Details',
     recordType: 'Record',
     status: 'Active',
     branchName: 'Head Office',
@@ -50,7 +55,7 @@ export default function RecordAuditHistory() {
     phone: '—',
     email: '—',
     createdAt: new Date(),
-    createdBy: { userName: 'System', userRole: 'Admin' },
+    createdBy: { userId: null },
     lastUpdated: new Date(),
     totalChanges: historyEvents.length,
   }
@@ -58,25 +63,84 @@ export default function RecordAuditHistory() {
   const tabsConfig = [
     { key: 'timeline', label: 'Timeline View', icon: Clock },
     { key: 'table', label: 'Table View', icon: TableIcon },
-    { key: 'fieldChanges', label: 'Field Changes', icon: Layers },
-    { key: 'userView', label: 'User View', icon: Users },
   ]
 
+  const { data: userData } = useListUsersQuery()
+  const usersList = userData?.data || userData || []
+
   const handleExport = () => {
-    if (!recordId) return
-    window.open(`/api/audit/export?recordId=${encodeURIComponent(recordId)}`, '_blank')
+    if (!historyEvents || historyEvents.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    
+    const formatChangesForExcel = (changes) => {
+      if (!changes || !changes.length) return '';
+      return changes.map(c => {
+        const fieldName = c.field.split('.')
+          .filter((_, i, arr) => arr.length === 1 || i > 0)
+          .map(p => {
+            const str = p.replace(/([A-Z])/g, ' $1').trim();
+            return str.charAt(0).toUpperCase() + str.slice(1);
+          })
+          .join(' -> ');
+        
+        const oldVal = c.oldValue === null || c.oldValue === undefined ? 'null' : (typeof c.oldValue === 'object' ? JSON.stringify(c.oldValue) : c.oldValue);
+        const newVal = c.newValue === null || c.newValue === undefined ? 'null' : (typeof c.newValue === 'object' ? JSON.stringify(c.newValue) : c.newValue);
+        
+        return `${fieldName}: ${oldVal} => ${newVal}`;
+      }).join('\n');
+    }
+
+    const exportData = historyEvents.flatMap(log => [
+      {
+        'Date & Time': new Date(log.meta?.createdAt || Date.now()).toLocaleString(),
+        'User': log.userName || 'System',
+        'Module': log.module,
+        'Action': log.action,
+        'Description': log.description || '',
+        'IP Address': log.systemInfo?.ipAddress || '',
+        'Changes': formatChangesForExcel(log.changes)
+      },
+      {} // Empty row for spacing
+    ]);
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Record Audit Logs");
+    XLSX.writeFile(workbook, `Record_${recordId}_AuditLogs.xlsx`);
+  }
+
+  let userOptions = []
+  if (Array.isArray(usersList) && usersList.length > 0) {
+    usersList.forEach((u) => {
+      const label = u.name || u.userName || (u.email ? u.email.split('@')[0] : 'User')
+      userOptions.push({
+        value: u._id || u.id || u.userId || label,
+        label,
+      })
+    })
   }
 
   return (
     <div className="space-y-4">
       {/* Top Record Header Banner */}
-      <AuditRecordHeader record={recordSummary} />
+      <AuditRecordHeader 
+        record={recordSummary} 
+        users={usersList} 
+        onViewFullInfo={() => setSelectedDrawerEvent({
+          action: 'VIEW',
+          isSnapshot: true,
+          recordType: recordSummary.recordType,
+          createdAt: new Date(),
+          details: { updateddata: data?.data?.recordRaw || recordSummary },
+          description: 'Current record state'
+        })}
+      />
 
-      {/* Main Container Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left 2 Columns: Tabs & Main Content */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card noPadding>
+      {/* Main Content */}
+      <div className="w-full space-y-4">
+        <Card noPadding>
             {/* Tabs & Toolbar Header */}
             <div className="p-3 border-b border-[var(--vz-border)] flex flex-wrap items-center justify-between gap-3">
               <Tabs
@@ -86,7 +150,27 @@ export default function RecordAuditHistory() {
                 className="border-b-0"
               />
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  options={ACTION_OPTIONS}
+                  value={filters.action || []}
+                  onChange={(val) => handleFilterChange('action', val)}
+                  placeholder="All Actions"
+                  className="text-xs min-w-[120px]"
+                  multiple={true}
+                />
+
+                <Select
+                  options={userOptions}
+                  value={filters.userId || filters.user || []}
+                  onChange={(val) => {
+                    handleFilterChange('userId', val)
+                    handleFilterChange('user', val)
+                  }}
+                  placeholder="All Users"
+                  className="text-xs min-w-[120px]"
+                  multiple={true}
+                />
                 <Button
                   variant="outline"
                   size="sm"
@@ -96,11 +180,6 @@ export default function RecordAuditHistory() {
                   <Download size={13} />
                   <span>Export Record Logs</span>
                 </Button>
-
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border border-[var(--vz-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)]">
-                  <Calendar size={13} className="text-[var(--vz-text-muted)]" />
-                  <span>All Time</span>
-                </div>
               </div>
             </div>
 
@@ -135,6 +214,7 @@ export default function RecordAuditHistory() {
                   {activeTab === 'timeline' && (
                     <AuditTimeline
                       events={historyEvents}
+                      users={usersList}
                       onViewChanges={(event) => setSelectedDrawerEvent(event)}
                     />
                   )}
@@ -142,21 +222,8 @@ export default function RecordAuditHistory() {
                   {activeTab === 'table' && (
                     <AuditTable
                       logs={historyEvents}
+                      users={usersList}
                       onViewChanges={(event) => setSelectedDrawerEvent(event)}
-                    />
-                  )}
-
-                  {activeTab === 'fieldChanges' && (
-                    <AuditFieldHistory history={historyEvents} />
-                  )}
-
-                  {activeTab === 'userView' && (
-                    <AuditUserView
-                      history={historyEvents}
-                      onSelectUser={(userId) => {
-                        handleFilterChange('userId', userId)
-                        setActiveTab('timeline')
-                      }}
                     />
                   )}
                 </>
@@ -164,16 +231,6 @@ export default function RecordAuditHistory() {
             </div>
           </Card>
         </div>
-
-        {/* Right 1 Column: Record Information & Quick Filters */}
-        <div className="space-y-4">
-          <AuditRecordInfo
-            record={recordSummary}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-          />
-        </div>
-      </div>
 
       {/* Change Details Drawer */}
       <AuditChangeDrawer

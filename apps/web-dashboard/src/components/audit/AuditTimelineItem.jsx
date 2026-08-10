@@ -96,28 +96,28 @@ export default function AuditTimelineItem({ event, isLast, onViewChanges }) {
             <div className="mt-1 text-[var(--vz-text)] text-xs font-medium pl-7">
               {event.description || (event.changes?.length ? `${event.changes.length} fields updated` : 'Action performed')}
             </div>
-
-            {event.changes && event.changes.length > 0 && (
-              <div className="mt-1 pl-7">
-                <button
-                  type="button"
-                  onClick={() => onViewChanges?.(event)}
-                  className="text-xs font-medium text-[#3577f1] hover:underline cursor-pointer"
-                >
-                  View changes
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* Right Badge & IP */}
-          <div className="text-right shrink-0">
-            <span className={`inline-block px-2.5 py-0.5 rounded text-[11px] ${BADGE_MAP[actionKey] || BADGE_MAP.VIEW}`}>
-              {formatActionName(actionKey)}
-            </span>
-            <div className="mt-1 font-mono text-[11px] text-[var(--vz-text-muted)]">
-              IP: {event.ipAddress || '192.168.1.105'}
+          {/* Right Badge, IP & Actions */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="text-right">
+              <span className={`inline-block px-2.5 py-0.5 rounded text-[11px] ${BADGE_MAP[actionKey] || BADGE_MAP.VIEW}`}>
+                {formatActionName(actionKey)}
+              </span>
+              <div className="mt-1 font-mono text-[11px] text-[var(--vz-text-muted)]">
+                IP: {event.ipAddress || event.systemInfo?.ipAddress || '192.168.1.105'}
+              </div>
             </div>
+            {(event.changes?.length > 0 || event.details) && (
+              <button
+                type="button"
+                onClick={() => onViewChanges?.(event)}
+                className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold rounded border border-[var(--vz-border)] text-[var(--vz-heading)] hover:bg-[var(--vz-body-bg)] transition-colors cursor-pointer"
+              >
+                <Eye size={12} />
+                <span>View Details</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

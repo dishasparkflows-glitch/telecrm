@@ -40,7 +40,17 @@ function computeChanges(oldObj = {}, newObj = {}, options = {}) {
             continue;
         }
 
-        // Handle nested plain objects recursively if desired or compare stringified values
+        // Handle nested plain objects recursively
+        if (isObject(oldVal) && isObject(newVal)) {
+            const nestedChanges = computeChanges(oldVal, newVal, {
+                ...options,
+                prefix: fieldName,
+                fieldsToCompare: null
+            });
+            changes.push(...nestedChanges);
+            continue;
+        }
+
         const strOld = JSON.stringify(formatValue(oldVal));
         const strNew = JSON.stringify(formatValue(newVal));
 

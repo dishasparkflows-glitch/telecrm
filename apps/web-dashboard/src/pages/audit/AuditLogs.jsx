@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import * as XLSX from 'xlsx'
 import { useGetAuditLogsQuery } from '../../features/tenant/tenantApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
@@ -9,17 +10,21 @@ import Button from '../../components/ui/Button'
 import AuditFilters from '../../components/audit/AuditFilters'
 import AuditTable from '../../components/audit/AuditTable'
 import AuditChangeDrawer from '../../components/audit/AuditChangeDrawer'
+import { useListUsersQuery } from '../../features/users/userApi'
 
 const PAGE_SIZE = 20
 
 export default function AuditLogs() {
+  const todayStr = new Date().toISOString().split('T')[0];
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState({
     module: 'all',
-    action: 'all',
-    userId: 'all',
+    action: [],
+    userId: [],
     branchId: 'all',
     search: '',
+    fromDate: todayStr,
+    toDate: todayStr,
   })
   const [selectedDrawerEvent, setSelectedDrawerEvent] = useState(null)
 
@@ -28,30 +33,68 @@ export default function AuditLogs() {
     setPage(1)
   }
 
-  const selectedUserId = (filters.userId && filters.userId !== 'all') ? filters.userId : (filters.user && filters.user !== 'all') ? filters.user : undefined
+  const selectedUserId = (Array.isArray(filters.userId) && filters.userId.length > 0) ? filters.userId.join(',') : undefined
   const selectedBranchId = (filters.branchId && filters.branchId !== 'all') ? filters.branchId : (filters.branch && filters.branch !== 'all') ? filters.branch : undefined
 
   const { data, isLoading, isError, refetch } = useGetAuditLogsQuery({
     page,
     limit: PAGE_SIZE,
     module: filters.module !== 'all' ? filters.module : undefined,
-    action: filters.action !== 'all' ? filters.action : undefined,
+    action: Array.isArray(filters.action) && filters.action.length > 0 ? filters.action.join(',') : undefined,
     userId: selectedUserId,
     branchId: selectedBranchId,
     search: filters.search || undefined,
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
   })
 
   const logs = data?.data || []
   const pagination = data?.pagination || { total: logs.length, page: 1, totalPages: 1 }
 
+  const { data: userData } = useListUsersQuery()
+  const usersList = userData?.data || userData || []
+
   const handleExport = () => {
-    const queryParams = new URLSearchParams()
-    if (filters.module !== 'all') queryParams.append('module', filters.module)
-    if (filters.action !== 'all') queryParams.append('action', filters.action)
-    if (selectedUserId) queryParams.append('userId', selectedUserId)
-    if (selectedBranchId) queryParams.append('branchId', selectedBranchId)
-    if (filters.search) queryParams.append('search', filters.search)
-    window.open(`/api/audit/export?${queryParams.toString()}`, '_blank')
+    if (!logs || logs.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    
+    const formatChangesForExcel = (changes) => {
+      if (!changes || !changes.length) return '';
+      return changes.map(c => {
+        const fieldName = c.field.split('.')
+          .filter((_, i, arr) => arr.length === 1 || i > 0)
+          .map(p => {
+            const str = p.replace(/([A-Z])/g, ' $1').trim();
+            return str.charAt(0).toUpperCase() + str.slice(1);
+          })
+          .join(' -> ');
+        
+        const oldVal = c.oldValue === null || c.oldValue === undefined ? 'null' : (typeof c.oldValue === 'object' ? JSON.stringify(c.oldValue) : c.oldValue);
+        const newVal = c.newValue === null || c.newValue === undefined ? 'null' : (typeof c.newValue === 'object' ? JSON.stringify(c.newValue) : c.newValue);
+        
+        return `${fieldName}: ${oldVal} => ${newVal}`;
+      }).join('\n');
+    }
+    
+    const exportData = logs.flatMap(log => [
+      {
+        'Date & Time': new Date(log.meta?.createdAt || Date.now()).toLocaleString(),
+        'User': log.userName || 'System',
+        'Module': log.module,
+        'Action': log.action,
+        'Description': log.description || '',
+        'IP Address': log.systemInfo?.ipAddress || '',
+        'Changes': formatChangesForExcel(log.changes)
+      },
+      {} // Empty row for spacing
+    ]);
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Audit Logs");
+    XLSX.writeFile(workbook, `AuditLogs_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
   return (
@@ -119,7 +162,7 @@ export default function AuditLogs() {
           </div>
         ) : (
           <>
-            <AuditTable logs={logs} onViewChanges={(log) => setSelectedDrawerEvent(log)} />
+            <AuditTable logs={logs} users={usersList} onViewChanges={(log) => setSelectedDrawerEvent(log)} />
 
             <div className="px-4 py-3 border-t border-[var(--vz-border)]">
               <Pagination

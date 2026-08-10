@@ -75,11 +75,7 @@ const tenantSchema = new mongoose.Schema(
             convertedAt: {
                 type: Date,
                 default: null,
-            },
-            suspendedReason: {
-                type: String,
-                default: null,
-            },
+            }
         },
         paymentMethodsConfigured: {
             type: Boolean,

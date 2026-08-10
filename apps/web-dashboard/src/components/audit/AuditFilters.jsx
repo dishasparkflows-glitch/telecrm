@@ -18,17 +18,13 @@ const MODULE_OPTIONS = [
 ]
 
 const ACTION_OPTIONS = [
-  { value: 'all', label: 'All Actions' },
   { value: 'CREATE', label: 'Create' },
   { value: 'UPDATE', label: 'Update' },
   { value: 'DELETE', label: 'Delete' },
-  { value: 'VIEW', label: 'View' },
   { value: 'LOGIN', label: 'Login' },
-  { value: 'LOGOUT', label: 'Logout' },
 ]
 
 const DEFAULT_USER_OPTIONS = [
-  { value: 'all', label: 'All Users' },
   { value: 'Disha Radadiya', label: 'Disha Radadiya' },
   { value: 'Amit Patel', label: 'Amit Patel' },
   { value: 'Priya Sharma', label: 'Priya Sharma' },
@@ -69,7 +65,7 @@ export default function AuditFilters({
 
   // Process live users -> map value to userId
   const liveUsers = userData?.data || userData || []
-  let userOptions = [{ value: 'all', label: 'All Users' }]
+  let userOptions = []
   if (Array.isArray(liveUsers) && liveUsers.length > 0) {
     liveUsers.forEach((u) => {
       const label = u.name || u.userName || (u.email ? u.email.split('@')[0] : 'User')
@@ -86,14 +82,24 @@ export default function AuditFilters({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         {/* Date Range Selector */}
-        <div className="relative">
-          <button
-            type="button"
-            className="flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] hover:border-primary transition-colors cursor-pointer"
-          >
-            <Calendar size={14} className="text-[var(--vz-text-muted)]" />
-            <span>{filters.dateRangeLabel || '01 May 2025 - 08 May 2025'}</span>
-          </button>
+        <div className="flex items-center gap-1">
+          <div className="relative">
+            <input
+              type="date"
+              value={filters.fromDate || ''}
+              onChange={(e) => onFilterChange('fromDate', e.target.value)}
+              className="pl-2 pr-2 py-2 text-xs font-medium rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] hover:border-primary focus:border-primary outline-none transition-colors cursor-pointer min-w-[125px]"
+            />
+          </div>
+          <span className="text-[var(--vz-text-muted)] text-xs">-</span>
+          <div className="relative">
+            <input
+              type="date"
+              value={filters.toDate || ''}
+              onChange={(e) => onFilterChange('toDate', e.target.value)}
+              className="pl-2 pr-2 py-2 text-xs font-medium rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] hover:border-primary focus:border-primary outline-none transition-colors cursor-pointer min-w-[125px]"
+            />
+          </div>
         </div>
 
         {/* Modules Filter - Custom Select */}
@@ -108,23 +114,25 @@ export default function AuditFilters({
         {/* Actions Filter - Custom Select */}
         <Select
           options={ACTION_OPTIONS}
-          value={filters.action || 'all'}
+          value={filters.action || []}
           onChange={(val) => onFilterChange('action', val)}
           placeholder="All Actions"
           className="min-w-[120px] text-xs"
+          multiple={true}
         />
 
         {/* Users Filter - Custom Select */}
         {showExtraFilters && (
           <Select
             options={userOptions}
-            value={filters.user || filters.userId || 'all'}
+            value={filters.user || filters.userId || []}
             onChange={(val) => {
               onFilterChange('user', val)
               onFilterChange('userId', val)
             }}
             placeholder="All Users"
             className="min-w-[140px] text-xs"
+            multiple={true}
           />
         )}
 
