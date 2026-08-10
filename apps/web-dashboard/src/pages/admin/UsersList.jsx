@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { UserCog, Search, Shield, Loader2, ChevronDown, UserPlus, Building2, Trash2, Edit3, X, UserCheck, UserX } from 'lucide-react'
-import { useListUsersQuery, useUpdateUserRoleMutation, useUpdateUserStatusMutation, useInviteUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../features/users/userApi'
+import { useNavigate } from 'react-router-dom'
+import { User, Search, Filter, UserPlus, Building2, Trash2, Edit3, X } from 'lucide-react'
+import { useListUsersQuery, useInviteUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../features/users/userApi'
 import { useListRolesQuery } from '../../features/roles/roleApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
 import { useSelector } from 'react-redux'
@@ -10,17 +11,56 @@ import Modal from '../../components/ui/Modal'
 import ConfirmModal from '../../components/ui/ConfirmModal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
-import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
+
+const formatLastLogin = (dateStr) => {
+  if (!dateStr) return 'Never'
+  const date = new Date(dateStr)
+  const formatted = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  return `${formatted}, ${time}`
+}
+
+function UserRowSkeleton() {
+  return (
+    <tr className="border-b border-[var(--vz-border)] animate-pulse">
+      <td className="px-6 py-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-full bg-[var(--vz-border)]" />
+          <div className="space-y-1.5">
+            <div className="h-3.5 w-24 rounded bg-[var(--vz-border)]" />
+            <div className="h-3 w-36 rounded bg-[var(--vz-border)]" />
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-2.5"><div className="h-6 w-28 rounded-full bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-2.5"><div className="h-3.5 w-24 rounded bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-2.5"><div className="h-6 w-16 rounded-full bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-2.5"><div className="h-3.5 w-32 rounded bg-[var(--vz-border)]" /></td>
+      <td className="px-6 py-2.5">
+        <div className="flex justify-end gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[var(--vz-border)]" />
+          <div className="w-8 h-8 rounded-lg bg-[var(--vz-border)]" />
+          <div className="w-8 h-8 rounded-lg bg-[var(--vz-border)]" />
+        </div>
+      </td>
+    </tr>
+  )
+}
 
 export default function UsersList() {
   const toast = useToast()
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
-  const PAGE_SIZE = 20
-  
+  const [pageSize, setPageSize] = useState(10)
+  const [showFilters, setShowFilters] = useState(false)
+
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  
+  const [roleFilter, setRoleFilter] = useState('')
+  const [branchFilter, setBranchFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search)
@@ -39,18 +79,17 @@ export default function UsersList() {
 
   const { data: usersResp, isLoading } = useListUsersQuery({
     page,
-    limit: PAGE_SIZE,
+    limit: pageSize,
     search: debouncedSearch,
-    matchedRoles: matchedRoles || undefined
+    matchedRoles: matchedRoles || undefined,
+    ...(roleFilter && { roleId: roleFilter }),
+    ...(statusFilter !== '' && { isActive: statusFilter }),
   })
 
   const { data: branchesResp } = useListBranchesQuery()
-  const [updateRole] = useUpdateUserRoleMutation()
-  const [updateStatus] = useUpdateUserStatusMutation()
   const [inviteUser, { isLoading: inviting }] = useInviteUserMutation()
   const [updateUser, { isLoading: updatingUser }] = useUpdateUserMutation()
   const [deleteUser, { isLoading: deletingUser }] = useDeleteUserMutation()
-  const [roleChanging, setRoleChanging] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
   const [inviteForm, setInviteForm] = useState({ name: '', email: '', phone: '', roleId: '', branchId: '', password: '' })
   const [showEdit, setShowEdit] = useState(false)
@@ -62,18 +101,18 @@ export default function UsersList() {
   const usersPagination = usersResp?.pagination || {}
   const branches = branchesResp?.data || []
 
-  const filteredUsers = users
+  const filteredUsers = branchFilter
+    ? users.filter((u) => u.branchId === branchFilter)
+    : users
 
-  const handleRoleChange = async (userId, roleId) => {
-    try {
-      await updateRole({ id: userId, roleId }).unwrap()
-      setRoleChanging(null)
-    } catch (err) { toast(err.data?.message || 'Failed to update role', 'error') }
-  }
+  const totalItems = branchFilter ? filteredUsers.length : (usersPagination.total || filteredUsers.length)
+  const totalPages = branchFilter
+    ? Math.max(1, Math.ceil(filteredUsers.length / pageSize))
+    : (usersPagination.totalPages || 1)
 
-  const handleStatusToggle = async (userId, currentStatus) => {
-    try { await updateStatus({ id: userId, isActive: !currentStatus }).unwrap() }
-    catch (err) { toast(err.data?.message || 'Failed to update status', 'error') }
+  const handlePermissions = (user) => {
+    if (user.roleId) navigate(`/admin/roles/${user.roleId}`)
+    else toast('This user has no role assigned', 'warning')
   }
 
   const handleInvite = async () => {
@@ -145,158 +184,275 @@ export default function UsersList() {
   const getBranchName = (branchId) => branches.find(b => b._id === branchId)?.name || '—'
   const getRoleName = (roleId) => roles.find(r => r._id === roleId)?.name || null
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    )
+  const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1
+  const endItem = Math.min(page * pageSize, totalItems)
+
+  const clearFilters = () => {
+    setRoleFilter('')
+    setBranchFilter('')
+    setStatusFilter('')
+    setPage(1)
   }
+
+  const hasActiveFilters = roleFilter || branchFilter || statusFilter !== ''
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--vz-heading)] flex items-center gap-2">
-            <UserCog size={22} className="text-primary" />
-            Users
-          </h1>
-          <p className="text-sm text-[var(--vz-text-muted)] mt-1">
-            Manage users, assign roles and branches, and control access
-          </p>
+          <h1 className="text-2xl font-bold text-[var(--vz-heading)]">Users</h1>
         </div>
-        <Button onClick={() => setShowInvite(true)} variant="primary" size="sm">
-          <UserPlus size={16} className="mr-1" /> Add User
+        <Button onClick={() => setShowInvite(true)} variant="primary" size="md" className="shrink-0 rounded-lg">
+          <UserPlus size={16} /> Add User
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]" />
-          <input type="text" placeholder="Search users by name, email, or role..."
-            value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-lg text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] focus:outline-none focus:border-primary"
-          />
+      {/* Main Card */}
+      <div className="bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-xl overflow-hidden" style={{ boxShadow: 'var(--vz-shadow)' }}>
+
+        {/* Search & Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 border-b border-[var(--vz-border)]">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]" />
+              <input
+                type="text"
+                placeholder="Search users by name, email, or role..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-lg text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors shrink-0
+                ${showFilters || hasActiveFilters
+                  ? 'border-primary bg-primary/5 text-primary'
+                  : 'border-[var(--vz-border)] text-[var(--vz-heading)] hover:bg-[var(--vz-input-bg)]'
+                }`}
+            >
+              <Filter size={15} />
+              Filter
+              {hasActiveFilters && (
+                <span className="w-2 h-2 rounded-full bg-primary" />
+              )}
+            </button>
+          </div>
+          <span className="text-sm text-[var(--vz-text-muted)] shrink-0">
+            Total {usersPagination.total || filteredUsers.length} users
+          </span>
         </div>
-        <span className="text-sm text-[var(--vz-text-muted)]">{filteredUsers.length} users</span>
-      </div>
 
-      {/* Users Table */}
-      <div className="bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-lg overflow-hidden" style={{ boxShadow: 'var(--vz-shadow)' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--vz-border)]">
-              <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--vz-text-muted)]">User</th>
-              <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--vz-text-muted)]">Role</th>
-              <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--vz-text-muted)]">Branch</th>
-              <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--vz-text-muted)]">Status</th>
-              <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--vz-text-muted)]">Last Login</th>
-              <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--vz-text-muted)]">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--vz-border)]">
-            {filteredUsers.map((user) => {
-              const userName = user.contact?.name  || ''
-              const userEmail = user.contact?.email || ''
-              const userAvatar =  user.contact?.avatar
-              const userLastLogin = user.authentication?.lastLoginAt
-              return (
-                <tr key={user._id} className="hover:bg-[var(--vz-body-bg)]/50 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold overflow-hidden shrink-0">
-                        {userAvatar ? (
-                          <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
-                        ) : (
-                          userName.charAt(0).toUpperCase() || '?'
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium text-[var(--vz-heading)]">{userName || 'Unnamed User'}</div>
-                        <div className="text-xs text-[var(--vz-text-muted)]">{userEmail}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    {roleChanging === user._id ? (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setRoleChanging(null)} />
-                        <div className="w-40 relative z-50" onClick={(e) => e.stopPropagation()}>
-                          <Select
-                            value={user.roleId || ''}
-                            onChange={(val) => handleRoleChange(user._id, val)}
-                            options={roles.map(r => ({ value: r._id, label: r.name }))}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <button onClick={() => setRoleChanging(user._id)}
-                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors">
-                        <Shield size={12} />
-                        {getRoleName(user.roleId) || user.role || 'No role'}
-                        <ChevronDown size={10} />
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="inline-flex items-center gap-1 text-xs text-[var(--vz-text)]">
-                      <Building2 size={12} className="text-[var(--vz-text-muted)]" />
-                      {getBranchName(user.branchId)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${user.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-                      }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-[var(--vz-text-muted)] text-xs">
-                    {userLastLogin ? new Date(userLastLogin).toLocaleString() : 'Never'}
-                  </td>
-                  <td className="px-5 py-4 text-right">
-
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => handleEdit(user)} className="p-1.5 rounded text-[var(--vz-primary)] hover:bg-[var(--vz-primary)]/10 transition-colors" title="Edit User">
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleStatusToggle(user._id, user.isActive)}
-                        className={`p-1.5 rounded transition-colors ${user.isActive
-                            ? 'text-[var(--vz-warning)] hover:bg-[var(--vz-warning)]/10'
-                            : 'text-[var(--vz-success)] hover:bg-[var(--vz-success)]/10'
-                          }`}
-                        title={user.isActive ? 'Suspend User' : 'Activate User'}
-                      >
-                        {user.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-                      </button>
-                      {user._id !== currentUser?._id && (
-                        <button
-                          onClick={() => setConfirmDelete({ isOpen: true, user })}
-                          className="p-1.5 rounded text-[var(--vz-danger)] hover:bg-[var(--vz-danger)]/10 transition-colors"
-                          title="Delete User"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-12 text-[var(--vz-text-muted)]">
-            {search ? 'No users match your search.' : 'No users found.'}
+        {/* Filter Panel */}
+        {showFilters && (
+          <div className="px-6 py-4 border-b border-[var(--vz-border)] bg-[var(--vz-body-bg)]/40">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="w-44">
+                <label className="block text-xs font-medium text-[var(--vz-text-muted)] mb-1.5">Role</label>
+                <Select
+                  value={roleFilter}
+                  onChange={(val) => { setRoleFilter(val); setPage(1) }}
+                  options={[
+                    { value: '', label: 'All Roles' },
+                    ...roles.map(r => ({ value: r._id, label: r.name })),
+                  ]}
+                />
+              </div>
+              <div className="w-44">
+                <label className="block text-xs font-medium text-[var(--vz-text-muted)] mb-1.5">Branch</label>
+                <Select
+                  value={branchFilter}
+                  onChange={(val) => { setBranchFilter(val); setPage(1) }}
+                  options={[
+                    { value: '', label: 'All Branches' },
+                    ...branches.map(b => ({ value: b._id, label: b.name })),
+                  ]}
+                />
+              </div>
+              <div className="w-36">
+                <label className="block text-xs font-medium text-[var(--vz-text-muted)] mb-1.5">Status</label>
+                <Select
+                  value={statusFilter}
+                  onChange={(val) => { setStatusFilter(val); setPage(1) }}
+                  options={[
+                    { value: '', label: 'All Status' },
+                    { value: 'true', label: 'Active' },
+                    { value: 'false', label: 'Inactive' },
+                  ]}
+                />
+              </div>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-1.5 text-sm text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] transition-colors pb-2"
+                >
+                  <X size={14} /> Clear filters
+                </button>
+              )}
+            </div>
           </div>
         )}
 
-        {usersPagination.totalPages > 1 && (
-          <Pagination currentPage={page} totalPages={usersPagination.totalPages || 1} totalItems={usersPagination.total} pageSize={PAGE_SIZE} onPageChange={setPage} />
+        {/* Users Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--vz-border)] bg-[var(--vz-body-bg)]/30">
+                {['User', 'Role', 'Branch', 'Status', 'Last Login', 'Actions'].map((col) => (
+                  <th
+                    key={col}
+                    className={`px-6 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--vz-text-muted)] ${col === 'Actions' ? 'text-right' : 'text-left'}`}
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                [...Array(5)].map((_, i) => <UserRowSkeleton key={i} />)
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-16 text-[var(--vz-text-muted)]">
+                    {search || hasActiveFilters ? 'No users match your search or filters.' : 'No users found.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user) => {
+                  const userName = user.contact?.name || ''
+                  const userEmail = user.contact?.email || ''
+                  const userAvatar = user.contact?.avatar
+                  const userLastLogin = user.authentication?.lastLoginAt
+
+                  return (
+                    <tr key={user._id} className="border-b border-[var(--vz-border)] last:border-b-0 hover:bg-[var(--vz-body-bg)]/40 transition-colors">
+                      <td className="px-6 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-full bg-[var(--vz-input-bg)] text-[var(--vz-text-muted)] flex items-center justify-center text-sm font-semibold overflow-hidden shrink-0 border border-[var(--vz-border)]">
+                            {userAvatar ? (
+                              <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+                            ) : (
+                              userName.charAt(0).toUpperCase() || '?'
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-[var(--vz-heading)] truncate leading-tight">{userName || 'Unnamed User'}</div>
+                            <div className="text-xs text-[var(--vz-text-muted)] truncate leading-tight">{userEmail}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-2.5">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                          <User size={13} />
+                          {getRoleName(user.roleId) || user.role || 'No role'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-2.5">
+                        <span className="inline-flex items-center gap-1.5 text-sm text-[var(--vz-text)]">
+                          <Building2 size={14} className="text-[var(--vz-text-muted)] shrink-0" />
+                          {getBranchName(user.branchId)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-2.5">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
+                          user.isActive
+                            ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                            : 'bg-red-500/10 text-red-500'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-2.5 text-sm text-[var(--vz-text-muted)] whitespace-nowrap">
+                        {formatLastLogin(userLastLogin)}
+                      </td>
+                      <td className="px-6 py-2.5">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleEdit(user)}
+                            className="w-8 h-8 rounded-lg border border-[var(--vz-border)] flex items-center justify-center text-[var(--vz-text-muted)] hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                            title="Edit User"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button
+                            onClick={() => handlePermissions(user)}
+                            className="w-8 h-8 rounded-lg border border-[var(--vz-border)] flex items-center justify-center text-[var(--vz-text-muted)] hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                            title="Role Permissions"
+                          >
+                            <UserPlus size={15} />
+                          </button>
+                          {user._id !== currentUser?._id && (
+                            <button
+                              onClick={() => setConfirmDelete({ isOpen: true, user })}
+                              className="w-8 h-8 rounded-lg border border-red-200 dark:border-red-900/40 flex items-center justify-center text-[var(--vz-danger)] hover:bg-red-500/10 transition-colors"
+                              title="Delete User"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Footer */}
+        {totalItems > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-[var(--vz-border)]">
+            <p className="text-sm text-[var(--vz-text-muted)]">
+              Showing {startItem} to {endItem} of {totalItems} users
+            </p>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                  className="p-2 rounded-lg text-[var(--vz-text-muted)] hover:bg-[var(--vz-input-bg)] disabled:opacity-40 transition-colors"
+                >
+                  ‹
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[36px] h-9 rounded-lg text-sm font-medium transition-colors ${
+                      page === p
+                        ? 'bg-primary text-white'
+                        : 'text-[var(--vz-text)] hover:bg-[var(--vz-input-bg)]'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage(page + 1)}
+                  disabled={page === totalPages}
+                  className="p-2 rounded-lg text-[var(--vz-text-muted)] hover:bg-[var(--vz-input-bg)] disabled:opacity-40 transition-colors"
+                >
+                  ›
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
+                className="text-sm bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-lg px-3 py-2 text-[var(--vz-heading)] focus:outline-none focus:border-primary cursor-pointer"
+              >
+                {[10, 20, 50].map((size) => (
+                  <option key={size} value={size}>{size} per page</option>
+                ))}
+              </select>
+            </div>
+          </div>
         )}
       </div>
 
@@ -413,7 +569,7 @@ export default function UsersList() {
       {/* Delete Confirmation */}
       <ConfirmModal
         isOpen={confirmDelete.isOpen}
-        title={`Remove User "${confirmDelete.user?.name}"?`}
+        title={`Remove User "${confirmDelete.user?.contact?.name || confirmDelete.user?.name || 'this user'}"?`}
         message="This user will lose access to the CRM. This action cannot be undone."
         confirmText="Remove User"
         variant="danger"

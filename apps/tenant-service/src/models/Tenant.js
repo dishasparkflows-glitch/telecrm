@@ -37,10 +37,10 @@ const tenantSchema = new mongoose.Schema(
                 type: String,
                 default: '',
             },
-        },
-        address: {
-            type: String,
-            trim: true,
+            address: {
+                type: String,
+                trim: true,
+            },
         },
         // ─── Status ───
         status: {
@@ -231,7 +231,6 @@ const tenantSchema = new mongoose.Schema(
 );
 
 // ─── Indexes ───
-tenantSchema.index({ 'company.slug': 1 });
 tenantSchema.index({ 'company.email': 1 });
 tenantSchema.index({ 'subscription.status': 1 });
 tenantSchema.index({ 'trial.status': 1, 'trial.expiresAt': 1 });

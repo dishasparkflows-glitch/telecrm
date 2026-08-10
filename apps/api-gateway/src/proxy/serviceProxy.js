@@ -163,6 +163,11 @@ const SERVICE_ROUTES = {
         public: true,
         websocket: true,
     },
+    '/socket.io-notifications': {
+        target: env.SERVICES.NOTIFICATION,
+        public: true,
+        websocket: true,
+    },
 };
 
 const TARGET_AUDIENCES = new Map([
@@ -225,6 +230,16 @@ const createGatewayServiceHeaders = (config, audience, req) => {
 const stripUntrustedIdentityHeaders = (req, res, next) => {
     TRUSTED_IDENTITY_HEADERS.forEach((header) => delete req.headers[header]);
     next();
+};
+
+/**
+ * Check if the request path matches the target prefix exactly or as a sub-path.
+ */
+const isPathMatch = (reqPath, targetPath) => {
+    if (reqPath === targetPath) return true;
+    if (reqPath.startsWith(targetPath + '/')) return true;
+    if (reqPath.startsWith(targetPath + '?')) return true;
+    return false;
 };
 
 /**
@@ -364,8 +379,8 @@ const setupProxies = (app) => {
             target: config.target,
             changeOrigin: true,
             ws: config.websocket === true,
-            // pathFilter matches requests that start with this prefix
-            pathFilter: (reqPath) => reqPath.startsWith(path),
+            // pathFilter matches requests that start with this prefix exactly or as sub-path
+            pathFilter: (reqPath) => isPathMatch(reqPath, path),
             on: {
                 proxyReq: (proxyReq, req) => {
                     if (req.userId) proxyReq.setHeader('X-User-Id', req.userId);
@@ -391,12 +406,17 @@ const setupProxies = (app) => {
                 },
                 error: (err, req, res) => {
                     console.error(`❌ Proxy error for ${path}:`, err.message);
-                    if (!res.headersSent) {
-                        res.status(502).json({
-                            success: false,
-                            message: `Service at ${path} is currently unavailable`,
-                            error: env.isDev ? err.message : undefined,
-                        });
+                    if (res && typeof res.status === 'function') {
+                        if (!res.headersSent) {
+                            res.status(502).json({
+                                success: false,
+                                message: `Service at ${path} is currently unavailable`,
+                                error: env.isDev ? err.message : undefined,
+                            });
+                        }
+                    } else if (res && typeof res.end === 'function') {
+                        // Handles WebSocket upgrade requests where 'res' is a socket
+                        res.end('HTTP/1.1 502 Bad Gateway\r\n\r\n');
                     }
                 },
             },
@@ -407,7 +427,7 @@ const setupProxies = (app) => {
         // Wrap: run middleware chain first, then proxy
         app.use((req, res, next) => {
             // Only handle requests matching this route's path prefix
-            if (!req.originalUrl.startsWith(path)) return next();
+            if (!isPathMatch(req.originalUrl, path)) return next();
 
             // Run the middleware chain (rate limiter, auth, tenant, etc.)
             runMiddlewareChain(middlewares, req, res, (err) => {
@@ -431,7 +451,7 @@ const setupProxies = (app) => {
 
 const attachWebSocketUpgrades = (server) => {
     server.on('upgrade', (req, socket, head) => {
-        const entry = websocketProxies.find(({ path }) => req.url.startsWith(path));
+        const entry = websocketProxies.find(({ path }) => isPathMatch(req.url, path));
         if (entry) entry.proxy.upgrade(req, socket, head);
         else socket.destroy();
     });

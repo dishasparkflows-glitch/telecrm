@@ -290,7 +290,7 @@ export default function Settings() {
         email: company.email || '',
         phone: company.phone || '',
         logo: company.logo || '',
-        address: profileData.data.address || '',
+        address: company.address || '',
         timezone: profileData.data.timezone || 'Asia/Kolkata',
         website: company.website || ''
       })
@@ -477,8 +477,8 @@ export default function Settings() {
           phone: companyForm.phone,
           logo: companyForm.logo,
           website: companyForm.website,
+          address: companyForm.address,
         },
-        address: companyForm.address,
         settings: {
           timezone: companyForm.timezone,
         },

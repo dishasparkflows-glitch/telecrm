@@ -22,6 +22,11 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      '/socket.io-notifications': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        ws: true,
+      },
     },
     allowedHosts: [
       'stopper-thyself-rancidity.ngrok-free.dev',

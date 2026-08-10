@@ -10,12 +10,14 @@ const getNotifications = asyncHandler(async (req, res) => {
     const { page = 1, limit = 25, isRead } = req.query;
 
     const filter = { tenantId, userId };
-    if (branchId) filter.branchId = branchId;
+    if (branchId) {
+        filter.$or = [{ branchId }, { branchId: null }];
+    }
     if (isRead !== undefined) filter.isRead = isRead === 'true';
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [notifications, total, unreadCount] = await Promise.all([
-        Notification.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
+        Notification.find(filter).sort({ sentAt: -1 }).skip(skip).limit(parseInt(limit)),
         Notification.countDocuments(filter),
         Notification.countDocuments({ ...filter, isRead: false }),
     ]);
@@ -28,7 +30,7 @@ const getNotifications = asyncHandler(async (req, res) => {
 });
 
 const markAsRead = asyncHandler(async (req, res) => {
-    const userId = req.headers['x-user-id'];
+    const userId = req.body.userId || req.headers['x-user-id'];
     const { ids } = req.body; // Array of notification IDs
 
     if (ids?.length) {
@@ -40,7 +42,7 @@ const markAsRead = asyncHandler(async (req, res) => {
 
 const markAllRead = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const userId = req.headers['x-user-id'];
+    const userId = req.body.userId || req.headers['x-user-id'];
     const branchId = req.headers['x-branch-id'] || req.headers['x-user-branch-id'];
 
     const filter = { tenantId, userId, isRead: false };

@@ -18,9 +18,10 @@ export const notificationApi = baseApi.injectEndpoints({
             invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
         }),
         markAllRead: builder.mutation({
-            query: () => ({
+            query: (data) => ({
                 url: '/notifications/read-all',
                 method: 'PUT',
+                body: data,
             }),
             invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
         }),

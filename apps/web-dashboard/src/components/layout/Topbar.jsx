@@ -5,16 +5,18 @@ import { useLogoutMutation, useSwitchBranchMutation } from '../../features/auth/
 import { baseApi } from '../../features/api/baseApi'
 import { useToast } from '../../components/ui/Toast'
 import { ROLES } from '../../utils/constants'
-import { useGetNotificationsQuery } from '../../features/notifications/notificationApi'
+import { useGetNotificationsQuery, useMarkAsReadMutation } from '../../features/notifications/notificationApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu, Search, Sun, Moon, Bell, Maximize, ChevronDown, LogOut, User, Settings, Building2, Phone } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
+import { useNotificationsSocket } from '../../hooks/useNotificationsSocket'
 
 export default function Topbar() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const toast = useToast()
+  useNotificationsSocket() // Initialize real-time notifications
   const { theme, sidebarCollapsed } = useSelector((s) => s.ui)
   const { user, activeBranchId } = useSelector((s) => s.auth)
   const { data: branchesData } = useListBranchesQuery(undefined, { skip: user?.role !== ROLES.SUPER_ADMIN })
@@ -31,6 +33,16 @@ export default function Topbar() {
   const isImpersonating = user?.isImpersonating === true
   const branches = branchesData?.data || []
   const activeBranch = branches.find(b => b._id === activeBranchId)
+
+  // Listen for real-time notification events to show a toast
+  useEffect(() => {
+    const handleNewNotification = (e) => {
+      const { title, message, type } = e.detail
+      toast(title || message, type === 'error' ? 'error' : 'success')
+    }
+    window.addEventListener('app:notification', handleNewNotification)
+    return () => window.removeEventListener('app:notification', handleNewNotification)
+  }, [toast])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -243,9 +255,13 @@ export default function Topbar() {
 function NotificationBell({ notifRef, notifOpen, setNotifOpen, navigate }) {
   const { user } = useSelector((s) => s.auth)
   const isOwner = user?.role === 'owner'
-  const { data } = useGetNotificationsQuery({ limit: 5 }, { skip: isOwner })
+  const [markAsRead] = useMarkAsReadMutation()
+  const { data } = useGetNotificationsQuery({ limit: 50, userId: user?._id || user?.id }, { skip: isOwner || !(user?._id || user?.id) })
   const notifications = data?.data || []
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const unreadCount = notifications.filter((n) => !n.isRead).length
+  const location = useLocation()
+  
+  const hideCount = notifOpen || location.pathname === '/notifications'
 
   return (
     <div className="relative" ref={notifRef}>
@@ -254,7 +270,7 @@ function NotificationBell({ notifRef, notifOpen, setNotifOpen, navigate }) {
         className="relative p-2.5 rounded-lg text-[var(--vz-topbar-text)] hover:bg-[var(--vz-input-bg)] transition-colors"
       >
         <Bell size={20} />
-        {unreadCount > 0 && (
+        {unreadCount > 0 && !hideCount && (
           <span className="absolute top-1 right-1 min-w-[16px] h-[16px] flex items-center justify-center bg-danger text-white text-[9px] font-bold rounded-full px-1">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
@@ -275,8 +291,20 @@ function NotificationBell({ notifRef, notifOpen, setNotifOpen, navigate }) {
               </div>
             ) : (
               notifications.map((n) => (
-                <div key={n._id} className={`px-4 py-2.5 border-b border-[var(--vz-border)] last:border-0 ${!n.read ? 'bg-primary/5' : ''}`}>
-                  <p className={`text-xs ${n.read ? 'text-[var(--vz-text)]' : 'text-[var(--vz-heading)] font-medium'}`}>
+                <div 
+                  key={n._id} 
+                  onClick={async () => {
+                    setNotifOpen(false);
+                    if (!n.isRead) {
+                      try { await markAsRead({ ids: [n._id], userId: user?._id || user?.id }).unwrap(); } catch {}
+                    }
+                    if (n.actionUrl) {
+                      navigate(n.actionUrl);
+                    }
+                  }}
+                  className={`px-4 py-2.5 border-b border-[var(--vz-border)] last:border-0 cursor-pointer hover:bg-[var(--vz-input-bg)] ${!n.isRead ? 'bg-primary/5' : ''}`}
+                >
+                  <p className={`text-xs ${n.isRead ? 'text-[var(--vz-text)]' : 'text-[var(--vz-heading)] font-medium'}`}>
                     {n.title || n.message}
                   </p>
                   <p className="text-[10px] text-[var(--vz-text-muted)] mt-0.5">

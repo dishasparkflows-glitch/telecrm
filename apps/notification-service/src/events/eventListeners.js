@@ -1,6 +1,6 @@
 const { EVENTS, subscribeToEvents } = require('@sparkcrm/shared-events');
-const Notification = require('../models/Notification');
 const Reminder = require('../models/Reminder');
+const { sendInApp } = require('../channels/inApp.channel');
 const { sendTemplateEmail } = require('../channels/email.channel');
 const { sendPushToUser } = require('../channels/push.channel');
 
@@ -13,12 +13,13 @@ const registerEventListeners = async () => {
     // ─── Generic send notification ───
     await subscribeToEvents(EVENTS.SEND_NOTIFICATION, async (_channel, data) => {
         try {
-            const { tenantId, userId, title, message, type, actionUrl, channel } = data;
-            await Notification.create({
-                tenantId, userId, title, message,
+            const { tenantId, userId, title, message, type, actionUrl, branchId, channel } = data;
+            await sendInApp(tenantId, userId, {
+                title,
+                message,
                 type: type || 'info',
-                channel: channel || 'in_app',
                 actionUrl: actionUrl || '',
+                branchId,
             });
             console.log(`🔔 Notification created for user ${userId}: ${title}`);
         } catch (err) {
@@ -125,12 +126,12 @@ const registerEventListeners = async () => {
                 { tenantId, leadId, type: 'lead_follow_up', status: 'pending' },
                 { $set: { userId: assignedTo } }
             );
-            await Notification.create({
-                tenantId, userId: assignedTo,
+            await sendInApp(tenantId, assignedTo, {
                 title: 'New Lead Assigned',
                 message: `A new lead has been assigned to you`,
                 type: 'action',
                 actionUrl: `/leads/${leadId}`,
+                branchId: data.branchId,
             });
             await sendPushToUser({
                 tenantId,
@@ -149,12 +150,12 @@ const registerEventListeners = async () => {
         try {
             const { tenantId, meetingId, hostId } = data;
             if (!hostId) return;
-            await Notification.create({
-                tenantId, userId: hostId,
+            await sendInApp(tenantId, hostId, {
                 title: 'New Meeting Booked',
                 message: 'Someone has scheduled a meeting with you',
                 type: 'info',
                 actionUrl: `/meetings`,
+                branchId: data.branchId,
             });
             await sendPushToUser({
                 tenantId,
@@ -172,11 +173,11 @@ const registerEventListeners = async () => {
     await subscribeToEvents(EVENTS.PAYMENT_SUCCESS, async (_channel, data) => {
         try {
             const { tenantId, amount, type } = data;
-            await Notification.create({
-                tenantId,
+            await sendInApp(tenantId, null, {
                 title: 'Payment Successful',
                 message: `Payment of ₹${amount} for ${type} received`,
                 type: 'success',
+                branchId: data.branchId,
             });
         } catch (err) {
             console.error('❌ payment.success notification error:', err.message);
@@ -187,13 +188,12 @@ const registerEventListeners = async () => {
     await subscribeToEvents(EVENTS.CALL_MISSED, async (_channel, data) => {
         try {
             const { tenantId, callId, leadId, userId } = data;
-            await Notification.create({
-                tenantId,
-                userId: userId || null,
+            await sendInApp(tenantId, userId || null, {
                 title: 'Missed Call',
                 message: `You missed a call${leadId ? ` from lead` : ''}`,
                 type: 'warning',
                 actionUrl: leadId ? `/leads/${leadId}` : '/calls',
+                branchId: data.branchId,
             });
             if (userId) {
                 await sendPushToUser({

@@ -54,7 +54,8 @@ const updateSettings = asyncHandler(async (req, res) => {
         }
         tenant.company.logo = newLogo;
     }
-    if (address !== undefined) tenant.address = address;
+    const newAddress = company?.address !== undefined ? company.address : address;
+    if (newAddress !== undefined) tenant.company.address = newAddress;
     if (settings) {
         if (settings.timezone) tenant.settings.timezone = settings.timezone;
         if (settings.workingHours) tenant.settings.workingHours = settings.workingHours;

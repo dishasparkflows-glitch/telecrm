@@ -1,4 +1,4 @@
-const app = require('./app');
+const { server } = require('./app');
 const { connectDB, env } = require('@sparkcrm/shared-config');
 const { registerEventListeners } = require('./events/eventListeners');
 const { registerCronJobs } = require('./jobs/cronJobs');
@@ -11,7 +11,7 @@ const startServer = async () => {
   try { await registerEventListeners(); } catch (e) { console.warn('⚠️  Event listeners skipped (Redis unavailable):', e.message); }
   registerCronJobs();
 
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log('🚀 notification-service running on port ' + PORT);
   });
 };
