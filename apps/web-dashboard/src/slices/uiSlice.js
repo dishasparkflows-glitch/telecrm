@@ -7,6 +7,7 @@ const initialState = {
     mobileSidebarOpen: false,
     dialerOpen: false,
     dialerNumber: '',
+    dialerLeadId: null,
 }
 
 const uiSlice = createSlice({
@@ -24,11 +25,18 @@ const uiSlice = createSlice({
         },
         openDialer: (state, action) => {
             state.dialerOpen = true
-            state.dialerNumber = action.payload || ''
+            if (action.payload && typeof action.payload === 'object') {
+                state.dialerNumber = action.payload.phone || ''
+                state.dialerLeadId = action.payload.leadId || null
+            } else {
+                state.dialerNumber = action.payload || ''
+                state.dialerLeadId = null
+            }
         },
         closeDialer: (state) => {
             state.dialerOpen = false
             state.dialerNumber = ''
+            state.dialerLeadId = null
         },
         setTheme: (state, action) => {
             state.theme = action.payload

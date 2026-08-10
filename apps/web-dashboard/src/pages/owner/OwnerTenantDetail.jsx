@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { useGetOwnerTenantDetailQuery, useImpersonateTenantMutation, useUpdateTenantFeaturesMutation, useUpdateTenantPaymentMethodsMutation } from '../../features/owner/ownerApi'
+import { useGetOwnerTenantDetailQuery, useImpersonateTenantMutation, useUpdateTenantFeaturesMutation, useUpdateTenantPaymentMethodsMutation, useUpdateTenantCallingMutation } from '../../features/owner/ownerApi'
 import { useToast } from '../../components/ui/Toast'
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
@@ -43,11 +43,14 @@ export default function OwnerTenantDetail() {
   const [impersonate, { isLoading: impersonating }] = useImpersonateTenantMutation()
   const [updateFeatures, { isLoading: updatingFeatures }] = useUpdateTenantFeaturesMutation()
   const [updatePaymentMethods, { isLoading: updatingPaymentMethods }] = useUpdateTenantPaymentMethodsMutation()
+  const [updateCalling, { isLoading: updatingCalling }] = useUpdateTenantCallingMutation()
 
   const [isEditingModules, setIsEditingModules] = useState(false)
   const [selectedExtraModules, setSelectedExtraModules] = useState([])
   const [isEditingPaymentMethods, setIsEditingPaymentMethods] = useState(false)
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState([])
+  const [isEditingCalling, setIsEditingCalling] = useState(false)
+  const [callingConfig, setCallingConfig] = useState({ exotelVirtualNumber: '', callingEnabled: false })
 
   const d = data?.data || {}
   const tenant = d.tenant || {}
@@ -103,6 +106,24 @@ export default function OwnerTenantDetail() {
       setIsEditingPaymentMethods(false)
     } catch (err) {
       toast.error(err?.data?.message || 'Failed to update tenant payment methods')
+    }
+  }
+
+  const handleStartEditCalling = () => {
+    setCallingConfig({
+      exotelVirtualNumber: tenant.calling?.exotelVirtualNumber || '',
+      callingEnabled: !!tenant.calling?.callingEnabled,
+    })
+    setIsEditingCalling(true)
+  }
+
+  const handleSaveCalling = async () => {
+    try {
+      await updateCalling({ id, ...callingConfig }).unwrap()
+      toast.success('Tenant calling configuration updated')
+      setIsEditingCalling(false)
+    } catch (err) {
+      toast.error(err?.data?.message || 'Failed to update calling configuration')
     }
   }
 
@@ -390,6 +411,74 @@ export default function OwnerTenantDetail() {
               </button>
             )
           })}
+        </div>
+      </Card>
+
+      {/* Calling Configuration */}
+      <Card>
+        <Card.Header>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+            <div className="flex items-center gap-3">
+              <Card.Title>Calling Configuration</Card.Title>
+              <Badge color={tenant.calling?.callingEnabled ? 'success' : 'warning'}>
+                {tenant.calling?.callingEnabled ? 'Enabled' : 'Disabled'}
+              </Badge>
+            </div>
+            {!isEditingCalling ? (
+              <Button variant="ghost" size="sm" onClick={handleStartEditCalling}>
+                <Edit size={14} className="mr-2" /> Edit Calling
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsEditingCalling(false)} disabled={updatingCalling}>
+                  <X size={14} className="mr-2" /> Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveCalling} disabled={updatingCalling}>
+                  <Save size={14} className="mr-2" /> {updatingCalling ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            )}
+          </div>
+        </Card.Header>
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1">
+              Exotel Virtual Number
+            </label>
+            <input
+              type="text"
+              disabled={!isEditingCalling}
+              className="w-full sm:w-1/2 bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-md px-3 py-2 text-sm text-[var(--vz-text)] focus:ring-1 focus:ring-primary focus:border-primary disabled:opacity-50"
+              placeholder="e.g. 08068XXXXXX"
+              value={isEditingCalling ? callingConfig.exotelVirtualNumber : (tenant.calling?.exotelVirtualNumber || '')}
+              onChange={(e) => setCallingConfig({ ...callingConfig, exotelVirtualNumber: e.target.value })}
+            />
+            <p className="text-xs text-[var(--vz-text-muted)] mt-1">
+              The dedicated virtual number assigned to this tenant from Exotel.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              disabled={!isEditingCalling}
+              onClick={() => setCallingConfig({ ...callingConfig, callingEnabled: !callingConfig.callingEnabled })}
+              className={`w-10 h-5 rounded-full relative transition-colors ${
+                (isEditingCalling ? callingConfig.callingEnabled : tenant.calling?.callingEnabled)
+                  ? 'bg-primary'
+                  : 'bg-[var(--vz-border)]'
+              } ${!isEditingCalling ? 'opacity-50 cursor-default' : 'cursor-pointer'}`}
+            >
+              <span 
+                className={`absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform ${
+                  (isEditingCalling ? callingConfig.callingEnabled : tenant.calling?.callingEnabled)
+                    ? 'translate-x-5'
+                    : 'translate-x-0'
+                }`}
+              />
+            </button>
+            <span className="text-sm text-[var(--vz-heading)]">Enable Calling for this Tenant</span>
+          </div>
         </div>
       </Card>
 

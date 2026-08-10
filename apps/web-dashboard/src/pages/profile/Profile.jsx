@@ -11,8 +11,9 @@ import { ROLES } from '../../utils/constants'
 import Badge from '../../components/ui/Badge'
 import {
   User, Mail, Phone, Calendar, Briefcase, Shield, Building2,
-  Activity, Globe, Award, Camera
+  Activity, Globe, Award, Camera, Edit2, Save, X
 } from 'lucide-react'
+import Button from '../../components/ui/Button'
 
 export default function Profile() {
   const { user, branches, activeBranchId } = useSelector((s) => s.auth)
@@ -25,10 +26,43 @@ export default function Profile() {
 
   const tenant = profileData?.data || {}
   const [activeTab, setActiveTab] = useState('overview')
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '', mobileNumber: '' })
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+
+  const handleStartEdit = () => {
+    setProfileForm({
+      name: user?.contact?.name || '',
+      phone: user?.contact?.phone || '',
+      mobileNumber: user?.contact?.mobileNumber || '',
+    })
+    setIsEditingProfile(true)
+  }
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true)
+    try {
+      await updateUser({
+        id: user._id,
+        contact: {
+          ...user.contact,
+          name: profileForm.name,
+          phone: profileForm.phone,
+          mobileNumber: profileForm.mobileNumber,
+        }
+      }).unwrap()
+      toast('Profile updated successfully', 'success')
+      setIsEditingProfile(false)
+      refetchMe()
+    } catch (err) {
+      toast(err?.data?.message || 'Failed to update profile', 'error')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
 
   const activeBranch = branches?.find(b => b._id === activeBranchId)
   const joinDate = user?.meta?.createdAt ? new Date(user.meta?.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'
-  const lastLogin = user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Just now'
 
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -191,32 +225,83 @@ export default function Profile() {
               {/* Personal Information */}
               <Card>
                 <Card.Header>
-                  <Card.Title>Personal Information</Card.Title>
+                  <div className="flex items-center justify-between w-full">
+                    <Card.Title>Personal Information</Card.Title>
+                    {!isEditingProfile ? (
+                      <button onClick={handleStartEdit} className="text-primary hover:text-indigo-600 p-1">
+                        <Edit2 size={16} />
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setIsEditingProfile(false)} disabled={isSavingProfile} className="text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] p-1">
+                          <X size={16} />
+                        </button>
+                        <button onClick={handleSaveProfile} disabled={isSavingProfile} className="text-success hover:text-green-600 p-1">
+                          <Save size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </Card.Header>
                 <div className="space-y-3.5">
-                  {[
-                    { icon: User, label: 'Full Name', value: user?.contact?.name || 'N/A' },
-                    { icon: Mail, label: 'Email', value: user?.contact?.email || 'N/A' },
-                    { icon: Phone, label: 'Phone', value: user?.contact?.phone || 'Not added' },
-                    { icon: Shield, label: 'Role', value: user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Agent', badge: true },
-                    { icon: Building2, label: 'Branch', value: activeBranch?.name || 'Head Office' },
-                    { icon: Briefcase, label: 'Company', value: tenant.company?.name || 'N/A' },
-                    { icon: Calendar, label: 'Joined', value: joinDate },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <item.icon size={15} className="text-primary" />
+                  {!isEditingProfile ? (
+                    <>
+                      {[
+                        { icon: User, label: 'Full Name', value: user?.contact?.name || 'N/A' },
+                        { icon: Mail, label: 'Email', value: user?.contact?.email || 'N/A' },
+                        { icon: Phone, label: 'Phone', value: user?.contact?.phone || 'Not added' },
+                        { icon: Phone, label: 'Mobile (Calling)', value: user?.contact?.mobileNumber || 'Not added' },
+                        { icon: Shield, label: 'Role', value: user?.role === ROLES.SUPER_ADMIN ? 'Super Admin' : user?.roleName || user?.role || 'Agent', badge: true },
+                        { icon: Building2, label: 'Branch', value: activeBranch?.name || 'Head Office' },
+                        { icon: Briefcase, label: 'Company', value: tenant.company?.name || 'N/A' },
+                        { icon: Calendar, label: 'Joined', value: joinDate },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <item.icon size={15} className="text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-[var(--vz-text-muted)] uppercase tracking-wide">{item.label}</p>
+                            {item.badge ? (
+                              <Badge color="primary" className="mt-0.5">{item.value}</Badge>
+                            ) : (
+                              <p className="text-sm text-[var(--vz-heading)] truncate">{item.value}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs text-[var(--vz-text-muted)] mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          value={profileForm.name}
+                          onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                          className="w-full bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-md px-3 py-1.5 text-sm text-[var(--vz-text)] focus:ring-1 focus:ring-primary focus:border-primary"
+                        />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-[var(--vz-text-muted)] uppercase tracking-wide">{item.label}</p>
-                        {item.badge ? (
-                          <Badge color="primary" className="mt-0.5">{item.value}</Badge>
-                        ) : (
-                          <p className="text-sm text-[var(--vz-heading)] truncate">{item.value}</p>
-                        )}
+                      <div>
+                        <label className="block text-xs text-[var(--vz-text-muted)] mb-1">Phone</label>
+                        <input
+                          type="text"
+                          value={profileForm.phone}
+                          onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                          className="w-full bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-md px-3 py-1.5 text-sm text-[var(--vz-text)] focus:ring-1 focus:ring-primary focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[var(--vz-text-muted)] mb-1">Mobile (For Calling)</label>
+                        <input
+                          type="text"
+                          value={profileForm.mobileNumber}
+                          onChange={(e) => setProfileForm({ ...profileForm, mobileNumber: e.target.value })}
+                          className="w-full bg-[var(--vz-input-bg)] border border-[var(--vz-border)] rounded-md px-3 py-1.5 text-sm text-[var(--vz-text)] focus:ring-1 focus:ring-primary focus:border-primary"
+                        />
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </Card>
             </div>

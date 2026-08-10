@@ -61,6 +61,14 @@ export const ownerApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (result, error, { id }) => [{ type: 'OwnerTenants', id }],
         }),
+        updateTenantCalling: builder.mutation({
+            query: ({ id, ...data }) => ({
+                url: `/owner/tenants/${id}/calling`,
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: 'OwnerTenants', id }],
+        }),
 
         // Plans
         getOwnerPlans: builder.query({
@@ -176,6 +184,7 @@ export const {
     useUpdateUserStatusMutation,
     useUpdateTenantFeaturesMutation,
     useUpdateTenantPaymentMethodsMutation,
+    useUpdateTenantCallingMutation,
     useGetPaymentConfigsQuery,
     useSavePaymentConfigMutation,
     useTestPaymentConfigMutation,

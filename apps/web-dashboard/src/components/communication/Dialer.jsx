@@ -9,7 +9,7 @@ import { useToast } from '../ui/Toast'
 export default function Dialer() {
   const dispatch = useDispatch()
   const toast = useToast()
-  const { dialerOpen, dialerNumber } = useSelector((s) => s.ui)
+  const { dialerOpen, dialerNumber, dialerLeadId } = useSelector((s) => s.ui)
   const [number, setNumber] = useState('')
   const [status, setStatus] = useState('idle') // idle, calling, active, ended
   const [duration, setDuration] = useState(0)
@@ -39,7 +39,7 @@ export default function Dialer() {
     setStatus('calling')
     try {
       // Mock API call
-      await initiateCall({ phone: number, leadId: null }).unwrap()
+      await initiateCall({ phone: number, leadId: dialerLeadId }).unwrap()
       setTimeout(() => setStatus('active'), 2000) // Simulate connection
     } catch {
       toast('Call failed', 'error')
