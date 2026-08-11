@@ -51,6 +51,7 @@ const callLogSchema = new mongoose.Schema(
             pending: { type: [mongoose.Schema.Types.Mixed], default: [] },
             processed: { type: [String], default: [] }
         },
+        isSyncing: { type: Boolean, default: false },
         notes: { type: String, default: '' },
         callbackAt: { type: Date, default: null },
         audit: {

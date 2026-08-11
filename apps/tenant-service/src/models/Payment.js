@@ -74,7 +74,6 @@ const paymentSchema = new mongoose.Schema(
 );
 
 paymentSchema.index({ tenantId: 1, createdAt: -1 });
-paymentSchema.index({ invoiceNumber: 1 });
 
 const Payment = mongoose.model('Payment', paymentSchema);
 module.exports = Payment;

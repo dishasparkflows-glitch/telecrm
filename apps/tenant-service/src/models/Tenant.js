@@ -234,7 +234,6 @@ const tenantSchema = new mongoose.Schema(
 tenantSchema.index({ 'company.email': 1 });
 tenantSchema.index({ 'subscription.status': 1 });
 tenantSchema.index({ 'trial.status': 1, 'trial.expiresAt': 1 });
-tenantSchema.index({ referralCode: 1 });
 
 // ─── Virtual: isTrialActive ───
 tenantSchema.virtual('isTrialActive').get(function () {

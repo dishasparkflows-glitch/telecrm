@@ -2,6 +2,8 @@ const cron = require('node-cron');
 const CallLog = require('../models/CallLog');
 const callingApiService = require('../services/callingApi.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
+const axios = require('axios');
+const { uploadBufferToR2 } = require('@sparkcrm/shared-utils');
 
 let isSyncing = false;
 
@@ -12,24 +14,21 @@ const syncMissingExotelRecordings = async () => {
     try {
         console.log('🔄 [CRON] Starting sweep for missing Exotel recordings...');
         
-        const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const threeMinsAgo = new Date(Date.now() - 3 * 60 * 1000);
-        
-        // Find calls where webhook probably failed to complete them
-        // OR where they completed but recording is still stuck processing
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        // Find calls from today that are still active and missing a recording URL
         const stuckCalls = await CallLog.find({
             'provider.name': 'exotel',
-            $or: [
-                {
-                    'call.status': { $in: ['initiated', 'ringing', 'in_progress'] },
-                    'audit.createdAt': { $lt: fiveMinsAgo }
-                },
-                {
-                    'recording.status': 'processing',
-                    'audit.updatedAt': { $lt: threeMinsAgo }
-                }
-            ]
-        }).limit(20);
+            isSyncing: { $ne: true },
+            // 'audit.createdAt': { $gte: startOfToday },
+            // 'call.status': { $in: ['initiated', 'ringing', 'in_progress'] },
+            // $or: [
+            //     { 'recording.url': null },
+            //     { 'recording.url': '' },
+            //     { 'recording.url': { $exists: false } }
+            // ]
+        });
 
         if (stuckCalls.length === 0) {
             console.log('✅ [CRON] No missing recordings found.');
@@ -44,6 +43,7 @@ const syncMissingExotelRecordings = async () => {
                 if (!callLog.provider?.externalCallId) continue;
                 
                 const callSid = callLog.provider.externalCallId;
+                const config = await callingApiService.getConfig();
                 const details = await callingApiService.getCallStatus(callLog.tenantId, callSid);
                 
                 let updated = false;
@@ -61,50 +61,84 @@ const syncMissingExotelRecordings = async () => {
                     updated = true;
                 }
 
-                // Sync recording URL
-                if (details.recordingUrl && !callLog.recording.url) {
-                    console.log(`[CRON] Recording recovered for Call SID: ${callSid}`);
-                    callLog.recording.url = details.recordingUrl;
-                    callLog.recording.status = 'ready';
-                    callLog.recording.fetchedAt = new Date();
+                // Sync timing (StartTime -> initiatedAt, EndTime -> endedAt)
+                if (details.startTime && !callLog.timing.initiatedAt) {
+                    callLog.timing.initiatedAt = new Date(details.startTime);
                     updated = true;
-                } else if (details.status === 'completed' && !details.recordingUrl && callLog.recording.status === 'processing') {
-                    // It's been > 3 mins processing and Exotel still doesn't have it.
-                    // Keep it processing for now, or maybe mark it unavailable if it's too old
-                    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-                    if (callLog.audit.createdAt < oneHourAgo) {
-                        console.log(`[CRON] Recording permanently unavailable for Call SID: ${callSid}`);
-                        callLog.recording.status = 'unavailable';
+                }
+                if (details.endTime && !callLog.timing.endedAt) {
+                    callLog.timing.endedAt = new Date(details.endTime);
+                    updated = true;
+                }
+                
+                // Calculate answeredAt if we have duration and end time but no answered time
+                if (callLog.timing.endedAt && callLog.call.duration > 0 && !callLog.timing.answeredAt) {
+                    callLog.timing.answeredAt = new Date(callLog.timing.endedAt.getTime() - (callLog.call.duration * 1000));
+                    updated = true;
+                }
+
+                // Sync recording URL
+                const hasExotelUrl = callLog.recording.url && callLog.recording.url.includes('exotel.com');
+                if (details.recordingUrl && (!callLog.recording.url || hasExotelUrl)) {
+                    console.log(`[CRON] Recording recovered for Call SID: ${callSid}. Downloading from Exotel...`);
+                    try {
+                        // Download the audio file from Exotel (requires Basic Auth)
+                        const exotelAuth = config.provider === 'exotel'
+                            ? { username: config.apiKey, password: config.apiToken }
+                            : undefined;
+                        const response = await axios.get(details.recordingUrl, {
+                            responseType: 'arraybuffer',
+                            auth: exotelAuth,
+                        });
+                        console.log(`✅ [CRON] Recording downloaded, size: ${response.data.byteLength} bytes`);
+                        const buffer = Buffer.from(response.data);
+                        // Upload to Cloudflare R2 using the desired path structure
+                        const fileName = `${callLog.tenantId}/${callLog.userId}/${callLog.leadId}/recordings/${callSid}.mp3`;
+                        const r2Url = await uploadBufferToR2(buffer, fileName, 'audio/mpeg');
+                        
+                        callLog.recording.url = r2Url;
+                        callLog.recording.status = 'ready';
+                        callLog.recording.fetchedAt = new Date();
                         updated = true;
+                        console.log(`✅ [CRON] Uploaded recording to R2 for Call SID: ${callSid}`);
+                    } catch (uploadError) {
+                        console.error(`❌ [CRON] Failed to download/upload recording for Call SID: ${callSid}`, uploadError.message);
+                        // Fallback to the exotel URL if upload fails
+                        if (!callLog.recording.url) {
+                            callLog.recording.url = details.recordingUrl;
+                            callLog.recording.status = 'ready';
+                            callLog.recording.fetchedAt = new Date();
+                            updated = true;
+                        }
                     }
                 }
 
                 if (updated) {
                     await callLog.save();
                     
-                    if (callLog.call.status === 'completed' && !callLog.events.processed?.includes('CALL_COMPLETED')) {
-                        await publishEvent(EVENTS.CALL_COMPLETED, {
-                            tenantId: callLog.tenantId,
-                            callId: callLog._id,
-                            leadId: callLog.leadId,
-                            userId: callLog.userId,
-                            duration: callLog.call.duration,
-                        });
-                        callLog.events.processed.push('CALL_COMPLETED');
-                        await callLog.save();
-                    }
+                    // if (callLog.call.status === 'completed' && !callLog.events.processed?.includes('CALL_COMPLETED')) {
+                    //     await publishEvent(EVENTS.CALL_COMPLETED, {
+                    //         tenantId: callLog.tenantId,
+                    //         callId: callLog._id,
+                    //         leadId: callLog.leadId,
+                    //         userId: callLog.userId,
+                    //         duration: callLog.call.duration,
+                    //     });
+                    //     callLog.events.processed.push('CALL_COMPLETED');
+                    //     await callLog.save();
+                    // }
 
-                    if (callLog.recording.status === 'ready' && !callLog.events.processed?.includes('CALL_RECORDING_READY')) {
-                        await publishEvent('CALL_RECORDING_READY', {
-                            tenantId: callLog.tenantId,
-                            callId: callLog._id,
-                            callSid: callSid,
-                            recordingUrl: details.recordingUrl,
-                            userId: callLog.userId
-                        });
-                        callLog.events.processed.push('CALL_RECORDING_READY');
-                        await callLog.save();
-                    }
+                    // if (callLog.recording.status === 'ready' && !callLog.events.processed?.includes('CALL_RECORDING_READY')) {
+                    //     await publishEvent('CALL_RECORDING_READY', {
+                    //         tenantId: callLog.tenantId,
+                    //         callId: callLog._id,
+                    //         callSid: callSid,
+                    //         recordingUrl: details.recordingUrl,
+                    //         userId: callLog.userId
+                    //     });
+                    //     callLog.events.processed.push('CALL_RECORDING_READY');
+                    //     await callLog.save();
+                    // }
                 }
             } catch (err) {
                 console.error(`❌ [CRON] Error syncing call ${callLog._id}:`, err.message);
@@ -120,7 +154,7 @@ const syncMissingExotelRecordings = async () => {
 
 const registerCronJobs = () => {
     // Run every 2 minutes
-    cron.schedule('*/2 * * * *', () => {
+    cron.schedule('*/1 * * * *', () => {
         syncMissingExotelRecordings().catch(console.error);
     });
     console.log('✅ call-service: Cron jobs registered');

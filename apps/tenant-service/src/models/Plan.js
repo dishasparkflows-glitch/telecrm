@@ -88,7 +88,6 @@ const planSchema = new mongoose.Schema(
     }
 );
 
-planSchema.index({ slug: 1 });
 planSchema.index({ isActive: 1, sortOrder: 1 });
 
 const Plan = mongoose.model('Plan', planSchema);
