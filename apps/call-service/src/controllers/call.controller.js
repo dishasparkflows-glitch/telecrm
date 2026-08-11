@@ -80,6 +80,7 @@ const initiateCall = asyncHandler(async (req, res) => {
         callLog.provider.externalCallId = result.externalCallId;
         callLog.provider.name           = result.provider;
         callLog.provider.data           = result.providerData;
+        callLog.markModified('provider');
         await callLog.save();
     } catch (err) {
         callLog.call.status = CALL_STATUS.FAILED;
@@ -89,6 +90,7 @@ const initiateCall = asyncHandler(async (req, res) => {
         } else {
             callLog.provider.data = { error: { message: err.message } };
         }
+        callLog.markModified('provider');
         await callLog.save();
 
         if (err.code && err.status) {
@@ -306,10 +308,19 @@ const getCallLogs = asyncHandler(async (req, res) => {
     const safeLimit = Math.min(Math.max(parseInt(limit) || 25, 1), 100);
     const safePage = Math.max(parseInt(page) || 1, 1);
     const skip = (safePage - 1) * safeLimit;
-    const [logs, total] = await Promise.all([
+    const [dbLogs, total] = await Promise.all([
         CallLog.find(filter).sort({ 'audit.createdAt': -1 }).skip(skip).limit(safeLimit),
         CallLog.countDocuments(filter),
     ]);
+
+    const logs = dbLogs.map(log => {
+        const obj = log.toObject();
+        obj.recording = {
+            ...obj.recording,
+            url: obj.recording?.url || null
+        };
+        return obj;
+    });
 
     // Return the nested structure directly
     ApiResponse.paginated(res, logs, {

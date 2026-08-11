@@ -203,6 +203,8 @@ const registerEventListeners = async () => {
                     body: leadId ? 'You missed a call from a lead' : 'You missed a call',
                     data: { type: 'call_missed', callId, leadId: leadId || '', actionUrl: leadId ? `/leads/${leadId}` : '/calls' },
                 });
+                const realtimeService = require('../services/realtime.service');
+                realtimeService.emitToUser(userId, 'call_completed', { callId, leadId });
             }
         } catch (err) {
             console.error('❌ call.missed notification error:', err.message);
@@ -219,6 +221,19 @@ const registerEventListeners = async () => {
             }
         } catch (err) {
             console.error('❌ call.completed notification error:', err.message);
+        }
+    });
+
+    // ─── Call recording ready → notify UI via socket ───
+    await subscribeToEvents('CALL_RECORDING_READY', async (_channel, data) => {
+        try {
+            const { callId, userId, recordingUrl } = data;
+            if (userId) {
+                const realtimeService = require('../services/realtime.service');
+                realtimeService.emitToUser(userId, 'call_recording_ready', { callId, recordingUrl });
+            }
+        } catch (err) {
+            console.error('❌ call.recording_ready notification error:', err.message);
         }
     });
 

@@ -73,7 +73,7 @@ export default function CallLogs() {
               <table className="w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr className="bg-[var(--vz-table-header-bg)]">
-                    {['Lead', 'Phone', 'Agent', 'Duration', 'Status', 'Disposition', 'Date', 'Actions'].map((h) => (
+                    {['Lead', 'Phone', 'Agent', 'Duration', 'Status', 'Disposition', 'Recording', 'Date', 'Actions'].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -92,6 +92,15 @@ export default function CallLogs() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)] capitalize">{log.disposition?.code || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">
+                        {log.recording?.status === 'ready' && log.recording?.url ? (
+                          <audio controls src={log.recording.url} className="h-8 w-48" preload="none" />
+                        ) : log.recording?.status === 'processing' ? (
+                          <span className="text-xs text-[var(--vz-text-muted)] italic">⏳ Recording processing...</span>
+                        ) : (
+                          <span className="text-xs text-[var(--vz-text-muted)] italic">No recording available</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-[var(--vz-text)] text-xs">{new Date(log.audit?.createdAt || log.meta?.createdAt || new Date()).toLocaleString()}</td>
                       <td className="px-4 py-3">
                         <Button variant="ghost" size="sm" onClick={() => { setShowDisp(log._id); setDisposition(log.disposition?.code || '') }}>

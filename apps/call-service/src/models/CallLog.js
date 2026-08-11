@@ -27,11 +27,12 @@ const callLogSchema = new mongoose.Schema(
             endedAt: { type: Date, default: null }
         },
         recording: {
-            status: { type: String, enum: ['none', 'pending', 'available', 'failed'], default: 'none' },
+            status: { type: String, enum: ['none', 'pending', 'available', 'failed', 'processing', 'ready', 'unavailable'], default: 'none' },
             url: { type: String, default: null },
             objectKey: { type: String, default: null, select: false },
             mimeType: { type: String, default: '' },
-            duration: { type: Number, default: 0 }
+            duration: { type: Number, default: 0 },
+            fetchedAt: { type: Date, default: null }
         },
         disposition: {
             code: { type: String, enum: Object.values(CALL_DISPOSITION), default: null },

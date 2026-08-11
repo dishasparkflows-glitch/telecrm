@@ -115,25 +115,26 @@ const initiateCall = async ({ fromNumber, toNumber, virtualNumber, callId }) => 
         params.append('To', to);
         params.append('CallerId', callerId);
         params.append('CallType', 'trans');
+        params.append('Record', 'true');
 
         if (callId) {
             params.append('CustomField', String(callId));
         }
 
-        const callbackUrl = 'https://stopper-thyself-rancidity.ngrok-free.dev/webhooks/exotel';
+        const callbackUrl = env.EXOTEL_CALLBACK_URL;
         if (callbackUrl) {
             params.append('StatusCallback', callbackUrl);
             params.append('StatusCallbackEvents[0]', 'terminal');
         }
 
-        console.log('📞 Exotel request:', {
-            url,
-            from,
-            to,
-            callerId,
-            callType: 'trans',
-            callId: callId ? String(callId) : null,
-        });
+        // console.log('📞 Exotel request:', {
+        //     url,
+        //     from,
+        //     to,
+        //     callerId,
+        //     callType: 'trans',
+        //     callId: callId ? String(callId) : null,
+        // });
 
         let res;
         try {
@@ -141,11 +142,6 @@ const initiateCall = async ({ fromNumber, toNumber, virtualNumber, callId }) => 
                 auth: { username: config.apiKey, password: config.apiToken },
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
                 timeout: 15000,
-            });
-
-            console.log('📞 Exotel response:', {
-                status: res.status,
-                data: res.data,
             });
         } catch (error) {
             const status = error.response?.status;
@@ -251,10 +247,17 @@ const getCallStatus = async (tenantId, externalCallId) => {
             auth: { username: config.apiKey, password: config.apiToken },
             timeout: 10000,
         });
+        const callData = res.data?.Call || {};
         return {
-            status: res.data?.Call?.Status || 'unknown',
-            duration: parseInt(res.data?.Call?.Duration) || 0,
-            recordingUrl: res.data?.Call?.RecordingUrl || null,
+            status: callData.Status || 'unknown',
+            duration: parseInt(callData.Duration) || 0,
+            recordingUrl: callData.RecordingUrl || null,
+            startTime: callData.StartTime || null,
+            endTime: callData.EndTime || null,
+            from: callData.From || null,
+            to: callData.To || null,
+            sid: callData.Sid || null,
+            preSignedRecordingUrl: callData.PreSignedRecordingUrl || null,
         };
     } else if (config.provider === 'twilio') {
         const url = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Calls/${externalCallId}.json`;

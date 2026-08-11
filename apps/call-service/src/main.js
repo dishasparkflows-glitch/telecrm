@@ -1,6 +1,7 @@
 const app = require('./app');
 const { connectDB, env } = require('@sparkcrm/shared-config');
 const { registerCallEventRetryJob } = require('./services/callEvents.service');
+const { registerCronJobs } = require('./jobs/cronJobs');
 
 const PORT = env.PORTS.CALL;
 const MONGO_URI = env.MONGO.CALL;
@@ -11,6 +12,7 @@ const startServer = async () => {
   app.listen(PORT, () => {
     console.log(' call-service running on port ' + PORT);
     registerCallEventRetryJob();
+    registerCronJobs();
   });
 };
 

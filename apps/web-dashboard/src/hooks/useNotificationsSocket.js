@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { io as socketIO } from 'socket.io-client';
 import { useSelector, useDispatch } from 'react-redux';
 import { notificationApi } from '../features/notifications/notificationApi';
+import { callApi } from '../features/calls/callApi';
 
 export function useNotificationsSocket() {
     const { token } = useSelector((state) => state.auth);
@@ -39,6 +40,15 @@ export function useNotificationsSocket() {
             
             // Optionally emit a custom event to show a toast in the topbar or app
             window.dispatchEvent(new CustomEvent('app:notification', { detail: notification }));
+        });
+
+        socket.on('call_recording_ready', (data) => {
+            console.log('📞 Real-time call recording ready:', data);
+            dispatch(callApi.util.invalidateTags([{ type: 'Call', id: 'LIST' }, { type: 'CallLog', id: 'LIST' }]));
+        });
+
+        socket.on('call_completed', (data) => {
+            dispatch(callApi.util.invalidateTags([{ type: 'Call', id: 'LIST' }, { type: 'CallLog', id: 'LIST' }]));
         });
 
         socket.on('disconnect', () => {
