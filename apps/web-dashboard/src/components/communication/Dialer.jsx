@@ -38,7 +38,6 @@ export default function Dialer() {
     if (!number) return
     setStatus('calling')
     try {
-      // Mock API call
       await initiateCall({ phone: number, leadId: dialerLeadId }).unwrap()
       setTimeout(() => setStatus('active'), 2000) // Simulate connection
     } catch {

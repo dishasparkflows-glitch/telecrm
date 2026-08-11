@@ -447,14 +447,17 @@ export default function LeadDetail() {
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"><Phone size={15} /></div>
                           <div>
-                            <p className="text-sm font-medium text-[var(--vz-heading)] capitalize">{call.direction || 'outbound'} call · {call.status}</p>
-                            <p className="text-xs text-[var(--vz-text-muted)]">{call.toNumber || lead.contact?.phone} · {call.duration ? `${call.duration}s` : 'No duration'}</p>
+                            <p className="text-sm font-medium text-[var(--vz-heading)] capitalize">{call.call?.direction || call.direction || 'outbound'} call · {call.call?.status || call.status}</p>
+                            {call.call?.status === 'failed' && call.provider?.data?.error?.code === 'EXOTEL_KYC_REQUIRED' && (
+                              <p className="text-[10px] text-danger mt-0.5 font-medium">Exotel KYC verification required</p>
+                            )}
+                            <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">{call.numbers?.to || call.toNumber || lead.contact?.phone} · {call.call?.duration ? `${call.call.duration}s` : 'No duration'}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          {call.disposition && <Badge color="info">{call.disposition}</Badge>}
-                          {(call.recordingStatus === 'available' || call.recordingUrl) && <button onClick={() => handlePlayRecording(call._id)} className="block ml-auto text-[10px] text-primary hover:underline mt-1">Play recording</button>}
-                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{call.startedAt || call.createdAt || call.meta?.createdAt ? new Date(call.startedAt || call.createdAt || call.meta?.createdAt).toLocaleString() : '—'}</p>
+                          {call.disposition?.code && <Badge color="info">{call.disposition.code}</Badge>}
+                          {(call.recording?.status === 'available' || call.recording?.url) && <button onClick={() => handlePlayRecording(call._id)} className="block ml-auto text-[10px] text-primary hover:underline mt-1">Play recording</button>}
+                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{call.timing?.initiatedAt || call.startedAt || call.audit?.createdAt || call.meta?.createdAt ? new Date(call.timing?.initiatedAt || call.startedAt || call.audit?.createdAt || call.meta?.createdAt).toLocaleString() : '—'}</p>
                         </div>
                       </div>
                     ))}

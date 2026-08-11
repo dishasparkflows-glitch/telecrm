@@ -72,31 +72,129 @@ const invalidateCache = () => {
 };
 
 /**
+ * Normalizes Indian phone numbers for Exotel's Connect API.
+ * 1. Remove non-numeric characters.
+ * 2. If it starts with 91 and is 12 digits, replace 91 with 0.
+ * 3. If it's a 10-digit number, prepend 0.
+ * 4. If it's already 11 digits starting with 0, keep it.
+ * 5. Reject invalid lengths.
+ */
+const normalizeExotelNumber = (number) => {
+    if (!number) return '';
+    let digits = String(number).replace(/\D/g, '');
+    
+    if (digits.length === 12 && digits.startsWith('91')) {
+        digits = '0' + digits.substring(2);
+    } else if (digits.length === 10) {
+        digits = '0' + digits;
+    } else if (digits.length === 11 && digits.startsWith('0')) {
+        // already fine
+    } else if (digits.length > 0) {
+        throw new Error(`Invalid phone number format for Exotel: ${number}`);
+    }
+    
+    return digits;
+};
+
+/**
  * Initiate a call through the configured provider.
- * @param {string} fromNumber - Caller number (user's assigned number)
- * @param {string} toNumber   - Recipient number
+ * @param {Object} options - Call options
  * @returns {{ externalCallId, provider, status }}
  */
-const initiateCall = async (fromNumber, toNumber) => {
+const initiateCall = async ({ fromNumber, toNumber, virtualNumber, callId }) => {
     const config = await getConfig();
-
     if (config.provider === 'exotel') {
-        const url = `https://${config.subdomain}/v1/Accounts/${config.sid}/Calls/connect`;
+        const url = `https://${config.subdomain}/v1/Accounts/${config.sid}/Calls/connect.json`;
+
+        const from = normalizeExotelNumber(fromNumber);
+        const to = normalizeExotelNumber(toNumber);
+        const callerId = normalizeExotelNumber(config.callerId);
 
         const params = new URLSearchParams();
-        params.append('From', fromNumber);
-        params.append('To', toNumber);
-        params.append('CallerId', config.callerId);
+        params.append('From', from);
+        params.append('To', to);
+        params.append('CallerId', callerId);
         params.append('CallType', 'trans');
 
-        const res = await axios.post(url, params.toString(), {
-            auth: { username: config.apiKey, password: config.apiToken },
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 15000,
+        if (callId) {
+            params.append('CustomField', String(callId));
+        }
+
+        console.log('📞 Exotel request:', {
+            url,
+            from,
+            to,
+            callerId,
+            callType: 'trans',
+            callId: callId ? String(callId) : null,
         });
 
+        let res;
+        try {
+            res = await axios.post(url, params.toString(), {
+                auth: { username: config.apiKey, password: config.apiToken },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+                timeout: 15000,
+            });
+
+            console.log('📞 Exotel response:', {
+                status: res.status,
+                data: res.data,
+            });
+        } catch (error) {
+            const status = error.response?.status;
+            const message = error.response?.data?.RestException?.Message || error.message;
+            let code = 'EXOTEL_PROVIDER_ERROR';
+            let httpStatus = 502;
+
+            if (status === 403) {
+                if (message.includes('KYC')) {
+                    code = 'EXOTEL_KYC_REQUIRED';
+                    httpStatus = 403;
+                } else {
+                    code = 'EXOTEL_FORBIDDEN';
+                    httpStatus = 403;
+                }
+            } else if (status === 401) {
+                code = 'EXOTEL_AUTHENTICATION_FAILED';
+                httpStatus = 401;
+            } else if (status === 400) {
+                code = 'EXOTEL_INVALID_REQUEST';
+                httpStatus = 400;
+            } else if (status === 429) {
+                code = 'EXOTEL_RATE_LIMITED';
+                httpStatus = 429;
+            } else if (!status || error.code === 'ECONNABORTED') {
+                code = 'EXOTEL_TIMEOUT';
+                httpStatus = 504;
+            }
+
+            console.error('❌ Exotel error:', {
+                status,
+                code,
+                message: message.substring(0, 100),
+            });
+
+            const mappedError = new Error(message);
+            mappedError.code = code;
+            mappedError.status = httpStatus;
+            mappedError.providerData = {
+                error: {
+                    status: status || null,
+                    code,
+                    message,
+                }
+            };
+            throw mappedError;
+        }
+
+        const externalCallId = res.data?.Call?.Sid;
+        if (!externalCallId) {
+            throw new Error('Exotel did not return a call SID');
+        }
+
         return {
-            externalCallId: res.data?.Call?.Sid || null,
+            externalCallId,
             provider: 'exotel',
             status: 'initiated',
             providerData: res.data,
@@ -105,9 +203,13 @@ const initiateCall = async (fromNumber, toNumber) => {
         const url = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Calls.json`;
 
         const params = new URLSearchParams();
-        params.append('Url', 'http://demo.twilio.com/docs/voice.xml'); // TwiML URL
-        params.append('To', toNumber);
-        params.append('From', config.twilioPhoneNumber || fromNumber);
+        const voiceWebhook = env.TWILIO_VOICE_WEBHOOK_URL || 'https://your-domain.com/webhooks/twilio/voice';
+        const voiceUrl = new URL(voiceWebhook);
+        if (callId) voiceUrl.searchParams.append('callId', String(callId));
+
+        params.append('Url', voiceUrl.toString()); // Our own TwiML webhook
+        params.append('To', fromNumber); // Twilio calls the agent first
+        params.append('From', virtualNumber || config.twilioPhoneNumber);
 
         const res = await axios.post(url, params.toString(), {
             auth: { username: config.accountSid, password: config.authToken },
@@ -115,8 +217,13 @@ const initiateCall = async (fromNumber, toNumber) => {
             timeout: 15000,
         });
 
+        const externalCallId = res.data?.sid;
+        if (!externalCallId) {
+            throw new Error('Twilio did not return a call SID');
+        }
+
         return {
-            externalCallId: res.data?.sid || null,
+            externalCallId,
             provider: 'twilio',
             status: 'initiated',
             providerData: res.data,
@@ -129,11 +236,11 @@ const initiateCall = async (fromNumber, toNumber) => {
 /**
  * Get call status from the provider
  */
-const getCallStatus = async (externalCallId) => {
-    const config = await getConfig();
+const getCallStatus = async (tenantId, externalCallId) => {
+    const config = await getConfig(tenantId);
 
     if (config.provider === 'exotel') {
-        const url = `https://${config.subdomain}/v1/Accounts/${config.sid}/Calls/${externalCallId}`;
+        const url = `https://${config.subdomain}/v1/Accounts/${config.sid}/Calls/${externalCallId}.json`;
         const res = await axios.get(url, {
             auth: { username: config.apiKey, password: config.apiToken },
             timeout: 10000,

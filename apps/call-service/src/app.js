@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = require('@sparkcrm/shared-middleware');
 const callRoutes = require('./routes/call.routes');
 const exotelWebhook = require('./webhooks/exotel.webhook');
+const twilioWebhook = require('./webhooks/twilio.webhook');
 const { requireVerifiedUser, requireInternalService } = require('./middleware/security');
 
 const requireGatewayUser = requireVerifiedUser('call-service');
@@ -13,12 +14,11 @@ const app = express();
 app.use(helmet());
 app.use(cors(createCorsOptions()));
 app.use(requestLogger('call-service'));
-
-// Provider signature verification requires the exact bytes received.
 app.use('/webhooks', exotelWebhook);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use('/webhooks/twilio', twilioWebhook);
 app.use(contextMiddleware);
 
 app.get('/health', (req, res) => {

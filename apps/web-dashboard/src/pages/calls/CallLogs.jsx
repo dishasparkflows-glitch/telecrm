@@ -81,17 +81,20 @@ export default function CallLogs() {
                 <tbody>
                   {logs.map((log) => (
                     <tr key={log._id} className="border-t border-[var(--vz-border)] hover:bg-[var(--vz-table-hover-bg)] transition-colors">
-                      <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{log.leadName || 'Unknown'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.phone}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.agentName || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.duration || '—'}</td>
+                      <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{log.leadId?.name || log.leadId?.firstName || 'Unknown'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.numbers?.to || log.phone || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.userId?.name || log.userId?.firstName || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.call?.duration || '—'}</td>
                       <td className="px-4 py-3">
-                        <Badge color={statusColors[log.status] || 'primary'}>{log.status}</Badge>
+                        <Badge color={statusColors[log.call?.status || 'initiated'] || 'primary'}>{log.call?.status || 'initiated'}</Badge>
+                        {log.call?.status === 'failed' && log.provider?.data?.error?.code === 'EXOTEL_KYC_REQUIRED' && (
+                          <div className="text-[10px] text-danger mt-1 font-medium">Exotel KYC verification required</div>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-[var(--vz-text)] capitalize">{log.disposition || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)] text-xs">{new Date(log.meta?.createdAt).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)] capitalize">{log.disposition?.code || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)] text-xs">{new Date(log.audit?.createdAt || log.meta?.createdAt || new Date()).toLocaleString()}</td>
                       <td className="px-4 py-3">
-                        <Button variant="ghost" size="sm" onClick={() => { setShowDisp(log._id); setDisposition(log.disposition || '') }}>
+                        <Button variant="ghost" size="sm" onClick={() => { setShowDisp(log._id); setDisposition(log.disposition?.code || '') }}>
                           Edit
                         </Button>
                       </td>

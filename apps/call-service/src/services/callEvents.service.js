@@ -3,20 +3,20 @@ const { publishEvent } = require('@sparkcrm/shared-events');
 
 async function publishPendingEvents(callLog) {
     const remaining = [];
-    for (const pending of callLog.pendingEvents || []) {
+    for (const pending of callLog.events?.pending || []) {
         try {
             await publishEvent(pending.event, pending.data);
         } catch (error) {
             remaining.push({ event: pending.event, data: pending.data, attempts: (pending.attempts || 0) + 1, lastError: String(error.message || error).slice(0, 1000) });
         }
     }
-    callLog.pendingEvents = remaining;
+    callLog.events.pending = remaining;
     await callLog.save();
     return remaining.length === 0;
 }
 
 async function retryPendingCallEvents(limit = 100) {
-    const logs = await CallLog.find({ 'pendingEvents.0': { $exists: true } }).sort({ 'meta.updatedAt': 1 }).limit(limit);
+    const logs = await CallLog.find({ 'events.pending.0': { $exists: true } }).sort({ 'audit.updatedAt': 1 }).limit(limit);
     for (const log of logs) await publishPendingEvents(log);
 }
 
