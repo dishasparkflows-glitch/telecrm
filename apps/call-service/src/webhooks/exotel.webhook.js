@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const CallLog = require('../models/CallLog');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
-const { asyncHandler } = require('@sparkcrm/shared-utils');
+const { asyncHandler, EXOTEL_STATUS_MAP } = require('@sparkcrm/shared-utils');
 
 const authenticateAndParse = (req, res, next) => {
     const secret = process.env.EXOTEL_WEBHOOK_SECRET;
@@ -81,18 +81,7 @@ router.post(
 
         if (callLog) {
             const isAlreadyTerminal = ['completed', 'missed', 'failed'].includes(callLog.call.status);
-            // Map Exotel statuses to our statuses
-            const statusMap = {
-                ringing: 'ringing',
-                'in-progress': 'in_progress',
-                completed: 'completed',
-                busy: 'missed',
-                'no-answer': 'missed',
-                failed: 'failed',
-                canceled: 'failed',
-            };
-
-            const newStatus = statusMap[Status] || callLog.call.status;
+            const newStatus = EXOTEL_STATUS_MAP[Status] || callLog.call.status;
             callLog.call.status = newStatus;
             
             const isNowTerminal = ['completed', 'missed', 'failed'].includes(newStatus);
@@ -121,6 +110,7 @@ router.post(
                         tenantId: callLog.tenantId,
                         callId: callLog._id,
                         leadId: callLog.leadId,
+                        userId: callLog.userId,
                         duration: callLog.call.duration,
                     });
                     
@@ -137,6 +127,7 @@ router.post(
                         tenantId: callLog.tenantId,
                         callId: callLog._id,
                         leadId: callLog.leadId,
+                        userId: callLog.userId,
                     });
                 }
             }

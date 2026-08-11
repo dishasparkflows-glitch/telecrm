@@ -210,7 +210,7 @@ export default function OwnerTenantDetail() {
             </div>
             <div className="flex justify-between py-2 border-b border-[var(--vz-border)]">
               <span className="text-[var(--vz-text-muted)]">Plan</span>
-              <Badge color="soft-primary">{tenant.planId?.name || 'N/A'}</Badge>
+              <Badge color="soft-primary">{tenant.subscription?.planId?.name || 'N/A'}</Badge>
             </div>
             <div className="flex justify-between py-2 border-b border-[var(--vz-border)]">
               <span className="text-[var(--vz-text-muted)]">Billing</span>
@@ -234,14 +234,14 @@ export default function OwnerTenantDetail() {
                 <div key={u._id} className="flex items-center justify-between py-2 px-1 border-b border-[var(--vz-border)] last:border-0">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                      {u.name?.[0]?.toUpperCase()}
+                      {u.contact?.name?.[0]?.toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[var(--vz-heading)]">{u.name}</p>
-                      <p className="text-[11px] text-[var(--vz-text-muted)]">{u.email}</p>
+                      <p className="text-sm font-medium text-[var(--vz-heading)]">{u.contact?.name || 'Unknown User'}</p>
+                      <p className="text-[11px] text-[var(--vz-text-muted)]">{u.contact?.email}</p>
                     </div>
                   </div>
-                  <Badge color={u.isActive ? 'success' : 'danger'}>{u.role}</Badge>
+                  <Badge color={u.isActive ? 'success' : 'danger'}>{u.role || 'User'}</Badge>
                 </div>
               ))}
             </div>

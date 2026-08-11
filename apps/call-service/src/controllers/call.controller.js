@@ -28,13 +28,19 @@ const initiateCall = asyncHandler(async (req, res) => {
 
     const virtualNumber = req.headers['x-tenant-calling-number'];
     const agentMobile   = req.headers['x-user-mobile'];
+    const isImpersonating = req.headers['x-is-impersonating'] === 'true';
 
     const { leadId } = req.body;
     const toNumber = req.body.phone;
 
     if (!toNumber) throw ApiError.badRequest('Lead phone number is required');
     if (!virtualNumber) throw ApiError.badRequest('Calling is not configured for this account. Please contact your administrator.');
-    if (!agentMobile)   throw ApiError.badRequest('Your mobile number is not set. Please update your profile before making calls.');
+    if (!agentMobile) {
+        if (isImpersonating) {
+            throw ApiError.badRequest('Owners impersonating a tenant cannot initiate calls directly. Please log in as a tenant user with a configured mobile number to test calling.');
+        }
+        throw ApiError.badRequest('Your mobile number is not set. Please update your profile before making calls.');
+    }
 
     const callLog = await CallLog.create({
         tenantId,

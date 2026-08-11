@@ -407,7 +407,7 @@ export default function LeadsList() {
                           </button>
                           <button
                             onClick={(e) => handleArchive(lead._id, e)}
-                            className="p-1.5 rounded text-[var(--vz-text-muted)] hover:text-danger hover:bg-danger/10 transition-colors"
+                            className="p-1.5 rounded text-danger hover:text-danger-dark hover:bg-danger/10 transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>

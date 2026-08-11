@@ -209,7 +209,20 @@ const registerEventListeners = async () => {
         }
     });
 
-    console.log('✅ notification-service: 8 event listeners registered');
+    // ─── Call completed → notify UI via socket ───
+    await subscribeToEvents(EVENTS.CALL_COMPLETED, async (_channel, data) => {
+        try {
+            const { callId, leadId, userId } = data;
+            if (userId) {
+                const realtimeService = require('../services/realtime.service');
+                realtimeService.emitToUser(userId, 'call_completed', { callId, leadId });
+            }
+        } catch (err) {
+            console.error('❌ call.completed notification error:', err.message);
+        }
+    });
+
+    console.log('✅ notification-service: event listeners registered');
 };
 
 module.exports = { registerEventListeners };

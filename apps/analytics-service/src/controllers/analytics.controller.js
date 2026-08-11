@@ -352,7 +352,7 @@ const getRevenueAnalytics = asyncHandler(async (req, res) => {
                 _id: null,
                 dealsClosed: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'won'] }, 1, 0] } },
                 wonRevenue: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$pipeline.stage', '$stage'] }, 'won'] }, { $ifNull: ['$lifecycle.expectedValue', { $ifNull: ['$expectedValue', 0] }] }, 0] } },
-                pipelineValue: { $sum: { $cond: [{ $nin: [{ $ifNull: ['$pipeline.stage', '$stage'] }, ['won', 'lost']] }, { $ifNull: ['$lifecycle.expectedValue', { $ifNull: ['$expectedValue', 0] }] }, 0] } },
+                pipelineValue: { $sum: { $cond: [{ $not: [{ $in: [{ $ifNull: ['$pipeline.stage', '$stage'] }, ['won', 'lost']] }] }, { $ifNull: ['$lifecycle.expectedValue', { $ifNull: ['$expectedValue', 0] }] }, 0] } },
             } },
         ]),
         Lead.aggregate([

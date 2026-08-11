@@ -175,7 +175,7 @@ export default function RolesList() {
                     {!role.isSystem && (
                       <button
                         onClick={() => setConfirmDelete({ isOpen: true, role })}
-                        className="p-1.5 rounded hover:bg-danger/10 text-[var(--vz-text-muted)] hover:text-danger transition-colors"
+                        className="p-1.5 rounded hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors"
                       >
                         <Trash2 size={15} />
                       </button>

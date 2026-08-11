@@ -2,7 +2,6 @@
  * Application-wide constants
  */
 const ROLES = {
-
     SUPER_ADMIN: 'super-admin',
     BRANCH_MANAGER: 'branch-manager',
     SALES_LEAD: 'sales-lead',
@@ -140,6 +139,16 @@ const ASSIGNMENT_STRATEGIES = {
     LOAD_BASED: 'load_based',
 };
 
+const EXOTEL_STATUS_MAP = {
+    ringing: 'ringing',
+    'in-progress': 'in_progress',
+    completed: 'completed',
+    busy: 'missed',
+    'no-answer': 'missed',
+    failed: 'failed',
+    canceled: 'failed',
+};
+
 module.exports = {
     ROLES,
     ROLE_HIERARCHY,
@@ -156,4 +165,5 @@ module.exports = {
     FEATURE_CATEGORIES,
     NOTIFICATION_TYPES,
     ASSIGNMENT_STRATEGIES,
+    EXOTEL_STATUS_MAP,
 };

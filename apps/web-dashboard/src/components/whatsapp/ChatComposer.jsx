@@ -94,7 +94,7 @@ export default function ChatComposer({ value, onChange, onSendText, onSendMedia,
             ? <img src={imagePreview} alt="Selected attachment" className="w-12 h-12 rounded-lg object-cover" />
             : <span className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><FileText size={20} /></span>}
           <div className="min-w-0 flex-1"><p className="text-xs font-semibold truncate">{selectedFile.name}</p><p className="text-[10px] text-[var(--vz-text-muted)]">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p></div>
-          <button type="button" onClick={() => setSelectedFile(null)} className="p-1 text-[var(--vz-text-muted)] hover:text-danger"><X size={16} /></button>
+          <button type="button" onClick={() => setSelectedFile(null)} className="p-1 text-danger hover:text-danger-dark"><X size={16} /></button>
         </div>
       )}
       <div className="flex items-end gap-2">

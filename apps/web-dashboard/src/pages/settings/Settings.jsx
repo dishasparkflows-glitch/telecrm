@@ -148,16 +148,28 @@ export default function Settings() {
 
   // Queries
   const { data: profileData, refetch: refetchProfile } = useGetProfileQuery()
-  const { data: usersResp, isLoading: usersLoading } = useListUsersQuery({ branchId: activeBranchId })
-  const { data: rolesResp } = useListRolesQuery()
-  const { data: branchesResp } = useListBranchesQuery()
-  const { data: referralData } = useGetReferralCodeQuery()
-  const { data: refStatsData } = useGetReferralStatsQuery()
-  const { data: assignmentPolicyResp } = useGetAssignmentPolicyQuery({ branchId: activeBranchId })
-  const { data: leadSourceConnectionsResp } = useGetLeadSourceConnectionsQuery()
-  const { data: leadSourceMappingsResp } = useGetLeadSourceMappingsQuery()
-  const { data: metaWebhookConfigResp } = useGetMetaWebhookConfigQuery()
-  const { data: whatsappTemplatesResp } = useGetTemplatesQuery()
+  const [usersPage, setUsersPage] = useState(1)
+  const [allUsers, setAllUsers] = useState([])
+  const [assignmentForm, setAssignmentForm] = useState({
+    strategy: 'manual',
+    isActive: true,
+    agentIds: [],
+  })
+  
+  const shouldFetchUsers = activeTab === 'lead_sources' || (activeTab === 'assignment' && assignmentForm.strategy !== 'manual')
+  const { data: usersResp, isLoading: usersLoading, isFetching: usersFetching } = useListUsersQuery(
+    { branchId: activeBranchId, page: usersPage, limit: 16 }, 
+    { skip: !shouldFetchUsers }
+  )
+  const { data: rolesResp } = useListRolesQuery(undefined, { skip: activeTab !== 'assignment' && activeTab !== 'users' })
+  const { data: branchesResp } = useListBranchesQuery(undefined, { skip: activeTab !== 'assignment' && activeTab !== 'users' })
+  const { data: referralData } = useGetReferralCodeQuery(undefined, { skip: activeTab !== 'referral' })
+  const { data: refStatsData } = useGetReferralStatsQuery(undefined, { skip: activeTab !== 'referral' })
+  const { data: assignmentPolicyResp } = useGetAssignmentPolicyQuery({ branchId: activeBranchId }, { skip: activeTab !== 'assignment' })
+  const { data: leadSourceConnectionsResp } = useGetLeadSourceConnectionsQuery(undefined, { skip: activeTab !== 'lead_sources' })
+  const { data: leadSourceMappingsResp } = useGetLeadSourceMappingsQuery(undefined, { skip: activeTab !== 'lead_sources' })
+  const { data: metaWebhookConfigResp } = useGetMetaWebhookConfigQuery(undefined, { skip: activeTab !== 'lead_sources' })
+  const { data: whatsappTemplatesResp } = useGetTemplatesQuery(undefined, { skip: activeTab !== 'lead_sources' && activeTab !== 'whatsapp' })
 
   // Mutations
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
@@ -170,7 +182,7 @@ export default function Settings() {
   const [revokeTrustedDevice] = useRevokeTrustedDeviceMutation()
   const [revokeAllTrustedDevices, { isLoading: revokingAllDevices }] = useRevokeAllTrustedDevicesMutation()
   
-  const { data: customFieldsResp, isLoading: fieldsLoading } = useGetCustomFieldsQuery()
+  const { data: customFieldsResp, isLoading: fieldsLoading } = useGetCustomFieldsQuery(undefined, { skip: activeTab !== 'fields' })
   const [createCustomField] = useCreateCustomFieldMutation()
   const [deleteCustomField] = useDeleteCustomFieldMutation()
   const [inviteUser, { isLoading: inviting }] = useInviteUserMutation()
@@ -186,7 +198,25 @@ export default function Settings() {
   const [saveLeadSourceMapping, { isLoading: savingLeadSourceMapping }] = useSaveLeadSourceMappingMutation()
 
   const profile = profileData?.data || {}
-  const users = usersResp?.data || []
+  const users = allUsers
+
+  useEffect(() => {
+    if (usersResp?.data) {
+      if (usersPage === 1) {
+        setAllUsers(usersResp.data)
+      } else {
+        setAllUsers(prev => {
+          const existingIds = new Set(prev.map(u => u._id))
+          const newUsers = usersResp.data.filter(u => !existingIds.has(u._id))
+          return [...prev, ...newUsers]
+        })
+      }
+    }
+  }, [usersResp?.data, usersPage])
+
+  useEffect(() => {
+    setUsersPage(1)
+  }, [activeBranchId])
   const roles = rolesResp?.data || []
   const branches = branchesResp?.data || []
   const referralCode = referralData?.data?.code || ''
@@ -225,11 +255,7 @@ export default function Settings() {
   const [fieldForm, setFieldForm] = useState({ name: '', type: 'text', required: false, entity: 'Lead' })
   const [fieldFilter, setFieldFilter] = useState('Lead')
   const [pipelineDraft, setPipelineDraft] = useState([])
-  const [assignmentForm, setAssignmentForm] = useState({
-    strategy: 'manual',
-    isActive: true,
-    agentIds: [],
-  })
+
   const [leadSourceConnectionForm, setLeadSourceConnectionForm] = useState({
     label: 'Meta Lead Ads',
     externalAccountId: '',
@@ -639,6 +665,15 @@ export default function Settings() {
 
   const getBranchName = (id) => branches.find(b => b._id === id)?.name || 'Head Office'
   const getRoleName = (id) => roles.find(r => r._id === id)?.name || 'Agent'
+
+  const handleUsersScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    if (scrollHeight - scrollTop <= clientHeight + 10) {
+      if (!usersFetching && usersResp?.pagination && usersResp.pagination.page < usersResp.pagination.totalPages) {
+        setUsersPage(prev => prev + 1);
+      }
+    }
+  }
 
   return (
     <div className="relative">
@@ -1143,7 +1178,29 @@ export default function Settings() {
                   <div className="lg:col-span-2">
                     <div className="flex items-center justify-between mb-3">
                       <h6 className="text-sm font-bold text-[var(--vz-heading)]">Eligible Agents</h6>
-                      <span className="text-xs text-[var(--vz-text-muted)]">{assignmentForm.agentIds.length} selected</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[var(--vz-text-muted)]">{assignmentForm.agentIds.length} selected</span>
+                        {users.length > 0 && assignmentForm.strategy !== 'manual' && (
+                          <label className="flex items-center gap-1.5 text-xs text-[var(--vz-heading)] cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={users.filter(u => u.isActive !== false).length > 0 && users.filter(u => u.isActive !== false).every(u => assignmentForm.agentIds.includes(u._id))}
+                              onChange={(e) => {
+                                const loadedActive = users.filter(u => u.isActive !== false);
+                                if (e.target.checked) {
+                                  const loadedIds = loadedActive.map(u => u._id);
+                                  setAssignmentForm(prev => ({ ...prev, agentIds: Array.from(new Set([...prev.agentIds, ...loadedIds])) }));
+                                } else {
+                                  const loadedIds = new Set(loadedActive.map(u => u._id));
+                                  setAssignmentForm(prev => ({ ...prev, agentIds: prev.agentIds.filter(id => !loadedIds.has(id)) }));
+                                }
+                              }}
+                              className="rounded border-[var(--vz-border)] text-primary focus:ring-primary cursor-pointer"
+                            />
+                            Select All
+                          </label>
+                        )}
+                      </div>
                     </div>
 
                     {assignmentForm.strategy === 'manual' ? (
@@ -1151,7 +1208,7 @@ export default function Settings() {
                     ) : users.length === 0 ? (
                       <EmptyState icon={Users} title="No users found" description="Invite users before enabling automatic lead distribution." />
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1" onScroll={handleUsersScroll}>
                         {users.filter((u) => u.isActive !== false).map((u) => (
                           <button
                             key={u._id}
@@ -1170,6 +1227,11 @@ export default function Settings() {
                             </div>
                           </button>
                         ))}
+                        {usersFetching && usersPage > 1 && (
+                          <div className="col-span-1 md:col-span-2 text-center py-2 text-xs text-[var(--vz-text-muted)]">
+                            Loading more...
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

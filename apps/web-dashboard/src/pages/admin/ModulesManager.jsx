@@ -232,7 +232,7 @@ export default function ModulesManager() {
                     {!mod.isSystem && (
                       <button
                         onClick={() => handleDelete(mod)}
-                        className="p-1.5 rounded text-[var(--vz-text-muted)] hover:text-danger hover:bg-danger/10 transition-colors"
+                        className="p-1.5 rounded text-danger hover:text-danger-dark hover:bg-danger/10 transition-colors"
                       >
                         <Trash2 size={15} />
                       </button>

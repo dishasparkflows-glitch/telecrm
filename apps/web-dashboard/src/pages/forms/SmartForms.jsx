@@ -221,7 +221,7 @@ export default function SmartForms() {
                    <button onClick={() => setEditingForm(form)} className="p-1.5 rounded hover:bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:text-primary transition-colors" title="Settings">
                       <Settings size={14} />
                    </button>
-                   <button onClick={() => handleDeleteForm(form._id)} className="p-1.5 rounded hover:bg-danger/10 text-[var(--vz-text-muted)] hover:text-danger transition-colors" title="Delete">
+                   <button onClick={() => handleDeleteForm(form._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors" title="Delete">
                       <Trash2 size={14} />
                    </button>
                 </div>

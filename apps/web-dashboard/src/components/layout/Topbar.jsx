@@ -15,6 +15,7 @@ import { useNotificationsSocket } from '../../hooks/useNotificationsSocket'
 export default function Topbar() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
   const toast = useToast()
   useNotificationsSocket() // Initialize real-time notifications
   const { theme, sidebarCollapsed } = useSelector((s) => s.ui)
@@ -180,13 +181,15 @@ export default function Topbar() {
         </button>
         
         {/* Dialer Button */}
-        <button
-          onClick={() => dispatch(openDialer())}
-          className="p-2.5 rounded-lg text-[var(--vz-topbar-text)] hover:bg-[var(--vz-input-bg)] transition-colors text-primary"
-          title="Open Dialer"
-        >
-          <Phone size={20} />
-        </button>
+        {location.pathname.startsWith('/leads') && (
+          <button
+            onClick={() => dispatch(openDialer())}
+            className="p-2.5 rounded-lg text-[var(--vz-topbar-text)] hover:bg-[var(--vz-input-bg)] transition-colors text-primary"
+            title="Open Dialer"
+          >
+            <Phone size={20} />
+          </button>
+        )}
 
         {/* Notifications */}
         <NotificationBell notifRef={notifRef} notifOpen={notifOpen} setNotifOpen={setNotifOpen} navigate={navigate} />

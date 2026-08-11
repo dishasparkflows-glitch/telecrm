@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
+import { useLocation } from 'react-router-dom'
 import { closeDialer } from '../../slices/uiSlice'
 import { useInitiateCallMutation } from '../../features/calls/callApi'
-import { Phone, X, Delete, PhoneOff, Mic, MicOff, Volume2, User } from 'lucide-react'
+import { Phone, X, Delete, PhoneOff, User } from 'lucide-react'
+import { useNotificationsSocket } from '../../hooks/useNotificationsSocket'
 
 import { useToast } from '../ui/Toast'
 
@@ -13,8 +15,24 @@ export default function Dialer() {
   const [number, setNumber] = useState('')
   const [status, setStatus] = useState('idle') // idle, calling, active, ended
   const [duration, setDuration] = useState(0)
-  const [muted, setMuted] = useState(false)
   const [initiateCall, { isLoading }] = useInitiateCallMutation()
+  const location = useLocation()
+  const socket = useNotificationsSocket()
+
+  useEffect(() => {
+    if (!socket) return
+    const handleCallCompleted = () => {
+      dispatch(closeDialer())
+    }
+    socket.on('call_completed', handleCallCompleted)
+    return () => socket.off('call_completed', handleCallCompleted)
+  }, [socket, dispatch])
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/leads')) {
+      dispatch(closeDialer())
+    }
+  }, [location.pathname, dispatch])
 
   useEffect(() => {
     if (dialerNumber) setNumber(dialerNumber)
@@ -67,7 +85,7 @@ export default function Dialer() {
       <div className="p-4 bg-primary flex items-center justify-between text-white">
         <div className="flex items-center gap-2">
           <Phone size={18} fill="currentColor" />
-          <span className="font-semibold text-sm">Mock Dialer</span>
+          <span className="font-semibold text-sm">Dialer</span>
         </div>
         <button onClick={() => dispatch(closeDialer())} className="hover:bg-white/20 p-1 rounded-full transition-colors">
           <X size={18} />
@@ -117,7 +135,7 @@ export default function Dialer() {
         <div className="flex justify-center items-center gap-6">
           {status === 'idle' ? (
             <>
-              <button onClick={() => setNumber(prev => prev.slice(0, -1))} className="p-3 text-[var(--vz-text-muted)] hover:text-danger">
+              <button onClick={() => setNumber(prev => prev.slice(0, -1))} className="p-3 text-danger hover:text-danger-dark">
                 <Delete size={20} />
               </button>
               <button 
@@ -131,18 +149,14 @@ export default function Dialer() {
             </>
           ) : status === 'active' ? (
             <>
-              <button onClick={() => setMuted(!muted)} className={`p-3 rounded-full ${muted ? 'bg-danger/10 text-danger' : 'hover:bg-[var(--vz-input-bg)]'}`}>
-                {muted ? <MicOff size={20} /> : <Mic size={20} />}
-              </button>
+              <div className="w-10" />
               <button 
                 onClick={handleEnd}
                 className="w-14 h-14 bg-danger text-white rounded-full flex items-center justify-center shadow-lg shadow-danger/30 hover:bg-danger/90 transition-all active:scale-95"
               >
                 <PhoneOff size={24} fill="currentColor" />
               </button>
-              <button className="p-3 rounded-full hover:bg-[var(--vz-input-bg)]">
-                <Volume2 size={20} />
-              </button>
+              <div className="w-10" />
             </>
           ) : (
             <div className="h-14" />

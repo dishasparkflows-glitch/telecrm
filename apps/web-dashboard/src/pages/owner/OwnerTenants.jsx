@@ -106,7 +106,7 @@ export default function OwnerTenants() {
                     </td>
                     <td className="px-5 py-4 text-[var(--vz-text)]">{email}</td>
                     <td className="px-5 py-4">
-                      <Badge color="soft-primary">{t.planId?.name || 'N/A'}</Badge>
+                      <Badge color="soft-primary">{t.subscription?.planId?.name || 'N/A'}</Badge>
                     </td>
                     <td className="px-5 py-4">
                       <Badge color={STATUS_COLORS[status] || 'primary'}>{status}</Badge>

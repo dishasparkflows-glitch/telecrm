@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Search, Filter, UserPlus, Building2, Trash2, Edit3, X, Users, Shield, Circle, Download, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { User, Search, Filter, UserPlus, Building2, Trash2, Edit3, X, Users, Shield, Circle, Download, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, Phone } from 'lucide-react'
 import { useListUsersQuery, useInviteUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../features/users/userApi'
 import { useListRolesQuery } from '../../features/roles/roleApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
@@ -24,14 +24,18 @@ const formatLastLogin = (dateStr) => {
 function UserRowSkeleton() {
   return (
     <tr className="border-b border-[var(--vz-border)] animate-pulse">
-      <td className="px-6 py-3 w-12"><div className="w-4 h-4 rounded bg-[var(--vz-border)]" /></td>
       <td className="px-6 py-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-[var(--vz-border)]" />
           <div className="space-y-1.5">
             <div className="h-3.5 w-24 rounded bg-[var(--vz-border)]" />
-            <div className="h-3 w-36 rounded bg-[var(--vz-border)]" />
           </div>
+        </div>
+      </td>
+      <td className="px-6 py-3">
+        <div className="space-y-1.5">
+          <div className="h-3 w-32 rounded bg-[var(--vz-border)]" />
+          <div className="h-3 w-24 rounded bg-[var(--vz-border)]" />
         </div>
       </td>
       <td className="px-6 py-3"><div className="h-6 w-28 rounded-full bg-[var(--vz-border)]" /></td>
@@ -232,19 +236,11 @@ export default function UsersList() {
         </div>
 
         {/* Users Table */}
-        <div className="px-6 py-4 flex items-center justify-between">
-          <span className="text-sm font-medium text-[var(--vz-text-muted)]">
-            Total <span className="font-bold text-[var(--vz-heading)]">{usersPagination.total || filteredUsers.length}</span> users
-          </span>
-        </div>
         <div className="overflow-x-auto border-t border-[var(--vz-border)]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--vz-border)] bg-gray-50/50 dark:bg-[var(--vz-body-bg)]/30">
-                <th className="px-6 py-3 w-12 text-center">
-                  <input type="checkbox" className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer" />
-                </th>
-                {['User', 'Role', 'Branch', 'Status', 'Last Login', 'Actions'].map((col) => (
+                {['User', 'Contact', 'Role', 'Branch', 'Status', 'Last Login', 'Actions'].map((col) => (
                   <th
                     key={col}
                     className={`px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-[var(--vz-text-muted)] ${col === 'Actions' ? 'text-right' : 'text-left'}`}
@@ -267,7 +263,7 @@ export default function UsersList() {
                 [...Array(5)].map((_, i) => <UserRowSkeleton key={i} />)
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-16 text-[var(--vz-text-muted)]">
+                  <td colSpan={7} className="text-center py-16 text-[var(--vz-text-muted)]">
                     {search || hasActiveFilters ? 'No users match your search or filters.' : 'No users found.'}
                   </td>
                 </tr>
@@ -280,9 +276,6 @@ export default function UsersList() {
 
                   return (
                     <tr key={user._id} className="border-b border-[var(--vz-border)] last:border-b-0 hover:bg-gray-50/50 dark:hover:bg-[var(--vz-body-bg)]/40 transition-colors">
-                      <td className="px-6 py-3 text-center">
-                        <input type="checkbox" className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer" />
-                      </td>
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-[#f3f0ff] dark:bg-purple-900/20 text-[#6d28d9] dark:text-purple-400 flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 border border-[#e9d5ff] dark:border-purple-800">
@@ -294,8 +287,33 @@ export default function UsersList() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-bold text-[var(--vz-heading)] truncate leading-tight">{userName || 'Unnamed User'}</div>
-                            <div className="text-xs text-[var(--vz-text-muted)] font-medium truncate leading-tight mt-0.5">{userEmail}</div>
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex flex-col gap-1 justify-center min-w-[140px]">
+                          {userEmail ? (
+                            <div className="flex items-center gap-1.5 text-xs text-[var(--vz-text-muted)] group hover:text-primary transition-colors cursor-pointer">
+                              <Mail size={12} className="shrink-0" />
+                              <span className="truncate">{userEmail}</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-xs text-[var(--vz-text-muted)] opacity-50">
+                              <Mail size={12} className="shrink-0" />
+                              <span>—</span>
+                            </div>
+                          )}
+                          {user.contact?.phone ? (
+                            <div className="flex items-center gap-1.5 text-xs text-[var(--vz-text-muted)] group hover:text-primary transition-colors cursor-pointer">
+                              <Phone size={12} className="shrink-0" />
+                              <span className="truncate">{user.contact.phone}</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-xs text-[var(--vz-text-muted)] opacity-50">
+                              <Phone size={12} className="shrink-0" />
+                              <span>—</span>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-3">
@@ -340,7 +358,7 @@ export default function UsersList() {
                           {user._id !== currentUser?._id && (
                             <button
                               onClick={() => setConfirmDelete({ isOpen: true, user })}
-                              className="p-1.5 text-[var(--vz-text-muted)] hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                              className="p-1.5 text-danger hover:text-danger-dark hover:bg-danger/10 rounded transition-colors"
                               title="Delete User"
                             >
                               <Trash2 size={15} />
