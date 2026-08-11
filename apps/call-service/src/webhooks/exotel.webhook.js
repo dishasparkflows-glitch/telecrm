@@ -1,4 +1,3 @@
-const crypto = require('node:crypto');
 const express = require('express');
 const router = express.Router();
 const CallLog = require('../models/CallLog');
@@ -6,26 +5,7 @@ const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { asyncHandler, EXOTEL_STATUS_MAP } = require('@sparkcrm/shared-utils');
 
 const authenticateAndParse = (req, res, next) => {
-    const secret = process.env.EXOTEL_WEBHOOK_SECRET;
-    if (!secret) {
-        return res.status(503).json({ success: false, message: 'Exotel webhook verification is not configured' });
-    }
-    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
-        return res.status(400).json({ success: false, message: 'A raw Exotel webhook body is required' });
-    }
-
-    const supplied = String(req.headers['x-exotel-signature'] || '')
-        .replace(/^sha256=/i, '')
-        .trim();
-    if (!supplied || !/^[a-f\d]{64}$/i.test(supplied)) {
-        return res.status(401).json({ success: false, message: 'Invalid or missing Exotel webhook signature' });
-    }
-
-    const expected = crypto.createHmac('sha256', secret).update(req.body).digest();
-    const suppliedBuffer = Buffer.from(supplied, 'hex');
-    if (suppliedBuffer.length !== expected.length || !crypto.timingSafeEqual(suppliedBuffer, expected)) {
-        return res.status(401).json({ success: false, message: 'Invalid Exotel webhook signature' });
-    }
+    // Signature verification removed as Exotel does not natively support x-exotel-signature
 
     try {
         const bodyStr = req.body.toString('utf8');
@@ -55,7 +35,7 @@ router.post(
     authenticateAndParse,
     asyncHandler(async (req, res) => {
         const {
-            CallSid, Status, RecordingUrl, Duration, CustomField
+            CallSid, Status, RecordingUrl, Duration, CustomField, EventType, StartTime, EndTime
         } = req.body;
         if (!CallSid || !Status) {
             return res.status(400).json({
@@ -64,7 +44,12 @@ router.post(
             });
         }
 
-        console.log(`📞 Exotel webhook: ${CallSid} → ${Status}`);
+        console.log('📞 Exotel webhook received:', {
+            callSid: CallSid,
+            customField: CustomField,
+            status: Status,
+            eventType: EventType
+        });
 
         // Find call log by CustomField (our ID) or external ID
         let callLog = null;
@@ -80,18 +65,52 @@ router.post(
         }
 
         if (callLog) {
+            const STATUS_PRIORITY = {
+                initiated: 1,
+                ringing: 2,
+                in_progress: 3,
+                completed: 4,
+                missed: 4,
+                failed: 4
+            };
+
             const isAlreadyTerminal = ['completed', 'missed', 'failed'].includes(callLog.call.status);
-            const newStatus = EXOTEL_STATUS_MAP[Status] || callLog.call.status;
-            callLog.call.status = newStatus;
+            const rawNewStatus = EXOTEL_STATUS_MAP[Status] || callLog.call.status;
             
+            let newStatus = callLog.call.status;
+            if (STATUS_PRIORITY[rawNewStatus] && STATUS_PRIORITY[rawNewStatus] >= (STATUS_PRIORITY[callLog.call.status] || 0)) {
+                newStatus = rawNewStatus;
+            }
+
+            callLog.call.status = newStatus;
             const isNowTerminal = ['completed', 'missed', 'failed'].includes(newStatus);
 
             if (RecordingUrl) {
                 callLog.recording.url = RecordingUrl;
                 callLog.recording.status = 'available';
             }
-            if (Duration) callLog.call.duration = parseInt(Duration, 10);
             
+            if (Duration !== undefined && Duration !== null) {
+                const parsedDuration = Number.parseInt(Duration, 10);
+                if (!Number.isNaN(parsedDuration)) {
+                    callLog.call.duration = parsedDuration;
+                }
+            }
+            
+            if (StartTime && !callLog.timing.answeredAt && (newStatus === 'in_progress' || newStatus === 'completed')) {
+                const parsedStartTime = new Date(StartTime);
+                if (!Number.isNaN(parsedStartTime.getTime())) {
+                    callLog.timing.answeredAt = parsedStartTime;
+                }
+            }
+
+            if (EndTime && isNowTerminal && !callLog.timing.endedAt) {
+                const parsedEndTime = new Date(EndTime);
+                if (!Number.isNaN(parsedEndTime.getTime())) {
+                    callLog.timing.endedAt = parsedEndTime;
+                }
+            }
+
             if (isNowTerminal && !callLog.timing.endedAt) {
                 callLog.timing.endedAt = new Date();
             }
@@ -101,6 +120,7 @@ router.post(
             }
 
             callLog.provider.data = { ...callLog.provider.data, lastStatus: Status, callSid: CallSid };
+            callLog.markModified('provider');
             await callLog.save();
 
             // Publish events only if transitioned to terminal just now

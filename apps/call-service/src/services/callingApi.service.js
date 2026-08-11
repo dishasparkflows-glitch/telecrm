@@ -120,6 +120,12 @@ const initiateCall = async ({ fromNumber, toNumber, virtualNumber, callId }) => 
             params.append('CustomField', String(callId));
         }
 
+        const callbackUrl = 'https://stopper-thyself-rancidity.ngrok-free.dev/webhooks/exotel';
+        if (callbackUrl) {
+            params.append('StatusCallback', callbackUrl);
+            params.append('StatusCallbackEvents[0]', 'terminal');
+        }
+
         console.log('📞 Exotel request:', {
             url,
             from,

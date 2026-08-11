@@ -179,6 +179,24 @@ const getUsers = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/users/all
+ * Get all active users id and name for dropdowns
+ */
+const getAllUsersList = asyncHandler(async (req, res) => {
+    const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
+    filter.isActive = true;
+
+    const users = await User.find(filter).select('_id contact.name').sort({ 'contact.name': 1 });
+
+    const formattedUsers = users.map((u) => ({
+        _id: u._id,
+        name: u.contact?.name || '',
+    }));
+
+    ApiResponse.success(res, formattedUsers);
+});
+
+/**
  * GET /api/users/:id
  * Get a user by ID
  */
@@ -295,6 +313,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 module.exports = {
     inviteUser,
     getUsers,
+    getAllUsersList,
     getUserById,
     updateUser,
     updateUserRole,

@@ -55,7 +55,7 @@ const assignLeadFromPolicy = async ({ tenantId, branchId = null, source, priorit
                     tenantId: toObjectId(tenantId),
                     ...(branchId && branchId !== 'all' ? { branchId: toObjectId(branchId) } : {}),
                     isArchived: false,
-                    stage: { $in: activeStages },
+                    'pipeline.stage': { $in: activeStages },
                     assignedTo: { $in: policy.agentIds },
                 },
             },

@@ -10,6 +10,10 @@ export const userApi = baseApi.injectEndpoints({
             query: (params) => ({ url: '/users', params }),
             providesTags: ['Users'],
         }),
+        getAllUsersList: builder.query({
+            query: () => '/users/all',
+            providesTags: ['Users'],
+        }),
         getUser: builder.query({
             query: (id) => `/users/${id}`,
             providesTags: (result, error, id) => [{ type: 'Users', id }],
@@ -59,6 +63,7 @@ export const userApi = baseApi.injectEndpoints({
 export const {
     useListUsersQuery,
     useGetUsersQuery,
+    useGetAllUsersListQuery,
     useGetUserQuery,
     useUpdateUserMutation,
     useUpdateUserRoleMutation,

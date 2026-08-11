@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux'
 import { useParams, useNavigate } from 'react-router-dom'
 import { openDialer } from '../../slices/uiSlice'
 import { useGetLeadQuery, useGetLeadTimelineQuery, useUpdateLeadMutation, useAddNoteMutation, useAssignLeadMutation } from '../../features/leads/leadApi'
-import { useGetUsersQuery } from '../../features/users/userApi'
+import { useGetAllUsersListQuery } from '../../features/users/userApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
 import { useGetProfileQuery } from '../../features/tenant/tenantApi'
 import { useGetChatQuery } from '../../features/whatsapp/whatsappApi'
@@ -41,12 +41,12 @@ export default function LeadDetail() {
   const [editForm, setEditForm] = useState(null)
 
   const { data, isLoading } = useGetLeadQuery(id)
-  const { data: timelineData, isFetching: timelineFetching } = useGetLeadTimelineQuery({ id, limit: 100 })
-  const { data: usersData } = useGetUsersQuery()
+  const { data: timelineData, isFetching: timelineFetching } = useGetLeadTimelineQuery({ id, limit: 100 }, { skip: activeTab !== 'timeline' })
+  const { data: usersData } = useGetAllUsersListQuery()
   const { data: fieldsData } = useGetCustomFieldsQuery()
   const { data: profileData } = useGetProfileQuery()
-  const { data: whatsappChatData, isFetching: whatsappFetching } = useGetChatQuery(id)
-  const { data: callLogsData, isFetching: callsFetching } = useGetCallLogsQuery({ leadId: id, limit: 50 })
+  const { data: whatsappChatData, isFetching: whatsappFetching } = useGetChatQuery(id, { skip: activeTab !== 'whatsapp' })
+  const { data: callLogsData, isFetching: callsFetching } = useGetCallLogsQuery({ leadId: id, limit: 50 }, { skip: activeTab !== 'calls' })
   const [getCallRecording] = useLazyGetCallRecordingQuery()
   const [updateLead] = useUpdateLeadMutation()
   const [addNote, { isLoading: addingNote }] = useAddNoteMutation()
@@ -154,8 +154,8 @@ export default function LeadDetail() {
   const tabs = [
     { key: 'overview', label: 'Overview', icon: Activity },
     { key: 'notes', label: 'Notes', icon: StickyNote, count: lead.notes?.length || 0 },
-    { key: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, count: whatsappMessages.length },
-    { key: 'calls', label: 'Calls', icon: Phone, count: callLogs.length },
+    { key: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, count: whatsappChatData ? whatsappMessages.length : undefined },
+    { key: 'calls', label: 'Calls', icon: Phone, count: callLogsData ? callLogs.length : undefined },
     { key: 'timeline', label: 'Timeline', icon: Clock },
   ]
 

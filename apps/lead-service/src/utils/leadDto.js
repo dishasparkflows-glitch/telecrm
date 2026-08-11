@@ -15,6 +15,7 @@ const LEAD_CREATE_FIELDS = Object.freeze([
     'followUpAt',
     'customFields',
     'address',
+    'assignedTo',
 ]);
 
 const LEAD_UPDATE_FIELDS = Object.freeze(
