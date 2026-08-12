@@ -1,7 +1,6 @@
 const cron = require('node-cron');
 const CallLog = require('../models/CallLog');
 const callingApiService = require('../services/callingApi.service');
-const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const axios = require('axios');
 const { uploadBufferToR2 } = require('@sparkcrm/shared-utils');
 
@@ -21,13 +20,13 @@ const syncMissingExotelRecordings = async () => {
         const stuckCalls = await CallLog.find({
             'provider.name': 'exotel',
             isSyncing: { $ne: true },
-            // 'audit.createdAt': { $gte: startOfToday },
-            // 'call.status': { $in: ['initiated', 'ringing', 'in_progress'] },
-            // $or: [
-            //     { 'recording.url': null },
-            //     { 'recording.url': '' },
-            //     { 'recording.url': { $exists: false } }
-            // ]
+            'audit.createdAt': { $gte: startOfToday },
+            'call.status': { $in: ['initiated', 'ringing', 'in_progress'] },
+            $or: [
+                { 'recording.url': null },
+                { 'recording.url': '' },
+                { 'recording.url': { $exists: false } }
+            ]
         });
 
         if (stuckCalls.length === 0) {
@@ -78,8 +77,7 @@ const syncMissingExotelRecordings = async () => {
                 }
 
                 // Sync recording URL
-                const hasExotelUrl = callLog.recording.url && callLog.recording.url.includes('exotel.com');
-                if (details.recordingUrl && (!callLog.recording.url || hasExotelUrl)) {
+                if (details.recordingUrl && (!callLog.recording.url)) {
                     console.log(`[CRON] Recording recovered for Call SID: ${callSid}. Downloading from Exotel...`);
                     try {
                         // Download the audio file from Exotel (requires Basic Auth)
@@ -92,12 +90,13 @@ const syncMissingExotelRecordings = async () => {
                         });
                         console.log(`✅ [CRON] Recording downloaded, size: ${response.data.byteLength} bytes`);
                         const buffer = Buffer.from(response.data);
-                        // Upload to Cloudflare R2 using the desired path structure
-                        const fileName = `${callLog.tenantId}/${callLog.userId}/${callLog.leadId}/recordings/${callSid}.mp3`;
-                        const r2Url = await uploadBufferToR2(buffer, fileName, 'audio/mpeg');
-                        
-                        callLog.recording.url = r2Url;
-                        callLog.recording.status = 'ready';
+                        const objectKey = `${callLog.tenantId}/${callLog.userId}/${callLog.leadId}/recordings/${callSid}.mp3`;
+                        await uploadBufferToR2(buffer, objectKey, 'audio/mpeg');
+                        callLog.isSyncing = true;
+                        callLog.recording.url = details.recordingUrl;
+                        callLog.recording.objectKey = objectKey;
+                        callLog.recording.mimeType = 'audio/mpeg';
+                        callLog.recording.status = 'available';
                         callLog.recording.fetchedAt = new Date();
                         updated = true;
                         console.log(`✅ [CRON] Uploaded recording to R2 for Call SID: ${callSid}`);
@@ -110,6 +109,8 @@ const syncMissingExotelRecordings = async () => {
                             callLog.recording.fetchedAt = new Date();
                             updated = true;
                         }
+                    } finally {
+                        callLog.isSyncing = false;
                     }
                 }
 
@@ -153,8 +154,8 @@ const syncMissingExotelRecordings = async () => {
 };
 
 const registerCronJobs = () => {
-    // Run every 2 minutes
-    cron.schedule('*/1 * * * *', () => {
+    // Run every 5 minutes
+    cron.schedule('*/5 * * * *', () => {
         syncMissingExotelRecordings().catch(console.error);
     });
     console.log('✅ call-service: Cron jobs registered');

@@ -30,16 +30,24 @@
   },
   "dependencies": {
     "@aws-sdk/s3-request-presigner": "^3.998.0",
+    "@nx/devkit": "^23.1.1",
+    "@nx/workspace": "^23.1.1",
     "axios": "^1.13.5",
     "node-cron": "^4.2.1"
   },
   "devDependencies": {
-    "@nx/js": "22.5.1",
+    "@nx/js": "^23.1.1",
     "eslint-plugin-react": "^7.37.5",
-    "nx": "22.5.1"
+    "nx": "^23.1.1"
   },
   "workspaces": [
     "apps/*",
     "libs/*"
-  ]
+  ],
+  "allowScripts": {
+    "nx@23.1.1": true,
+    "esbuild@0.28.2": true,
+    "protobufjs@7.6.5": true,
+    "@whiskeysockets/baileys@7.0.0-rc14": true
+  }
 }

@@ -7,7 +7,7 @@ import { useGetAllUsersListQuery } from '../../features/users/userApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
 import { useGetProfileQuery } from '../../features/tenant/tenantApi'
 import { useGetChatQuery } from '../../features/whatsapp/whatsappApi'
-import { useGetCallLogsQuery, useLazyGetCallRecordingQuery } from '../../features/calls/callApi'
+import { useGetCallLogsQuery } from '../../features/calls/callApi'
 
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
@@ -47,7 +47,6 @@ export default function LeadDetail() {
   const { data: profileData } = useGetProfileQuery()
   const { data: whatsappChatData, isFetching: whatsappFetching } = useGetChatQuery(id, { skip: activeTab !== 'whatsapp' })
   const { data: callLogsData, isFetching: callsFetching } = useGetCallLogsQuery({ leadId: id, limit: 50 }, { skip: activeTab !== 'calls' })
-  const [getCallRecording] = useLazyGetCallRecordingQuery()
   const [updateLead] = useUpdateLeadMutation()
   const [addNote, { isLoading: addingNote }] = useAddNoteMutation()
   const [assignLead] = useAssignLeadMutation()
@@ -139,14 +138,6 @@ export default function LeadDetail() {
     }
   }
 
-  const handlePlayRecording = async (callId) => {
-    try {
-      const response = await getCallRecording(callId).unwrap()
-      if (response.data?.playbackUrl) window.open(response.data.playbackUrl, '_blank', 'noopener,noreferrer')
-    } catch (err) {
-      toast(err.data?.message || 'Recording is not available', 'error')
-    }
-  }
 
   const leadScoreVal = lead.scoring?.score ?? lead.score ?? 0
   const scoreColor = leadScoreVal >= 70 ? 'text-secondary' : leadScoreVal >= 40 ? 'text-warning' : 'text-danger'
@@ -456,7 +447,7 @@ export default function LeadDetail() {
                         </div>
                         <div className="text-right">
                           {call.disposition?.code && <Badge color="info">{call.disposition.code}</Badge>}
-                          {(call.recording?.status === 'available' || call.recording?.url) && <button onClick={() => handlePlayRecording(call._id)} className="block ml-auto text-[10px] text-primary hover:underline mt-1">Play recording</button>}
+                          {call.recording?.playbackUrl && <a href={call.recording.playbackUrl} target="_blank" rel="noopener noreferrer" className="block ml-auto text-[10px] text-primary hover:underline mt-1">Play recording</a>}
                           <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{call.timing?.initiatedAt || call.startedAt || call.audit?.createdAt || call.meta?.createdAt ? new Date(call.timing?.initiatedAt || call.startedAt || call.audit?.createdAt || call.meta?.createdAt).toLocaleString() : '—'}</p>
                         </div>
                       </div>

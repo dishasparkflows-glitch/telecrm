@@ -1,9 +1,8 @@
 const CallLog = require('../models/CallLog');
-const { ApiResponse, ApiError, asyncHandler, CALL_STATUS, buildScopeFilter } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, CALL_STATUS, buildScopeFilter, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const callingApi = require('../services/callingApi.service');
 const { findLeadByPhone } = require('../services/leadLookup.service');
-const { ALLOWED_AUDIO_TYPES, uploadPrivateRecording, createRecordingPlaybackUrl } = require('../services/recordingStorage.service');
 
 /**
  * POST /api/calls/initiate
@@ -235,60 +234,17 @@ const syncMobileCalls = asyncHandler(async (req, res) => {
     ApiResponse.success(res, results, `Mobile sync complete: ${results.created} created, ${results.duplicates} duplicates`);
 });
 
-const uploadCallRecording = asyncHandler(async (req, res) => {
-    const filter = buildScopeFilter(req, { ownerField: 'userId', module: 'calls' });
-    filter._id = req.params.id;
-    const callLog = await CallLog.findOne(filter).select('+recording.objectKey');
-    if (!callLog) throw ApiError.notFound('Call log not found');
-
-    const contentType = String(req.body.contentType || '').toLowerCase();
-    if (!ALLOWED_AUDIO_TYPES.has(contentType)) throw ApiError.badRequest('Unsupported recording audio type');
-    const encoded = String(req.body.contentBase64 || '').replace(/^data:[^;]+;base64,/, '');
-    if (!encoded) throw ApiError.badRequest('contentBase64 is required');
-
-    let buffer;
-    try {
-        buffer = Buffer.from(encoded, 'base64');
-    } catch {
-        throw ApiError.badRequest('Invalid base64 recording');
-    }
-    if (!buffer.length) throw ApiError.badRequest('Recording is empty');
-    if (buffer.length > 7 * 1024 * 1024) throw ApiError.badRequest('Recording exceeds the 7 MB mobile upload limit');
-
-    callLog.recording.status = 'pending';
-    await callLog.save();
-    try {
-        callLog.recording.objectKey = await uploadPrivateRecording({
-            buffer,
-            tenantId: callLog.tenantId,
-            callId: callLog._id,
-            contentType,
-        });
-        callLog.recording.mimeType = contentType;
-        callLog.recording.duration = Math.max(0, Number(req.body.duration) || callLog.call.duration || 0);
-        callLog.recording.status = 'available';
-        callLog.recording.url = null;
-        await callLog.save();
-    } catch (error) {
-        callLog.recording.status = 'failed';
-        await callLog.save();
-        throw ApiError.internal(error.message || 'Recording upload failed');
-    }
-
-    ApiResponse.success(res, { callId: callLog._id, recordingStatus: callLog.recording.status }, 'Call recording uploaded securely');
-});
-
 const getCallRecording = asyncHandler(async (req, res) => {
     const filter = buildScopeFilter(req, { ownerField: 'userId', module: 'calls' });
     filter._id = req.params.id;
     const callLog = await CallLog.findOne(filter).select('+recording.objectKey');
     if (!callLog) throw ApiError.notFound('Call log not found');
     if (callLog.recording.objectKey) {
-        const playbackUrl = await createRecordingPlaybackUrl(callLog.recording.objectKey, callLog.recording.mimeType, 300);
-        return ApiResponse.success(res, { playbackUrl, expiresIn: 300, recordingStatus: callLog.recording.status }, 'Recording playback URL generated');
+        const playbackUrl = await getPresignedDownloadUrl(callLog.recording.objectKey);
+        return ApiResponse.success(res, { playbackUrl, recordingStatus: callLog.recording.status }, 'Recording playback URL generated');
     }
     if (callLog.recording.url) {
-        return ApiResponse.success(res, { playbackUrl: callLog.recording.url, expiresIn: null, recordingStatus: 'available' }, 'Provider recording URL fetched');
+        return ApiResponse.success(res, { playbackUrl: callLog.recording.url, recordingStatus: 'available' }, 'Provider recording URL fetched');
     }
     throw ApiError.notFound('No recording is available for this call');
 });
@@ -309,20 +265,46 @@ const getCallLogs = asyncHandler(async (req, res) => {
     const safePage = Math.max(parseInt(page) || 1, 1);
     const skip = (safePage - 1) * safeLimit;
     const [dbLogs, total] = await Promise.all([
-        CallLog.find(filter).sort({ 'audit.createdAt': -1 }).skip(skip).limit(safeLimit),
+        CallLog.find(filter)
+            .sort({ 'audit.createdAt': -1 })
+            .skip(skip)
+            .limit(safeLimit),
         CallLog.countDocuments(filter),
     ]);
 
-    const logs = dbLogs.map(log => {
-        const obj = log.toObject();
-        obj.recording = {
-            ...obj.recording,
-            url: obj.recording?.url || null
-        };
-        return obj;
-    });
+    // Generate signed playback URLs in parallel for logs that have an R2 objectKey
+    const logs = await Promise.all(
+        dbLogs.map(async log => {
+            const obj = log.toObject();
+            let playbackUrl = obj.recording?.url || null;
+            if (obj.recording?.objectKey) {
+                try {
+                    playbackUrl = await getPresignedDownloadUrl(obj.recording.objectKey);
+                } catch {
+                    playbackUrl = obj.recording?.url || null;
+                }
+            }
+            return {
+                _id: obj._id,
+                tenantId: obj.tenantId,
+                branchId: obj.branchId,
+                userId: obj.userId,
+                leadId: obj.leadId,
+                numbers: obj.numbers,
+                call: obj.call,
+                timing: obj.timing,
+                recording: {
+                    status: obj.recording?.status,
+                    mimeType: obj.recording?.mimeType,
+                    duration: obj.recording?.duration,
+                    playbackUrl,
+                },
+                disposition: obj.disposition,
+                audit: { createdAt: obj.audit?.createdAt },
+            };
+        })
+    );
 
-    // Return the nested structure directly
     ApiResponse.paginated(res, logs, {
         page: safePage, limit: safeLimit, total,
         totalPages: Math.ceil(total / safeLimit),
@@ -381,4 +363,4 @@ const getCallStats = asyncHandler(async (req, res) => {
     ApiResponse.success(res, stats[0] || { totalCalls: 0 });
 });
 
-module.exports = { initiateCall, syncMobileCalls, uploadCallRecording, getCallRecording, getCallLogs, updateDisposition, getCallStats, normalizeMobileCallEntry };
+module.exports = { initiateCall, syncMobileCalls, getCallRecording, getCallLogs, updateDisposition, getCallStats, normalizeMobileCallEntry };

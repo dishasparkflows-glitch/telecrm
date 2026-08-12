@@ -11,7 +11,6 @@ const initiateRateLimiter = rateLimit({
 
 router.post('/initiate', initiateRateLimiter, callCtrl.initiateCall);
 router.post('/mobile/sync', callCtrl.syncMobileCalls);
-router.post('/:id/recording', callCtrl.uploadCallRecording);
 router.get('/:id/recording', callCtrl.getCallRecording);
 router.get('/logs', callCtrl.getCallLogs);
 router.get('/stats', callCtrl.getCallStats);

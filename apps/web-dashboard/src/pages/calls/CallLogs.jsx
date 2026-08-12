@@ -93,8 +93,8 @@ export default function CallLogs() {
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)] capitalize">{log.disposition?.code || '—'}</td>
                       <td className="px-4 py-3 text-[var(--vz-text)]">
-                        {log.recording?.status === 'ready' && log.recording?.url ? (
-                          <audio controls src={log.recording.url} className="h-8 w-48" preload="none" />
+                        {log.recording?.playbackUrl ? (
+                          <audio controls src={log.recording.playbackUrl} className="h-8 w-48" preload="none" />
                         ) : log.recording?.status === 'processing' ? (
                           <span className="text-xs text-[var(--vz-text-muted)] italic">⏳ Recording processing...</span>
                         ) : (

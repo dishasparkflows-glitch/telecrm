@@ -29,7 +29,7 @@ const callLogSchema = new mongoose.Schema(
         recording: {
             status: { type: String, enum: ['none', 'pending', 'available', 'failed', 'processing', 'ready', 'unavailable'], default: 'none' },
             url: { type: String, default: null },
-            objectKey: { type: String, default: null, select: false },
+            objectKey: { type: String, default: null },
             mimeType: { type: String, default: '' },
             duration: { type: Number, default: 0 },
             fetchedAt: { type: Date, default: null }
@@ -68,13 +68,6 @@ const callLogSchema = new mongoose.Schema(
 
 callLogSchema.index({ tenantId: 1, userId: 1, 'audit.createdAt': -1 });
 callLogSchema.index({ tenantId: 1, leadId: 1, 'audit.createdAt': -1 });
-callLogSchema.index({ tenantId: 1, 'call.status': 1, 'audit.createdAt': -1 });
-callLogSchema.index({ tenantId: 1, 'numbers.to': 1, 'audit.createdAt': -1 });
-callLogSchema.index({ 'provider.externalCallId': 1 });
-callLogSchema.index(
-    { tenantId: 1, userId: 1, 'provider.name': 1, 'provider.externalCallId': 1 },
-    { unique: true, partialFilterExpression: { 'provider.externalCallId': { $type: 'string' } } }
-);
 
 const CallLog = mongoose.model('CallLog', callLogSchema);
 module.exports = CallLog;
