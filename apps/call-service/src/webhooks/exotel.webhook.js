@@ -7,7 +7,7 @@ const callingApiService = require('../services/callingApi.service');
 
 // We no longer need raw parsing since signature verification is removed.
 // Use built-in express parsers which robustly handle charsets and arrays.
-router.use(express.urlencoded({ extended: true, limit: '64kb' }));
+router.use(express.urlencoded({ extended: true, limit: '64kb', type: (req) => !req.is('json') }));
 router.use(express.json({ limit: '64kb' }));
 
 const enrichExotelCallAsync = async (callLogId, callSid, attempt = 1) => {

@@ -12,6 +12,31 @@ export const leadApi = baseApi.injectEndpoints({
                     ? [...result.data.map(({ _id }) => ({ type: 'Lead', id: _id })), { type: 'Lead', id: 'LIST' }]
                     : [{ type: 'Lead', id: 'LIST' }],
         }),
+        getActiveLeads: builder.query({
+            query: (params) => ({
+                url: '/leads/active/basic',
+                params,
+            }),
+            serializeQueryArgs: ({ endpointName, queryArgs }) => {
+                return `${endpointName}-${queryArgs.search || ''}`;
+            },
+            merge: (currentCache, newItems, { arg }) => {
+                if (arg.page === 1) {
+                    return newItems;
+                }
+                if (newItems.data) {
+                    currentCache.data.push(...newItems.data);
+                    currentCache.pagination = newItems.pagination;
+                }
+            },
+            forceRefetch({ currentArg, previousArg }) {
+                return currentArg?.page !== previousArg?.page || currentArg?.search !== previousArg?.search;
+            },
+            providesTags: (result) =>
+                result?.data
+                    ? [...result.data.map(({ _id }) => ({ type: 'Lead', id: _id })), { type: 'Lead', id: 'LIST' }]
+                    : [{ type: 'Lead', id: 'LIST' }],
+        }),
         getLead: builder.query({
             query: (id) => `/leads/${id}`,
             providesTags: (result, error, id) => [{ type: 'Lead', id }],
@@ -171,6 +196,7 @@ export const leadApi = baseApi.injectEndpoints({
 
 export const {
     useGetLeadsQuery,
+    useGetActiveLeadsQuery,
     useGetLeadQuery,
     useGetLeadStatsQuery,
     useGetLeadTimelineQuery,

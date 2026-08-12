@@ -4,7 +4,7 @@ import { useSearchParams, useLocation } from 'react-router-dom'
 import { io as socketIO } from 'socket.io-client'
 import { ROLES } from '../../utils/constants'
 import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
-import { useGetLeadsQuery } from '../../features/leads/leadApi'
+import { useGetActiveLeadsQuery, useGetLeadQuery } from '../../features/leads/leadApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -413,6 +413,7 @@ export default function WhatsApp() {
   const [replyingTo, setReplyingTo] = useState(null)
   const [chatSearch, setChatSearch] = useState('')
   const [contactSearch, setContactSearch] = useState('')
+  const [leadsPage, setLeadsPage] = useState(1)
   const [showCreateTemplate, setShowCreateTemplate] = useState(false)
   const [showEditTemplate, setShowEditTemplate] = useState(false)
   const [templateForm, setTemplateForm] = useState({ name: '', body: '', category: 'UTILITY', language: 'en' })
@@ -431,14 +432,19 @@ export default function WhatsApp() {
   // Chat template picker
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
 
-  const { data: leadsData } = useGetLeadsQuery({ limit: 50 })
+  const { data: leadsData, isFetching: isLeadsFetching } = useGetActiveLeadsQuery({ page: leadsPage, limit: 15, search: contactSearch })
+  const { data: selectedLeadData } = useGetLeadQuery(selectedLead, { skip: !selectedLead })
   const { data: chatData } = useGetChatQuery(selectedLead, {
     skip: !selectedLead,
     pollingInterval: 10000, // Socket.IO is primary; polling is the consistency fallback
     skipPollingIfUnfocused: true,
   })
-  const { data: templatesData } = useGetTemplatesQuery()
-  const { data: chatbotData } = useGetChatbotRulesQuery()
+  const { data: templatesData, isFetching: isTemplatesFetching } = useGetTemplatesQuery(undefined, {
+    skip: activeTab !== 'templates' && activeTab !== 'broadcasts' && !showTemplatePicker,
+  })
+  const { data: chatbotData } = useGetChatbotRulesQuery(undefined, {
+    skip: activeTab !== 'chatbot',
+  })
   const [sendMessage, { isLoading: sending }] = useSendMessageMutation()
   const [replyToMessage, { isLoading: replying }] = useReplyToMessageMutation()
   const [createTemplate] = useCreateTemplateMutation()
@@ -502,9 +508,7 @@ export default function WhatsApp() {
     : messages
   const actionContacts = leads.map((lead) => ({ id: lead._id, name: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim(), phone: lead.contact?.phone }))
 
-  const filteredLeads = contactSearch
-    ? leads.filter((l) => `${l.contact?.firstName} ${l.contact?.lastName}`.toLowerCase().includes(contactSearch.toLowerCase()))
-    : leads
+  const filteredLeads = leads;
 
   // Resolve template body for a specific lead (fill {{N}} from lead fields)
   const resolveTemplate = useCallback((template, lead) => {
@@ -706,12 +710,19 @@ export default function WhatsApp() {
             <div className="p-3 border-b border-[var(--vz-border)]">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]" />
-                <input type="text" placeholder="Search contacts..." value={contactSearch} onChange={(e) => setContactSearch(e.target.value)}
+                <input type="text" placeholder="Search contacts..." value={contactSearch} onChange={(e) => { setContactSearch(e.target.value); setLeadsPage(1); }}
                   className="w-full pl-8 pr-3 py-1.5 rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-sm text-[var(--vz-heading)]
                     placeholder:text-[var(--vz-text-muted)] outline-none focus:border-primary" />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto" onScroll={(e) => {
+              const { scrollTop, scrollHeight, clientHeight } = e.target;
+              if (scrollHeight - scrollTop <= clientHeight + 10 && !isLeadsFetching) {
+                if (leadsData?.pagination?.page < leadsData?.pagination?.totalPages) {
+                  setLeadsPage(p => p + 1);
+                }
+              }
+            }}>
               {filteredLeads.length === 0 ? (
                 <p className="text-center text-xs text-[var(--vz-text-muted)] py-8">No leads with phone numbers</p>
               ) : filteredLeads.map((lead) => (
@@ -738,7 +749,7 @@ export default function WhatsApp() {
             {!selectedLead ? (
               <EmptyState icon={MessageSquare} title="Select a contact" description="Choose a lead from the list to start chatting" />
             ) : (() => {
-              const lead = leads.find(l => l._id === selectedLead)
+              const lead = selectedLeadData?.data || leads.find(l => l._id === selectedLead)
               return (
                 <>
                   {/* Chat header */}
@@ -847,7 +858,9 @@ export default function WhatsApp() {
                         <p className="text-xs font-semibold text-[var(--vz-heading)] flex items-center gap-1.5"><FileText size={12} className="text-primary" /> Quick Templates</p>
                         <button onClick={() => setShowTemplatePicker(false)} className="text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)]"><ChevronDown size={14} /></button>
                       </div>
-                      {templates.filter(t => t.status === 'approved').length === 0 ? (
+                      {isTemplatesFetching ? (
+                        <div className="py-8 flex justify-center"><Loader2 size={16} className="animate-spin text-[var(--vz-text-muted)]" /></div>
+                      ) : templates.filter(t => t.status === 'approved').length === 0 ? (
                         <p className="text-xs text-[var(--vz-text-muted)] text-center py-4">No approved templates yet — create one in the Templates tab</p>
                       ) : (
                         templates.filter(t => t.status === 'approved' || t.status === 'draft').map(t => {

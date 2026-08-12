@@ -519,12 +519,12 @@ const getLeadByPhone = asyncHandler(async (req, res) => {
     const { phone } = req.params;
 
     if (!tenantId) throw ApiError.badRequest('tenantId required');
-    if (!phone)    throw ApiError.badRequest('phone required');
+    if (!phone) throw ApiError.badRequest('phone required');
 
     // Normalise: strip leading + and non-digit chars, then try bare 10-digit and full international
     const digits = phone.replace(/[^0-9]/g, '');
     const variants = [digits];
-    if (digits.length === 10)  variants.push(`91${digits}`);
+    if (digits.length === 10) variants.push(`91${digits}`);
     if (digits.length === 12 && digits.startsWith('91')) variants.push(digits.slice(2));
 
     const lead = await Lead.findOne({
@@ -540,9 +540,46 @@ const getLeadByPhone = asyncHandler(async (req, res) => {
     ApiResponse.success(res, lead, 'Lead found');
 });
 
+const getActiveLeads = asyncHandler(async (req, res) => {
+    const { page, limit, skip } = pagination(req.query);
+
+    const { search } = req.query;
+
+    // Build scope filter based on verified visibility
+    const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'leads' });
+    filter.isArchived = false;
+    filter['contact.phone'] = { $ne: '', $exists: true, $type: 'string' };
+
+    if (search) {
+        const escapedSearch = escapeRegex(search);
+        filter.$or = [
+            { 'contact.firstName': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.lastName': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.phone': { $regex: escapedSearch, $options: 'i' } },
+        ];
+    }
+
+    const [leads, total] = await Promise.all([
+        Lead.find(filter)
+            .select('_id contact')
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        Lead.countDocuments(filter),
+    ]);
+
+    ApiResponse.paginated(res, leads, {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+    });
+});
+
 module.exports = {
     createLead,
     getLeads,
+    getActiveLeads,
     getLead,
     updateLead,
     addNote,

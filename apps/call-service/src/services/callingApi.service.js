@@ -97,6 +97,7 @@ const initiateExotelCall = async (config, { fromNumber, toNumber, callId }) => {
     if (callbackUrl) {
         params.append('StatusCallback', callbackUrl);
         params.append('StatusCallbackEvents[0]', 'terminal');
+        params.append('StatusCallbackContentType', 'application/json');
     }
 
     let res;

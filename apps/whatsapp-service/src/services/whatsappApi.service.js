@@ -328,7 +328,7 @@ const sendReplyMessage = async (toPhoneNumber, source, outbound, tenantId, userI
 
 const sendReaction = async (source, emoji, tenantId, userId = null) => {
     const config = await requireActionConfig(tenantId, userId);
-    const to = normalizePhone(source.direction === 'inbound' ? source.from : source.to);
+    const to = normalizePhone(source.message?.direction === 'inbound' ? source.message?.from : source.message?.to);
     const provider = config.mode === 'qr' ? 'baileys' : 'cloud';
     if (source.provider?.name && source.provider.name !== provider) throw new Error('The source message belongs to a different WhatsApp provider connection');
     if (config.mode === 'qr') return baileysService.sendReactionViaQR(tenantId, userId, to, source, emoji);

@@ -44,6 +44,14 @@ const reactionSchema = new mongoose.Schema({
     reactedAt: { type: Date, default: Date.now },
 }, { _id: false });
 
+const mediaSchema = new mongoose.Schema({
+    mediaUrl: { type: String, default: null },
+    mediaObjectKey: { type: String, default: null, select: false },
+    mediaName: { type: String, default: null },
+    mediaMimeType: { type: String, default: null },
+    mediaSize: { type: Number, default: null },
+}, { _id: false });
+
 const whatsappMessageSchema = new mongoose.Schema(
     {
         tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
@@ -57,13 +65,7 @@ const whatsappMessageSchema = new mongoose.Schema(
             type: { type: String, enum: ['text', 'image', 'video', 'document', 'audio', 'template', 'interactive'], default: 'text' },
             content: { type: String, default: '' },
         },
-        media: {
-            mediaUrl: { type: String, default: null },
-            mediaObjectKey: { type: String, default: null, select: false },
-            mediaName: { type: String, default: null },
-            mediaMimeType: { type: String, default: null },
-            mediaSize: { type: Number, default: null },
-        },
+        media: { type: mediaSchema, default: undefined },
         templateName: { type: String, default: null },
         provider: {
             waMessageId: { type: String, default: null },
@@ -119,6 +121,13 @@ const whatsappMessageSchema = new mongoose.Schema(
         toObject: { transform: removePrivateMediaKey },
     }
 );
+
+whatsappMessageSchema.pre('save', function (next) {
+    if (this.message && !['image', 'video', 'document', 'audio'].includes(this.message.type)) {
+        this.media = undefined;
+    }
+    next();
+});
 
 whatsappMessageSchema.index({ tenantId: 1, leadId: 1, createdAt: -1 });
 whatsappMessageSchema.index({ tenantId: 1, 'message.from': 1, createdAt: -1 });

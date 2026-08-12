@@ -46,24 +46,20 @@ const initiateCall = asyncHandler(async (req, res) => {
         branchId: branchId || null,
         userId: userId,
         leadId: leadId,
-        numbers: {
-            from: agentMobile,
-            to: toNumber
-        },
         call: {
+            from: agentMobile,
+            to: toNumber,
             direction: 'outbound',
             status: CALL_STATUS.INITIATED,
-            duration: 0
+            duration: 0,
+            initiatedAt: new Date(),
+            answeredAt: null,
+            endedAt: null
         },
         provider: {
             name: 'exotel', // Default, will be updated via callingApi
             externalCallId: null,
             data: {}
-        },
-        timing: {
-            initiatedAt: new Date(),
-            answeredAt: null,
-            endedAt: null
         }
     });
 
@@ -169,24 +165,20 @@ const syncMobileCalls = asyncHandler(async (req, res) => {
                 branchId: branchId && branchId !== 'all' ? branchId : null,
                 userId: callerId,
                 leadId: lead?._id || null,
-                numbers: {
+                call: {
                     from: type.direction === 'outbound' ? localNumber : remoteNumber,
                     to: type.direction === 'outbound' ? remoteNumber : localNumber,
-                },
-                call: {
                     direction: type.direction,
                     status: type.status,
-                    duration
+                    duration,
+                    initiatedAt: startedAt,
+                    answeredAt: type.status === CALL_STATUS.COMPLETED ? startedAt : null,
+                    endedAt: new Date(startedAt.getTime() + duration * 1000)
                 },
                 provider: {
                     name: 'mobile',
                     externalCallId,
                     data: { nativeType: entry.type }
-                },
-                timing: {
-                    initiatedAt: startedAt,
-                    answeredAt: type.status === CALL_STATUS.COMPLETED ? startedAt : null,
-                    endedAt: new Date(startedAt.getTime() + duration * 1000)
                 },
                 recording: {
                     status: entry.hasRecording ? 'pending' : 'none'
@@ -287,9 +279,7 @@ const getCallLogs = asyncHandler(async (req, res) => {
                 branchId: obj.branchId,
                 userId: obj.userId,
                 leadId: obj.leadId,
-                numbers: obj.numbers,
                 call: obj.call,
-                timing: obj.timing,
                 recording: {
                     status: obj.recording?.status,
                     mimeType: obj.recording?.mimeType,

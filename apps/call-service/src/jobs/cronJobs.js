@@ -157,9 +157,9 @@ const syncMissingRecordings = async () => {
 
 const registerCronJobs = () => {
     // Run every 5 minutes
-    cron.schedule('*/5 * * * *', () => {
-        syncMissingRecordings().catch(console.error);
-    });
+    // cron.schedule('*/5 * * * *', () => {
+    //     syncMissingRecordings().catch(console.error);
+    // });
     console.log('✅ call-service: Cron jobs registered');
 };
 
