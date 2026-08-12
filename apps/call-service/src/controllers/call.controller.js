@@ -72,7 +72,6 @@ const initiateCall = asyncHandler(async (req, res) => {
         const result = await callingApi.initiateCall({
             fromNumber: agentMobile,
             toNumber,
-            virtualNumber,
             callId: callLog._id
         });
 

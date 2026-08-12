@@ -242,15 +242,19 @@ router.post(
                 const mappedStatus = statusMap[status.status];
                 if (!mappedStatus) continue;
 
-                const updateFields = { status: mappedStatus };
+                const updateFields = { 'delivery.status': mappedStatus };
+                if (mappedStatus === 'sent') updateFields['delivery.sentAt'] = new Date();
+                if (mappedStatus === 'delivered') updateFields['delivery.deliveredAt'] = new Date();
+                if (mappedStatus === 'failed') updateFields['delivery.failedAt'] = new Date();
                 if (mappedStatus === 'read') {
-                    updateFields.isRead = true;
-                    updateFields.readAt = new Date();
+                    updateFields['readState.isRead'] = true;
+                    updateFields['readState.readAt'] = new Date();
+                    updateFields['delivery.whatsappReadAt'] = new Date();
                 }
 
                 try {
                     const updated = await WhatsappMessage.findOneAndUpdate(
-                        { tenantId, waMessageId: status.id },
+                        { tenantId, 'provider.waMessageId': status.id },
                         { $set: updateFields },
                         { new: true }
                     );
@@ -270,7 +274,7 @@ router.post(
             for (const msg of value.messages) {
                 if (msg.type === 'reaction' && msg.reaction?.message_id) {
                     try {
-                        const source = await WhatsappMessage.findOne({ tenantId, waMessageId: msg.reaction.message_id });
+                        const source = await WhatsappMessage.findOne({ tenantId, 'provider.waMessageId': msg.reaction.message_id });
                         if (source) {
                             source.reactions = (source.reactions || []).filter(reaction =>
                                 !(reaction.direction === 'inbound' && reaction.actorPhone === msg.from)
@@ -300,7 +304,7 @@ router.post(
                 console.log(`💬 Inbound from ${msg.from} (tenant ${tenantId}): ${msg.type} — "${content.slice(0, 60)}"`);
 
                 // Deduplicate: skip if we already stored this waMessageId
-                const exists = await WhatsappMessage.exists({ tenantId, waMessageId: msg.id });
+                const exists = await WhatsappMessage.exists({ tenantId, 'provider.waMessageId': msg.id });
                 if (exists) {
                     console.log(`⏭️  Duplicate webhook — waMessageId ${msg.id} already stored`);
                     continue;
@@ -315,27 +319,36 @@ router.post(
                 let savedMessage;
                 try {
                     const referencedMessage = msg.context?.id
-                        ? await WhatsappMessage.findOne({ tenantId, waMessageId: msg.context.id })
+                        ? await WhatsappMessage.findOne({ tenantId, 'provider.waMessageId': msg.context.id })
                         : null;
                     savedMessage = await WhatsappMessage.create({
                         tenantId,
                         branchId,
                         userId,
-                        direction:   'inbound',
-                        from:        msg.from,
-                        to:          bizNumber,
-                        type:        msg.type || 'text',
-                        content,
-                        mediaUrl,
-                        waMessageId: msg.id,
-                        provider:    'cloud',
-                        providerMetadata: { phoneNumberId },
+                        message: {
+                            direction:   'inbound',
+                            from:        msg.from,
+                            to:          bizNumber,
+                            type:        msg.type || 'text',
+                            content,
+                        },
+                        media: {
+                            mediaUrl,
+                        },
+                        provider: {
+                            waMessageId: msg.id,
+                            name: 'cloud',
+                            providerMetadata: { phoneNumberId }
+                        },
                         replyTo: msg.context?.id ? {
                             messageId: referencedMessage?._id || null,
                             waMessageId: msg.context.id,
                             snapshot: referencedMessage ? snapshotMessage(referencedMessage) : null,
                         } : null,
-                        status:      'received',
+                        isForwarded: msg.context?.forwarded || false,
+                        delivery: {
+                            status: 'received'
+                        },
                     });
                 } catch (err) {
                     console.error(`❌ Failed to save inbound message from ${msg.from}:`, err.message);
@@ -407,14 +420,19 @@ router.post(
                             await WhatsappMessage.create({
                                 tenantId,
                                 branchId,
-                                direction:    'outbound',
-                                from:         bizNumber,
-                                to:           msg.from,
-                                type:         matchedRule.responseType === 'template' ? 'template' : 'text',
-                                content:      matchedRule.responseContent,
+                                message: {
+                                    direction:    'outbound',
+                                    from:         bizNumber,
+                                    to:           msg.from,
+                                    type:         matchedRule.responseType === 'template' ? 'template' : 'text',
+                                    content:      matchedRule.responseContent,
+                                },
                                 templateName: matchedRule.responseType === 'template' ? matchedRule.templateName : null,
-                                status:       replyResult.status,
-                                waMessageId:  replyResult.waMessageId,
+                                delivery: { status: replyResult.status },
+                                provider: {
+                                    waMessageId: replyResult.waMessageId,
+                                    name: 'cloud'
+                                },
                             });
                         }
                     } catch (chatbotErr) {

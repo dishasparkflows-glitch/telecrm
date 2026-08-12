@@ -311,18 +311,18 @@ const requireActionConfig = async (tenantId, userId) => {
 const sendReplyMessage = async (toPhoneNumber, source, outbound, tenantId, userId = null) => {
     const config = await requireActionConfig(tenantId, userId);
     const to = normalizePhone(toPhoneNumber);
-    if (!source?.waMessageId) throw new Error('The source message cannot be replied to because it has no provider message ID');
+    if (!source?.provider?.waMessageId) throw new Error('The source message cannot be replied to because it has no provider message ID');
     const provider = config.mode === 'qr' ? 'baileys' : 'cloud';
-    if (source.provider && source.provider !== provider) throw new Error('The source message belongs to a different WhatsApp provider connection');
+    if (source.provider?.name && source.provider.name !== provider) throw new Error('The source message belongs to a different WhatsApp provider connection');
     if (config.mode === 'qr') return baileysService.sendReplyViaQR(tenantId, userId, to, source, outbound);
 
-    const payload = buildMetaReplyPayload(to, source.waMessageId, buildCloudContentPayload(outbound));
+    const payload = buildMetaReplyPayload(to, source.provider.waMessageId, buildCloudContentPayload(outbound));
     const res = await metaPost(config.phoneNumberId, payload, config.accessToken);
     return {
         waMessageId: res.data?.messages?.[0]?.id,
         status: 'sent',
         provider: 'cloud',
-        providerMetadata: { phoneNumberId: config.phoneNumberId, contextMessageId: source.waMessageId },
+        providerMetadata: { phoneNumberId: config.phoneNumberId, contextMessageId: source.provider.waMessageId },
     };
 };
 
@@ -330,16 +330,16 @@ const sendReaction = async (source, emoji, tenantId, userId = null) => {
     const config = await requireActionConfig(tenantId, userId);
     const to = normalizePhone(source.direction === 'inbound' ? source.from : source.to);
     const provider = config.mode === 'qr' ? 'baileys' : 'cloud';
-    if (source.provider && source.provider !== provider) throw new Error('The source message belongs to a different WhatsApp provider connection');
+    if (source.provider?.name && source.provider.name !== provider) throw new Error('The source message belongs to a different WhatsApp provider connection');
     if (config.mode === 'qr') return baileysService.sendReactionViaQR(tenantId, userId, to, source, emoji);
 
-    const payload = buildMetaReactionPayload(to, source.waMessageId, emoji);
+    const payload = buildMetaReactionPayload(to, source.provider.waMessageId, emoji);
     const res = await metaPost(config.phoneNumberId, payload, config.accessToken);
     return {
         waMessageId: res.data?.messages?.[0]?.id || null,
         status: 'sent',
         provider: 'cloud',
-        providerMetadata: { phoneNumberId: config.phoneNumberId, reactionToMessageId: source.waMessageId },
+        providerMetadata: { phoneNumberId: config.phoneNumberId, reactionToMessageId: source.provider.waMessageId },
     };
 };
 

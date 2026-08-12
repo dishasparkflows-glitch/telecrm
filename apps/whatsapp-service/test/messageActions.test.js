@@ -13,14 +13,16 @@ const {
 } = require('../src/services/messageActions.service');
 
 const source = {
-    waMessageId: 'BAE5123456789',
     direction: 'inbound',
     from: '919876543210',
     to: '911234567890',
     type: 'text',
     content: 'original text',
-    provider: 'baileys',
-    providerMetadata: { remoteJid: '919876543210@s.whatsapp.net' },
+    provider: {
+        waMessageId: 'BAE5123456789',
+        name: 'baileys',
+        providerMetadata: { remoteJid: '919876543210@s.whatsapp.net' },
+    }
 };
 
 test('validates a single emoji grapheme and permits reaction removal', () => {
@@ -54,7 +56,7 @@ test('builds a reconstructed Baileys quoted message with the provider key', () =
 
 test('uses native Baileys forwarding only for safely reconstructable Baileys text', () => {
     assert.equal(canNativeForwardBaileys(source), true);
-    assert.equal(canNativeForwardBaileys({ ...source, provider: 'cloud' }), false);
+    assert.equal(canNativeForwardBaileys({ ...source, provider: { name: 'cloud' } }), false);
     assert.equal(canNativeForwardBaileys({ ...source, type: 'image' }), false);
     assert.deepEqual(buildBaileysForwardPayload(source), {
         forward: buildBaileysQuotedMessage(source, source.from),

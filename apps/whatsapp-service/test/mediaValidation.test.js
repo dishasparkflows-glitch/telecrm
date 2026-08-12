@@ -39,13 +39,17 @@ test('strictly decodes base64 and rejects oversized content', () => {
 test('does not serialize private media object keys', () => {
     const message = new WhatsappMessage({
         tenantId,
-        direction: 'outbound',
-        from: 'business',
-        to: '919876543210',
-        mediaObjectKey: createObjectKey(tenantId),
+        message: {
+            direction: 'outbound',
+            from: 'business',
+            to: '919876543210',
+        },
+        media: {
+            mediaObjectKey: createObjectKey(tenantId),
+        },
     });
-    assert.equal(message.toJSON().mediaObjectKey, undefined);
-    assert.equal(message.toObject().mediaObjectKey, undefined);
+    assert.equal(message.toJSON().media?.mediaObjectKey, undefined);
+    assert.equal(message.toObject().media?.mediaObjectKey, undefined);
 });
 
 test('creates opaque tenant-scoped keys without path traversal', () => {

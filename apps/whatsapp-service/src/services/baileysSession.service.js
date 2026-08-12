@@ -36,7 +36,7 @@ const getCurrentWaVersion = async () => {
         if (Array.isArray(result?.version) && result.version.length === 3) {
             cachedWaVersion = result.version;
             cachedWaVersionAt = Date.now();
-            console.log(`ℹ️ [Baileys] WhatsApp Web version ${result.version.join('.')} (latest=${result.isLatest})`);
+            // console.log(`ℹ️ [Baileys] WhatsApp Web version ${result.version.join('.')} (latest=${result.isLatest})`);
             return cachedWaVersion;
         }
     } catch (error) {
@@ -88,7 +88,7 @@ const sessionDir = (tenantId, userId) => {
 
 const applyBaileysReaction = async ({ tenantId, userId, actorPhone, direction, reaction, io, room }) => {
     if (!reaction?.key?.id) return null;
-    const source = await WhatsappMessage.findOne({ tenantId, waMessageId: reaction.key.id });
+    const source = await WhatsappMessage.findOne({ tenantId, 'provider.waMessageId': reaction.key.id });
     if (!source) return null;
     const actorId = direction === 'outbound' ? String(userId) : null;
     source.reactions = (source.reactions || []).filter((entry) => {
@@ -174,7 +174,7 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                 const qrBase64 = await QRCode.toDataURL(qr, { width: 256, margin: 2 });
                 session.qr = qrBase64;
                 io.to(room).emit('wa:qr', { qr: qrBase64 });
-                console.log(`📱 [Baileys] QR emitted to room ${room}`);
+                // console.log(`📱 [Baileys] QR emitted to room ${room}`);
             } catch (err) {
                 console.error('❌ [Baileys] QR generation failed:', err.message);
             }
@@ -188,14 +188,14 @@ const createSession = async (tenantId, userId, io, options = {}) => {
             session.connectedAt = new Date();
             session.retryCount  = 0;
             io.to(room).emit('wa:connected', { phone, connectedAt: session.connectedAt });
-            console.log(`✅ [Baileys] Agent ${userId} connected via number: ${phone}`);
+            // console.log(`✅ [Baileys] Agent ${userId} connected via number: ${phone}`);
         }
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const loggedOut  = statusCode === DisconnectReason.loggedOut;
             
-            console.log(`⚠️ [Baileys] Session ${key} closed. Code: ${statusCode}. LoggedOut: ${loggedOut}`);
+            // console.log(`⚠️ [Baileys] Session ${key} closed. Code: ${statusCode}. LoggedOut: ${loggedOut}`);
             
             if (loggedOut) {
                 // User logged out from their phone — clean up completely
@@ -207,7 +207,7 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                 // Network error / timeout — auto-retry up to 3 times
                 const retryCount = (session.retryCount || 0) + 1;
                 if (retryCount <= 3) {
-                    console.log(`🔄 [Baileys] Reconnecting... attempt ${retryCount}`);
+                    // console.log(`🔄 [Baileys] Reconnecting... attempt ${retryCount}`);
                     session.retryCount = retryCount;
                     session.status = 'reconnecting';
                     session.qr = null;
@@ -248,8 +248,8 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                 }
                 if (!msg.key.id) continue;
                 const confirmed = await WhatsappMessage.findOneAndUpdate(
-                    { tenantId, userId, waMessageId: msg.key.id },
-                    { status: 'sent', lastError: '' },
+                    { tenantId, userId, 'provider.waMessageId': msg.key.id },
+                    { $set: { 'delivery.status': 'sent', 'queue.lastError': '' } },
                     { new: true }
                 );
                 if (confirmed) io.to(room).emit('wa:message', { message: confirmed.toJSON() });
@@ -299,7 +299,7 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                 const lead = await findLeadByPhone(tenantId, from);
                 const leadId = lead?._id || null;
                 if (!leadId) {
-                    console.log(`📩 [Baileys] Ignored message from ${from} (not a lead)`);
+                    // console.log(`📩 [Baileys] Ignored message from ${from} (not a lead)`);
                     continue;
                 }
 
@@ -325,7 +325,7 @@ const createSession = async (tenantId, userId, io, options = {}) => {
 
                 const replyContext = extractBaileysReplyContext(msg);
                 const referencedMessage = replyContext?.waMessageId
-                    ? await WhatsappMessage.findOne({ tenantId, waMessageId: replyContext.waMessageId })
+                    ? await WhatsappMessage.findOne({ tenantId, 'provider.waMessageId': replyContext.waMessageId })
                     : null;
                 const contextNode = msg.message?.extendedTextMessage || mediaMessage;
                 const forwardScore = Number(contextNode?.contextInfo?.forwardingScore || 0);
@@ -334,44 +334,50 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                     tenantId,
                     leadId:      leadId || undefined,
                     userId:      userId || undefined,   // agent who owns the session
-                    direction:   'inbound',
-                    from,
-                    to:          sessions.get(key)?.phone || userId,
-                    type:        messageType,
-                    content,
-                    mediaObjectKey,
-                    mediaName: mediaMessage ? mediaName : null,
-                    mediaMimeType,
-                    mediaSize,
-                    waMessageId: msg.key.id,
-                    provider:    'baileys',
-                    providerMetadata: {
-                        remoteJid: msg.key.remoteJid || remoteJid,
-                        participant: msg.key.participant || null,
-                        fromMe: false,
+                    message: {
+                        direction:   'inbound',
+                        from,
+                        to:          sessions.get(key)?.phone || userId,
+                        type:        messageType,
+                        content,
+                    },
+                    media: {
+                        mediaObjectKey,
+                        mediaName: mediaMessage ? mediaName : null,
+                        mediaMimeType,
+                        mediaSize,
+                    },
+                    provider: {
+                        waMessageId: msg.key.id,
+                        name: 'baileys',
+                        providerMetadata: {
+                            remoteJid: msg.key.remoteJid || remoteJid,
+                            participant: msg.key.participant || null,
+                            fromMe: false,
+                        }
                     },
                     replyTo: replyContext ? {
                         messageId: referencedMessage?._id || null,
                         waMessageId: replyContext.waMessageId,
                         participant: replyContext.participant,
                         snapshot: referencedMessage ? {
-                            waMessageId: referencedMessage.waMessageId,
-                            direction: referencedMessage.direction,
-                            from: referencedMessage.from,
-                            to: referencedMessage.to,
-                            type: referencedMessage.type,
-                            content: referencedMessage.content,
-                            mediaName: referencedMessage.mediaName,
-                            mediaMimeType: referencedMessage.mediaMimeType,
-                            provider: referencedMessage.provider,
+                            waMessageId: referencedMessage.provider?.waMessageId,
+                            direction: referencedMessage.message?.direction || referencedMessage.direction,
+                            from: referencedMessage.message?.from || referencedMessage.from,
+                            to: referencedMessage.message?.to || referencedMessage.to,
+                            type: referencedMessage.message?.type || referencedMessage.type,
+                            content: referencedMessage.message?.content || referencedMessage.content,
+                            mediaName: referencedMessage.media?.mediaName || referencedMessage.mediaName,
+                            mediaMimeType: referencedMessage.media?.mediaMimeType || referencedMessage.mediaMimeType,
+                            provider: referencedMessage.provider?.name || referencedMessage.provider,
                         } : replyContext.snapshot,
                     } : null,
                     isForwarded: Boolean(contextNode?.contextInfo?.isForwarded || forwardScore > 0),
-                    status:      'received',
-                    isRead:      false,
+                    delivery: { status: 'received' },
+                    readState: { isRead: false },
                 });
                 io.to(room).emit('wa:message', { message: savedMessage.toJSON() });
-                console.log(`📩 [Baileys] Inbound from ${from} → lead ${leadId || 'unknown'}: ${content.substring(0, 60)}`);
+                // console.log(`📩 [Baileys] Inbound from ${from} → lead ${leadId || 'unknown'}: ${content.substring(0, 60)}`);
             } catch (err) {
                 console.error('❌ [Baileys] Failed to save inbound message:', err.message);
             }
@@ -385,9 +391,18 @@ const createSession = async (tenantId, userId, io, options = {}) => {
             if (!msgKey?.id) continue;
             const newStatus = statusFromBaileysAck(update?.status);
             if (!newStatus) continue;
+            const updateFields = { 'delivery.status': newStatus };
+            if (newStatus === 'sent') updateFields['delivery.sentAt'] = new Date();
+            if (newStatus === 'delivered') updateFields['delivery.deliveredAt'] = new Date();
+            if (newStatus === 'read') {
+                updateFields['readState.isRead'] = true;
+                updateFields['readState.readAt'] = new Date();
+                updateFields['delivery.whatsappReadAt'] = new Date();
+            }
+
             const updatedMessage = await WhatsappMessage.findOneAndUpdate(
-                { waMessageId: msgKey.id, tenantId },
-                { status: newStatus, ...(newStatus === 'read' ? { isRead: true, readAt: new Date() } : {}) },
+                { 'provider.waMessageId': msgKey.id, tenantId },
+                { $set: updateFields },
                 { new: true }
             );
             if (updatedMessage) io.to(room).emit('wa:message', { message: updatedMessage.toJSON() });
@@ -401,9 +416,18 @@ const createSession = async (tenantId, userId, io, options = {}) => {
             const newStatus = receipt?.readTimestamp ? 'read' : receipt?.receiptTimestamp ? 'delivered' : null;
             if (!newStatus) continue;
             try {
+                const updateFields = { 'delivery.status': newStatus };
+                if (newStatus === 'sent') updateFields['delivery.sentAt'] = new Date();
+                if (newStatus === 'delivered') updateFields['delivery.deliveredAt'] = new Date();
+                if (newStatus === 'read') {
+                    updateFields['readState.isRead'] = true;
+                    updateFields['readState.readAt'] = new Date();
+                    updateFields['delivery.whatsappReadAt'] = new Date();
+                }
+
                 const updatedMessage = await WhatsappMessage.findOneAndUpdate(
-                    { waMessageId: msgKey.id, tenantId },
-                    { status: newStatus, ...(newStatus === 'read' ? { isRead: true, readAt: new Date() } : {}) },
+                    { 'provider.waMessageId': msgKey.id, tenantId },
+                    { $set: updateFields },
                     { new: true }
                 );
                 if (updatedMessage) io.to(room).emit('wa:message', { message: updatedMessage.toJSON() });
@@ -466,7 +490,7 @@ const disconnectSession = async (tenantId, userId) => {
 
     sessions.delete(key);
     _deleteSessionFiles(tenantId, userId);
-    console.log(`🗑️  [Baileys] Session deleted for tenant=${tenantId} user=${userId}`);
+    // console.log(`🗑️  [Baileys] Session deleted for tenant=${tenantId} user=${userId}`);
 };
 
 const requireConnectedSession = (tenantId, userId) => {
@@ -510,7 +534,7 @@ const sendReplyViaQR = async (tenantId, userId, to, source, outbound) => {
     return {
         ...result,
         provider: 'baileys',
-        providerMetadata: { remoteJid: jid, fromMe: true, quotedMessageId: source.waMessageId },
+        providerMetadata: { remoteJid: jid, fromMe: true, quotedMessageId: source.provider?.waMessageId },
     };
 };
 
@@ -521,7 +545,7 @@ const sendReactionViaQR = async (tenantId, userId, to, source, emoji) => {
     return {
         ...result,
         provider: 'baileys',
-        providerMetadata: { remoteJid: jid, fromMe: true, reactionToMessageId: source.waMessageId },
+        providerMetadata: { remoteJid: jid, fromMe: true, reactionToMessageId: source.provider?.waMessageId },
     };
 };
 
@@ -535,7 +559,7 @@ const forwardViaQR = async (tenantId, userId, to, source, outbound) => {
         ...result,
         provider: 'baileys',
         forwardMode: native ? 'native' : 'resend',
-        providerMetadata: { remoteJid: jid, fromMe: true, forwardedSourceMessageId: source.waMessageId || null },
+        providerMetadata: { remoteJid: jid, fromMe: true, forwardedSourceMessageId: source.provider?.waMessageId || null },
     };
 };
 
@@ -555,7 +579,7 @@ const sendTextViaQR = async (tenantId, userId, to, text) => {
 
     try {
         const sent = await session.sock.sendMessage(jid, { text }, { messageId });
-        console.log(`📤 [Baileys] Text sent to ${jid}: ${text.substring(0, 60)}`);
+        // console.log(`📤 [Baileys] Text sent to ${jid}: ${text.substring(0, 60)}`);
         return {
             waMessageId: sent?.key?.id || messageId,
             status: 'sent',
@@ -613,7 +637,7 @@ const restoreAllSessions = async (io) => {
         for (const userId of users) {
             const credsFile = path.join(tenantPath, userId, 'creds.json');
             if (fs.existsSync(credsFile)) {
-                console.log(`🔄 [Baileys] Restoring session tenant=${tenantId} user=${userId}`);
+                // console.log(`🔄 [Baileys] Restoring session tenant=${tenantId} user=${userId}`);
                 createSession(tenantId, userId, io).catch(err => {
                     console.error(`❌ [Baileys] Restore failed ${tenantId}/${userId}:`, err.message);
                 });

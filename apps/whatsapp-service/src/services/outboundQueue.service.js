@@ -6,14 +6,14 @@ const { EVENTS } = require('@sparkcrm/shared-events');
 const MAX_ATTEMPTS = 5;
 
 async function deliver(message) {
-    const payload = message.deliveryPayload || {};
-    if (message.type === 'template') {
-        return whatsappApi.sendTemplateMessage(message.to, message.templateName, payload.languageCode || 'en', payload.templateComponents || [], message.tenantId, message.userId);
+    const payload = message.queue.deliveryPayload || {};
+    if (message.message.type === 'template') {
+        return whatsappApi.sendTemplateMessage(message.message.to, message.templateName, payload.languageCode || 'en', payload.templateComponents || [], message.tenantId, message.userId);
     }
-    if (['image', 'video', 'document', 'audio'].includes(message.type)) {
-        return whatsappApi.sendMediaMessage(message.to, message.type, message.mediaUrl, message.content || '', message.tenantId, message.userId);
+    if (['image', 'video', 'document', 'audio'].includes(message.message.type)) {
+        return whatsappApi.sendMediaMessage(message.message.to, message.message.type, message.media?.mediaUrl, message.message.content || '', message.tenantId, message.userId);
     }
-    return whatsappApi.sendTextMessage(message.to, message.content, message.tenantId, message.userId);
+    return whatsappApi.sendTextMessage(message.message.to, message.message.content, message.tenantId, message.userId);
 }
 
 async function deliverQueuedMessage(messageId) {
@@ -21,45 +21,45 @@ async function deliverQueuedMessage(messageId) {
     const message = await WhatsappMessage.findOneAndUpdate(
         {
             _id: messageId,
-            status: 'queued',
-            $or: [{ processingAt: null }, { processingAt: { $lte: staleBefore } }],
+            'delivery.status': 'queued',
+            $or: [{ 'queue.processingAt': null }, { 'queue.processingAt': { $lte: staleBefore } }],
         },
-        { $set: { processingAt: new Date() } },
+        { $set: { 'queue.processingAt': new Date() } },
         { new: true }
     );
     if (!message) return null;
 
     try {
         const result = await deliver(message);
-        message.status = result.status === 'sent' ? 'sent' : 'queued';
-        message.waMessageId = result.waMessageId || message.waMessageId;
-        message.lastError = result.offline ? 'Waiting for WhatsApp integration configuration' : '';
-        message.processingAt = null;
-        message.nextAttemptAt = message.status === 'queued' ? new Date(Date.now() + 5 * 60_000) : null;
-        if (message.status === 'sent') {
-            message.pendingEvents.push({ event: EVENTS.WHATSAPP_MESSAGE_SENT, data: {
+        message.delivery.status = result.status === 'sent' ? 'sent' : 'queued';
+        message.provider.waMessageId = result.waMessageId || message.provider.waMessageId;
+        message.queue.lastError = result.offline ? 'Waiting for WhatsApp integration configuration' : '';
+        message.queue.processingAt = null;
+        message.queue.nextAttemptAt = message.delivery.status === 'queued' ? new Date(Date.now() + 5 * 60_000) : null;
+        if (message.delivery.status === 'sent') {
+            message.queue.pendingEvents.push({ event: EVENTS.WHATSAPP_MESSAGE_SENT, data: {
                 tenantId: message.tenantId, branchId: message.branchId, messageId: message._id,
                 leadId: message.leadId, status: 'sent', idempotencyKey: `whatsapp:${message._id}:sent`,
             } });
-            if (message.leadId) message.pendingEvents.push({ event: EVENTS.LEAD_UPDATED, data: {
+            if (message.leadId) message.queue.pendingEvents.push({ event: EVENTS.LEAD_UPDATED, data: {
                 tenantId: message.tenantId, branchId: message.branchId, leadId: message.leadId,
                 changes: { lastContactedAt: new Date(), lastActivityAt: new Date() },
                 idempotencyKey: `whatsapp:${message._id}:lead-activity`,
             } });
         }
         await message.save();
-        if (message.pendingEvents.length) await publishPendingMessageEvents(message);
+        if (message.queue.pendingEvents.length) await publishPendingMessageEvents(message);
         return message;
     } catch (error) {
-        message.sendAttempts += 1;
-        message.lastError = String(error.message || error).slice(0, 1000);
-        message.processingAt = null;
-        if (message.sendAttempts >= MAX_ATTEMPTS) {
-            message.status = 'failed';
-            message.nextAttemptAt = null;
+        message.queue.sendAttempts += 1;
+        message.queue.lastError = String(error.message || error).slice(0, 1000);
+        message.queue.processingAt = null;
+        if (message.queue.sendAttempts >= MAX_ATTEMPTS) {
+            message.delivery.status = 'failed';
+            message.queue.nextAttemptAt = null;
         } else {
-            message.status = 'queued';
-            message.nextAttemptAt = new Date(Date.now() + Math.min(60_000, 1000 * (2 ** message.sendAttempts)));
+            message.delivery.status = 'queued';
+            message.queue.nextAttemptAt = new Date(Date.now() + Math.min(60_000, 1000 * (2 ** message.queue.sendAttempts)));
         }
         await message.save();
         return message;
@@ -69,8 +69,8 @@ async function deliverQueuedMessage(messageId) {
 async function retryQueuedMessages(limit = 50) {
     const boundedLimit = Math.max(1, Math.min(Number(limit) || 50, 100));
     const messages = await WhatsappMessage.find({
-        status: 'queued',
-        $or: [{ nextAttemptAt: null }, { nextAttemptAt: { $lte: new Date() } }],
+        'delivery.status': 'queued',
+        $or: [{ 'queue.nextAttemptAt': null }, { 'queue.nextAttemptAt': { $lte: new Date() } }],
     }).select('_id').sort({ 'meta.createdAt': 1 }).limit(boundedLimit).lean();
     for (const message of messages) await deliverQueuedMessage(message._id);
 }

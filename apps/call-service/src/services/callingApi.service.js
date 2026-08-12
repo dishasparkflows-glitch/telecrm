@@ -119,7 +119,7 @@ const normalizeTwilioNumber = (number) => {
  * @param {Object} options - Call options
  * @returns {{ externalCallId, provider, status }}
  */
-const initiateCall = async ({ fromNumber, toNumber, virtualNumber, callId }) => {
+const initiateCall = async ({ fromNumber, toNumber, callId }) => {
     const config = await getConfig();
     if (config.provider === 'exotel') {
         const url = `https://${config.subdomain}/v1/Accounts/${config.sid}/Calls/connect.json`;
@@ -232,6 +232,18 @@ const initiateCall = async ({ fromNumber, toNumber, virtualNumber, callId }) => 
         params.append('From', config.twilioPhoneNumber); // Twilio number to show as caller ID
         params.append('Record', 'true'); // Tell Twilio to record the call
 
+        // Set up real-time status callbacks
+        const statusUrl = new URL(voiceWebhook);
+        statusUrl.pathname = statusUrl.pathname.replace('/voice', '/status');
+        statusUrl.search = ''; // Clear existing search params from voiceWebhook
+        if (callId) statusUrl.searchParams.append('callId', String(callId));
+        
+        params.append('StatusCallback', statusUrl.toString());
+        params.append('StatusCallbackMethod', 'POST');
+        params.append('StatusCallbackEvent', 'initiated');
+        params.append('StatusCallbackEvent', 'ringing');
+        params.append('StatusCallbackEvent', 'answered');
+        params.append('StatusCallbackEvent', 'completed');
 
         let res;
         try {
@@ -330,4 +342,5 @@ module.exports = {
     invalidateCache,
     initiateCall,
     getCallStatus,
+    normalizeTwilioNumber,
 };

@@ -106,20 +106,24 @@ const sendMessage = asyncHandler(async (req, res) => {
         branchId: branchId || null,
         leadId,
         userId: safeUserId,
-        direction: 'outbound',
-        from: userWhatsapp || 'business',
-        to: normalizedTo,
-        type: type || 'text',
-        content: content || '',
-        mediaUrl,
-        mediaObjectKey,
-        mediaName: mediaName ? mediaStorage.sanitizeMediaName(mediaName) : null,
-        mediaMimeType: normalizedMediaMimeType,
-        mediaSize: normalizedMediaSize,
+        message: {
+            direction: 'outbound',
+            from: userWhatsapp || 'business',
+            to: normalizedTo,
+            type: type || 'text',
+            content: content || '',
+        },
+        media: {
+            mediaUrl,
+            mediaObjectKey,
+            mediaName: mediaName ? mediaStorage.sanitizeMediaName(mediaName) : null,
+            mediaMimeType: normalizedMediaMimeType,
+            mediaSize: normalizedMediaSize,
+        },
         templateName,
-        status: waResult.status,
-        waMessageId: waResult.waMessageId,
-        lastError: waResult.deliveryUncertain ? `Awaiting WhatsApp confirmation: ${waResult.error}` : (waResult.error || ''),
+        delivery: { status: waResult.status },
+        provider: { waMessageId: waResult.waMessageId },
+        queue: { lastError: waResult.deliveryUncertain ? `Awaiting WhatsApp confirmation: ${waResult.error}` : (waResult.error || '') },
     });
 
     // Update the connected agent's chat immediately. The dashboard also keeps
@@ -232,23 +236,29 @@ const persistOutboundAction = async ({ identity, source, to, outbound, result, a
         branchId: source.branchId || identity.branchId,
         leadId: source.leadId || null,
         userId: safeUserId,
-        direction: 'outbound',
-        from: identity.from,
-        to,
-        type: outbound.type,
-        content: outbound.content || '',
-        mediaUrl: outbound.persistedMediaUrl || null,
-        mediaObjectKey: outbound.mediaObjectKey || null,
-        mediaName: outbound.mediaName || null,
-        mediaMimeType: outbound.mediaMimeType || null,
-        mediaSize: outbound.mediaSize || null,
-        status: result.status,
-        waMessageId: result.waMessageId || null,
-        provider: result.provider,
-        providerMetadata: result.providerMetadata || {},
-        lastError: result.deliveryUncertain ? 'Awaiting WhatsApp confirmation after an uncertain provider response' : '',
+        message: {
+            direction: 'outbound',
+            from: identity.from,
+            to,
+            type: outbound.type,
+            content: outbound.content || '',
+        },
+        media: {
+            mediaUrl: outbound.persistedMediaUrl || null,
+            mediaObjectKey: outbound.mediaObjectKey || null,
+            mediaName: outbound.mediaName || null,
+            mediaMimeType: outbound.mediaMimeType || null,
+            mediaSize: outbound.mediaSize || null,
+        },
+        delivery: { status: result.status },
+        provider: {
+            waMessageId: result.waMessageId || null,
+            name: result.provider,
+            providerMetadata: result.providerMetadata || {},
+        },
+        queue: { lastError: result.deliveryUncertain ? 'Awaiting WhatsApp confirmation after an uncertain provider response' : '' },
         ...(action === 'reply' ? {
-            replyTo: { messageId: source._id, waMessageId: source.waMessageId, snapshot: snapshotMessage(source) },
+            replyTo: { messageId: source._id, waMessageId: source.provider?.waMessageId, snapshot: snapshotMessage(source) },
         } : {
             isForwarded: true,
             forwardedFrom: {
@@ -291,22 +301,22 @@ const forwardMessage = asyncHandler(async (req, res) => {
     const to = whatsappApi.normalizePhone(req.body.to);
     try { assertForwardable(source); } catch (error) { throw ApiError.badRequest(error.message); }
 
-    let mediaUrl = source.mediaUrl || null;
-    if (source.mediaObjectKey) {
-        mediaUrl = await mediaStorage.createSignedMediaUrl(source.mediaObjectKey, identity.tenantId, {
-            mimeType: source.mediaMimeType,
-            name: source.mediaName,
+    let mediaUrl = source.media?.mediaUrl || null;
+    if (source.media?.mediaObjectKey) {
+        mediaUrl = await mediaStorage.createSignedMediaUrl(source.media.mediaObjectKey, identity.tenantId, {
+            mimeType: source.media.mediaMimeType,
+            name: source.media.mediaName,
         });
     }
     const outbound = {
-        type: source.type,
-        content: source.content,
+        type: source.message?.type || 'text',
+        content: source.message?.content || '',
         mediaUrl,
-        persistedMediaUrl: source.mediaUrl || null,
-        mediaObjectKey: source.mediaObjectKey || null,
-        mediaName: source.mediaName || null,
-        mediaMimeType: source.mediaMimeType || null,
-        mediaSize: source.mediaSize || null,
+        persistedMediaUrl: source.media?.mediaUrl || null,
+        mediaObjectKey: source.media?.mediaObjectKey || null,
+        mediaName: source.media?.mediaName || null,
+        mediaMimeType: source.media?.mediaMimeType || null,
+        mediaSize: source.media?.mediaSize || null,
     };
 
     let result;
@@ -390,12 +400,12 @@ const getMessageMedia = asyncHandler(async (req, res) => {
     }
     const scope = buildScopeFilter(req, { ownerField: 'userId', module: 'whatsapp' });
     const message = await WhatsappMessage.findOne({ _id: req.params.id, ...scope })
-        .select('+mediaObjectKey mediaName mediaMimeType');
-    if (!message || !message.mediaObjectKey) throw ApiError.notFound('Message media not found');
+        .select('+media.mediaObjectKey media.mediaName media.mediaMimeType');
+    if (!message || !message.media?.mediaObjectKey) throw ApiError.notFound('Message media not found');
 
-    const url = await mediaStorage.createSignedMediaUrl(message.mediaObjectKey, tenantId, {
-        mimeType: message.mediaMimeType,
-        name: message.mediaName,
+    const url = await mediaStorage.createSignedMediaUrl(message.media.mediaObjectKey, tenantId, {
+        mimeType: message.media.mediaMimeType,
+        name: message.media.mediaName,
         download: req.query.download === '1',
     });
     ApiResponse.success(res, { url, expiresIn: mediaStorage.PREVIEW_URL_TTL_SECONDS });
@@ -425,10 +435,10 @@ const getChat = asyncHandler(async (req, res) => {
     ];
 
     if (phoneList.length) {
-        // Inbound: `from` = lead's number (no leadId, no userId scope)
-        conditions.push({ tenantId, from: { $in: phoneList } });
-        // Outbound without scope: `to` = lead's number
-        conditions.push({ tenantId, to: { $in: phoneList } });
+        // Inbound: `message.from` = lead's number (no leadId, no userId scope)
+        conditions.push({ tenantId, 'message.from': { $in: phoneList } });
+        // Outbound without scope: `message.to` = lead's number
+        conditions.push({ tenantId, 'message.to': { $in: phoneList } });
     }
 
     const filter = conditions.length === 1 ? conditions[0] : { $or: conditions };
@@ -479,9 +489,9 @@ const getTeamInbox = asyncHandler(async (req, res) => {
             $group: {
                 _id: {
                     $cond: [
-                        { $eq: ['$direction', 'inbound'] },
-                        '$from',
-                        '$to'
+                        { $eq: ['$message.direction', 'inbound'] },
+                        '$message.from',
+                        '$message.to'
                     ]
                 },
                 lastMessage: { $first: '$$ROOT' },
@@ -491,8 +501,8 @@ const getTeamInbox = asyncHandler(async (req, res) => {
                         $cond: [
                             {
                                 $and: [
-                                    { $eq: ['$direction', 'inbound'] },
-                                    { $ne: ['$isRead', true] }
+                                    { $eq: ['$message.direction', 'inbound'] },
+                                    { $ne: ['$readState.isRead', true] }
                                 ]
                             },
                             1, 0
@@ -541,7 +551,7 @@ const getInboxChat = asyncHandler(async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const filter = {
         tenantId: new mongoose.Types.ObjectId(tenantId),
-        $or: [{ from: phone }, { to: phone }],
+        $or: [{ 'message.from': phone }, { 'message.to': phone }],
     };
 
     const [messages, total] = await Promise.all([
@@ -568,11 +578,11 @@ const markInboxRead = asyncHandler(async (req, res) => {
     const result = await WhatsappMessage.updateMany(
         {
             tenantId: new mongoose.Types.ObjectId(tenantId),
-            from: phone,
-            direction: 'inbound',
-            isRead: false,
+            'message.from': phone,
+            'message.direction': 'inbound',
+            'readState.isRead': false,
         },
-        { $set: { isRead: true, readAt: new Date() } }
+        { $set: { 'readState.isRead': true, 'readState.readAt': new Date() } }
     );
 
     ApiResponse.success(res, { updated: result.modifiedCount }, 'Marked as read');
@@ -622,11 +632,13 @@ const broadcast = asyncHandler(async (req, res) => {
                 tenantId,
                 leadId: lead._id || lead.leadId,
                 userId,
-                direction: 'outbound',
-                from: 'business',
-                to: lead.phone,
-                type: 'template',
-                content: template.body,
+                message: {
+                    direction: 'outbound',
+                    from: 'business',
+                    to: lead.phone,
+                    type: 'template',
+                    content: template.body,
+                },
                 templateName: template.name,
                 status: 'sent',
             });

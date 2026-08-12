@@ -150,6 +150,10 @@ const SERVICE_ROUTES = {
         target: env.SERVICES.CALL,
         public: true,
     },
+    '/webhooks/twilio': {
+        target: env.SERVICES.CALL,
+        public: true,
+    },
     '/webhooks/whatsapp': {
         target: env.SERVICES.WHATSAPP,
         public: true,

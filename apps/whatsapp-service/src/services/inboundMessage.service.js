@@ -9,16 +9,16 @@ async function publishInboundEvent(message, provider) {
             branchId: message.branchId,
             leadId: message.leadId,
             messageId: message._id,
-            from: message.from,
-            type: message.type,
-            content: message.content,
-            provider: provider || message.provider,
+            from: message.message.from,
+            type: message.message.type,
+            content: message.message.content,
+            provider: provider || message.provider?.name,
             idempotencyKey: `whatsapp:${message._id}:received`,
         });
-        await WhatsappMessage.updateOne({ _id: message._id }, { eventPublishedAt: new Date(), eventError: '' });
+        await WhatsappMessage.updateOne({ _id: message._id }, { 'eventProcessing.eventPublishedAt': new Date(), 'eventProcessing.eventError': '' });
         return true;
     } catch (error) {
-        await WhatsappMessage.updateOne({ _id: message._id }, { eventError: String(error.message || error).slice(0, 1000) });
+        await WhatsappMessage.updateOne({ _id: message._id }, { 'eventProcessing.eventError': String(error.message || error).slice(0, 1000) });
         return false;
     }
 }
@@ -37,20 +37,30 @@ async function processInboundMessage({ tenantId, branchId = null, userId = null,
             branchId: branchId || lead?.branchId || null,
             leadId: lead?._id || null,
             userId,
-            direction: 'inbound',
-            from,
-            to,
-            type,
-            content: String(content || '').slice(0, 50_000),
-            mediaUrl,
-            waMessageId,
-            status: 'received',
-            isRead: false,
-            provider,
+            message: {
+                direction: 'inbound',
+                from,
+                to,
+                type,
+                content: String(content || '').slice(0, 50_000),
+            },
+            media: {
+                mediaUrl,
+            },
+            provider: {
+                waMessageId,
+                name: provider
+            },
+            delivery: {
+                status: 'received'
+            },
+            readState: {
+                isRead: false
+            },
         });
     } catch (error) {
         if (error?.code !== 11000) throw error;
-        return { message: await WhatsappMessage.findOne({ tenantId, waMessageId }), created: false, lead };
+        return { message: await WhatsappMessage.findOne({ tenantId, 'provider.waMessageId': waMessageId }), created: false, lead };
     }
 
     const published = await publishInboundEvent(message, provider);
@@ -59,7 +69,7 @@ async function processInboundMessage({ tenantId, branchId = null, userId = null,
 
 async function retryPendingInboundEvents(limit = 100) {
     const boundedLimit = Math.max(1, Math.min(Number(limit) || 100, 100));
-    const messages = await WhatsappMessage.find({ direction: 'inbound', eventPublishedAt: null }).sort({ 'meta.createdAt': 1 }).limit(boundedLimit);
+    const messages = await WhatsappMessage.find({ 'message.direction': 'inbound', 'eventProcessing.eventPublishedAt': null }).sort({ 'meta.createdAt': 1 }).limit(boundedLimit);
     for (const message of messages) await publishInboundEvent(message);
 }
 

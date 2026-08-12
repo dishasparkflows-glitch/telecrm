@@ -69,9 +69,10 @@ router.post('/voice', validateTwilioRequest, asyncHandler(async (req, res) => {
         
         const dial = response.dial({
             action: dialActionUrl,
-            method: 'POST'
+            method: 'POST',
+            callerId: req.twilioConfig.twilioPhoneNumber
         });
-        dial.number(toNumber);
+        dial.number(callingApi.normalizeTwilioNumber(toNumber));
     }
 
     res.type('text/xml');
@@ -81,8 +82,23 @@ router.post('/voice', validateTwilioRequest, asyncHandler(async (req, res) => {
 /**
  * Helper to process status and idempotently update CallLog
  */
-const updateCallStatus = async (callLog, newStatus, duration, recordingUrl, providerDataUpdates) => {
+const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl, providerDataUpdates) => {
+    const STATUS_PRIORITY = {
+        initiated: 1,
+        ringing: 2,
+        in_progress: 3,
+        completed: 4,
+        missed: 4,
+        failed: 4
+    };
+
     const isAlreadyTerminal = ['completed', 'missed', 'failed'].includes(callLog.call.status);
+    
+    let newStatus = callLog.call.status;
+    if (STATUS_PRIORITY[proposedStatus] && STATUS_PRIORITY[proposedStatus] >= (STATUS_PRIORITY[callLog.call.status] || 0)) {
+        newStatus = proposedStatus;
+    }
+
     callLog.call.status = newStatus;
     
     if (recordingUrl) {
