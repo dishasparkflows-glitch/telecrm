@@ -438,17 +438,17 @@ export default function LeadDetail() {
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"><Phone size={15} /></div>
                           <div>
-                            <p className="text-sm font-medium text-[var(--vz-heading)] capitalize">{call.call?.direction || call.direction || 'outbound'} call · {call.call?.status || call.status}</p>
+                            <p className="text-sm font-medium text-[var(--vz-heading)] capitalize">{call.call?.direction || 'outbound'} call · {call.call?.status}</p>
                             {call.call?.status === 'failed' && call.provider?.data?.error?.code === 'EXOTEL_KYC_REQUIRED' && (
                               <p className="text-[10px] text-danger mt-0.5 font-medium">Exotel KYC verification required</p>
                             )}
-                            <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">{call.numbers?.to || call.toNumber || lead.contact?.phone} · {call.call?.duration ? `${call.call.duration}s` : 'No duration'}</p>
+                            <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">{call.call?.to || lead.contact?.phone} · {call.call?.duration ? `${call.call?.duration}s` : 'No duration'}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           {call.disposition?.code && <Badge color="info">{call.disposition.code}</Badge>}
                           {call.recording?.playbackUrl && <a href={call.recording.playbackUrl} target="_blank" rel="noopener noreferrer" className="block ml-auto text-[10px] text-primary hover:underline mt-1">Play recording</a>}
-                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{call.timing?.initiatedAt || call.startedAt || call.audit?.createdAt || call.meta?.createdAt ? new Date(call.timing?.initiatedAt || call.startedAt || call.audit?.createdAt || call.meta?.createdAt).toLocaleString() : '—'}</p>
+                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">{call.call?.initiatedAt || call.startedAt || call.audit?.createdAt || call.meta?.createdAt ? new Date(call.call?.initiatedAt || call.startedAt || call.audit?.createdAt || call.meta?.createdAt).toLocaleString() : '—'}</p>
                         </div>
                       </div>
                     ))}

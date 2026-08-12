@@ -272,6 +272,9 @@ router.post(
         // ─── Inbound messages ─────────────────────────────────────────────────
         if (value.messages?.length) {
             for (const msg of value.messages) {
+                // Skip group and broadcast messages — we only want 1:1 chats
+                if (msg.group_id || msg.from?.includes('-')) continue;
+
                 if (msg.type === 'reaction' && msg.reaction?.message_id) {
                     try {
                         const source = await WhatsappMessage.findOne({ tenantId, 'provider.waMessageId': msg.reaction.message_id });

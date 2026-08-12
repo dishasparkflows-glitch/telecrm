@@ -48,8 +48,7 @@ const initiateCall = asyncHandler(async (req, res) => {
         leadId: leadId,
         numbers: {
             from: agentMobile,
-            to: toNumber,
-            callerId: virtualNumber
+            to: toNumber
         },
         call: {
             direction: 'outbound',
@@ -173,7 +172,6 @@ const syncMobileCalls = asyncHandler(async (req, res) => {
                 numbers: {
                     from: type.direction === 'outbound' ? localNumber : remoteNumber,
                     to: type.direction === 'outbound' ? remoteNumber : localNumber,
-                    callerId: ''
                 },
                 call: {
                     direction: type.direction,

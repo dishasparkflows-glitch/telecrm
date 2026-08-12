@@ -56,7 +56,7 @@ const validateTwilioRequest = async (req, res, next) => {
  */
 router.post('/voice', validateTwilioRequest, asyncHandler(async (req, res) => {
     const { callLog } = req;
-    const toNumber = callLog.numbers.to;
+    const toNumber = callLog.call.to;
 
     const response = new twilio.twiml.VoiceResponse();
 
@@ -109,12 +109,12 @@ const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl,
     
     const isNowTerminal = ['completed', 'missed', 'failed'].includes(newStatus);
     
-    if (isNowTerminal && !callLog.timing.endedAt) {
-        callLog.timing.endedAt = new Date();
+    if (isNowTerminal && !callLog.call.endedAt) {
+        callLog.call.endedAt = new Date();
     }
 
-    if (callLog.timing.endedAt && callLog.call.duration > 0 && !callLog.timing.answeredAt) {
-        callLog.timing.answeredAt = new Date(callLog.timing.endedAt.getTime() - (callLog.call.duration * 1000));
+    if (callLog.call.endedAt && callLog.call.duration > 0 && !callLog.call.answeredAt) {
+        callLog.call.answeredAt = new Date(callLog.call.endedAt.getTime() - (callLog.call.duration * 1000));
     }
 
     callLog.provider.data = { ...callLog.provider.data, ...providerDataUpdates };
@@ -132,7 +132,7 @@ const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl,
                 await publishEvent(EVENTS.LEAD_UPDATED, {
                     tenantId: callLog.tenantId,
                     leadId: callLog.leadId,
-                    changes: { lastContactedAt: callLog.timing.answeredAt || callLog.timing.endedAt },
+                    changes: { lastContactedAt: callLog.call.answeredAt || callLog.call.endedAt },
                 });
             }
         } else if (newStatus === 'missed') {

@@ -61,18 +61,18 @@ const syncMissingRecordings = async () => {
                 }
 
                 // Sync timing (StartTime -> initiatedAt, EndTime -> endedAt)
-                if (details.startTime && !callLog.timing.initiatedAt) {
-                    callLog.timing.initiatedAt = new Date(details.startTime);
+                if (details.startTime && !callLog.call.initiatedAt) {
+                    callLog.call.initiatedAt = new Date(details.startTime);
                     updated = true;
                 }
-                if (details.endTime && !callLog.timing.endedAt) {
-                    callLog.timing.endedAt = new Date(details.endTime);
+                if (details.endTime && !callLog.call.endedAt) {
+                    callLog.call.endedAt = new Date(details.endTime);
                     updated = true;
                 }
                 
                 // Calculate answeredAt if we have duration and end time but no answered time
-                if (callLog.timing.endedAt && callLog.call.duration > 0 && !callLog.timing.answeredAt) {
-                    callLog.timing.answeredAt = new Date(callLog.timing.endedAt.getTime() - (callLog.call.duration * 1000));
+                if (callLog.call.endedAt && callLog.call.duration > 0 && !callLog.call.answeredAt) {
+                    callLog.call.answeredAt = new Date(callLog.call.endedAt.getTime() - (callLog.call.duration * 1000));
                     updated = true;
                 }
 
@@ -92,7 +92,7 @@ const syncMissingRecordings = async () => {
                         });
                         console.log(`✅ [CRON] Recording downloaded, size: ${response.data.byteLength} bytes`);
                         const buffer = Buffer.from(response.data);
-                        const objectKey = `${callLog.tenantId}/${callLog.userId}/${callLog.leadId}/recordings/${callSid}.mp3`;
+                        const objectKey = `tenants/${callLog.tenantId}/users/${callLog.userId}/leads/${callLog.leadId}/recordings/${callSid}.mp3`;
                         await uploadBufferToR2(buffer, objectKey, 'audio/mpeg');
                         callLog.isSyncing = true;
                         callLog.recording.url = details.recordingUrl;

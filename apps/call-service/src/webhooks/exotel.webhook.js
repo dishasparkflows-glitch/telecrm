@@ -153,15 +153,15 @@ router.post(
             if (STATUS_PRIORITY['ringing'] >= (STATUS_PRIORITY[callLog.call.status] || 0)) {
                 newStatus = 'ringing';
             }
-            if (!callLog.timing.ringingAt) {
-                callLog.timing.ringingAt = EventTime ? new Date(EventTime) : new Date();
+            if (!callLog.call.ringingAt) {
+                callLog.call.ringingAt = EventTime ? new Date(EventTime) : new Date();
             }
         } else if (eventType === 'answered') {
             if (STATUS_PRIORITY['in_progress'] >= (STATUS_PRIORITY[callLog.call.status] || 0)) {
                 newStatus = 'in_progress';
             }
-            if (!callLog.timing.answeredAt) {
-                callLog.timing.answeredAt = EventTime ? new Date(EventTime) : (StartTime ? new Date(StartTime) : new Date());
+            if (!callLog.call.answeredAt) {
+                callLog.call.answeredAt = EventTime ? new Date(EventTime) : (StartTime ? new Date(StartTime) : new Date());
             }
         } else if (eventType === 'terminal' || (!eventType && Status)) {
             const rawNewStatus = EXOTEL_STATUS_MAP[Status] || callLog.call.status;
@@ -201,19 +201,19 @@ router.post(
                 callLog.recording.status = 'processing';
             }
 
-            if (!callLog.timing.endedAt) {
+            if (!callLog.call.endedAt) {
                 if (EventTime) {
-                    callLog.timing.endedAt = new Date(EventTime);
+                    callLog.call.endedAt = new Date(EventTime);
                 } else if (EndTime) {
-                    callLog.timing.endedAt = new Date(EndTime);
+                    callLog.call.endedAt = new Date(EndTime);
                 } else {
-                    callLog.timing.endedAt = new Date();
+                    callLog.call.endedAt = new Date();
                 }
             }
             
-            if (callLog.timing.endedAt && callLog.call.duration > 0 && !callLog.timing.answeredAt && !EventTime) {
+            if (callLog.call.endedAt && callLog.call.duration > 0 && !callLog.call.answeredAt && !EventTime) {
                 // Only calculate if EventTime is completely missing
-                callLog.timing.answeredAt = new Date(callLog.timing.endedAt.getTime() - (callLog.call.duration * 1000));
+                callLog.call.answeredAt = new Date(callLog.call.endedAt.getTime() - (callLog.call.duration * 1000));
             }
         }
 
@@ -248,7 +248,7 @@ router.post(
                     await publishEvent(EVENTS.LEAD_UPDATED, {
                         tenantId: callLog.tenantId,
                         leadId: callLog.leadId,
-                        changes: { lastContactedAt: callLog.timing.answeredAt || callLog.timing.endedAt },
+                        changes: { lastContactedAt: callLog.call.answeredAt || callLog.call.endedAt },
                     });
                 }
             } else if (newStatus === 'missed' || newStatus === 'failed') {

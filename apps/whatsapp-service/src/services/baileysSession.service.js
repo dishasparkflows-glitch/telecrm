@@ -258,12 +258,18 @@ const createSession = async (tenantId, userId, io, options = {}) => {
             }
 
             const jidCandidates = [msg.key.remoteJidAlt, msg.key.participantAlt, msg.key.remoteJid, msg.key.participant].filter(Boolean);
+
+            // ── Skip group & broadcast messages early ────────────────────────
+            // In groups, remoteJid is @g.us but participant is @s.whatsapp.net;
+            // check ALL candidates for group/broadcast before resolving sender.
+            if (jidCandidates.some((jid) => jid.endsWith('@g.us') || jid.endsWith('@broadcast'))) continue;
+
             let remoteJid = jidCandidates.find((jid) => jid.endsWith('@s.whatsapp.net')) || '';
             if (!remoteJid) {
                 const lidJid = jidCandidates.find((jid) => jid.endsWith('@lid'));
                 if (lidJid) remoteJid = await sock.signalRepository.lidMapping.getPNForLID(lidJid) || '';
             }
-            if (!remoteJid || remoteJid.endsWith('@g.us') || remoteJid.endsWith('@broadcast')) continue;
+            if (!remoteJid) continue;
             const from = jidNormalizedUser(remoteJid).split('@')[0];
             if (!from || from === 'status') continue;
 

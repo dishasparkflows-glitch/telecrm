@@ -7,24 +7,19 @@ const callLogSchema = new mongoose.Schema(
         branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
         userId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
         leadId: { type: mongoose.Schema.Types.ObjectId, index: true, default: null },
-        numbers: {
-            from: { type: String, required: true },
-            to: { type: String, required: true },
-            callerId: { type: String, default: '' }
-        },
         call: {
+            initiatedAt: { type: Date, default: null },
+            answeredAt: { type: Date, default: null },
+            endedAt: { type: Date, default: null },
             direction: { type: String, enum: ['outbound', 'inbound'], default: 'outbound' },
             status: { type: String, enum: Object.values(CALL_STATUS), default: CALL_STATUS.INITIATED },
-            duration: { type: Number, default: 0 } // seconds
+            duration: { type: Number, default: 0 }, // seconds
+            from: { type: String, required: true },
+            to: { type: String, required: true }
         },
         provider: {
             type: mongoose.Schema.Types.Mixed,
             default: { name: 'exotel', externalCallId: null, data: {} }
-        },
-        timing: {
-            initiatedAt: { type: Date, default: null },
-            answeredAt: { type: Date, default: null },
-            endedAt: { type: Date, default: null }
         },
         recording: {
             status: { type: String, enum: ['none', 'pending', 'available', 'failed', 'processing', 'ready', 'unavailable'], default: 'none' },

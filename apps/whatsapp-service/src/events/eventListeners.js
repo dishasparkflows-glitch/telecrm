@@ -73,9 +73,9 @@ const registerEventListeners = async () => {
                             content: '',
                         },
                         templateName,
-                        status: 'failed',
+                        delivery: { status: 'failed' },
                         automation: { automationType: 'meta_lead_welcome' },
-                        lastError: 'Configured WhatsApp welcome template is missing, inactive, or not approved',
+                        queue: { lastError: 'Configured WhatsApp welcome template is missing, inactive, or not approved' },
                     },
                 },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -99,10 +99,12 @@ const registerEventListeners = async () => {
                         content: template.body,
                     },
                     templateName: template.name,
-                    status: 'queued',
-                    deliveryPayload: {
-                        languageCode: template.language || 'en',
-                        templateComponents: buildTemplateComponents(template, templateData),
+                    delivery: { status: 'queued' },
+                    queue: {
+                        deliveryPayload: {
+                            languageCode: template.language || 'en',
+                            templateComponents: buildTemplateComponents(template, templateData),
+                        }
                     },
                     automation: { automationType: 'meta_lead_welcome' },
                 },
@@ -110,7 +112,7 @@ const registerEventListeners = async () => {
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
-        if (message.status === 'queued') await deliverQueuedMessage(message._id);
+        if (message.delivery?.status === 'queued') await deliverQueuedMessage(message._id);
     });
 };
 

@@ -1,6 +1,5 @@
 const crypto = require('crypto');
-const { GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { HeadObjectCommand } = require('@aws-sdk/client-s3');
 const { getR2Client, uploadBufferToR2 } = require('@sparkcrm/shared-utils');
 const { env } = require('@sparkcrm/shared-config');
 
@@ -65,8 +64,14 @@ const createObjectKey = (tenantId) => {
 const validateTenantObjectKey = (objectKey, tenantId) => {
     const tenant = String(tenantId || '');
     if (!TENANT_ID_PATTERN.test(tenant) || typeof objectKey !== 'string') return false;
+    
+    // Support legacy format: private-whatsapp-media/{tenantId}/{uuid}
     const parts = objectKey.split('/');
-    return parts.length === 3 && parts[0] === MEDIA_KEY_ROOT && parts[1] === tenant && UUID_PATTERN.test(parts[2]);
+    const isLegacy = parts.length === 3 && parts[0] === MEDIA_KEY_ROOT && parts[1] === tenant && UUID_PATTERN.test(parts[2]);
+    if (isLegacy) return true;
+
+    // Support new upload-service format: tenants/{tenantId}/...
+    return objectKey.startsWith(`tenants/${tenant}/`);
 };
 
 const assertTenantObjectKey = (objectKey, tenantId) => {
@@ -92,19 +97,6 @@ const assertMediaExists = async (objectKey, tenantId) => {
     return getR2Client().send(new HeadObjectCommand({ Bucket: env.CLOUDFLARE_BUCKET_NAME, Key: objectKey }));
 };
 
-const createSignedMediaUrl = async (objectKey, tenantId, options = {}) => {
-    assertTenantObjectKey(objectKey, tenantId);
-    const mimeType = options.mimeType ? validateMimeType(options.mimeType) : undefined;
-    const disposition = options.download ? 'attachment' : 'inline';
-    const filename = sanitizeMediaName(options.name);
-    return getSignedUrl(getR2Client(), new GetObjectCommand({
-        Bucket: env.CLOUDFLARE_BUCKET_NAME,
-        Key: objectKey,
-        ...(mimeType ? { ResponseContentType: mimeType } : {}),
-        ResponseContentDisposition: `${disposition}; filename="${filename.replace(/["\\]/g, '_')}"`,
-    }), { expiresIn: options.expiresIn || PREVIEW_URL_TTL_SECONDS });
-};
-
 module.exports = {
     ALLOWED_MEDIA_TYPES,
     MAX_MEDIA_BYTES,
@@ -112,7 +104,6 @@ module.exports = {
     assertMediaExists,
     assertTenantObjectKey,
     createObjectKey,
-    createSignedMediaUrl,
     decodeBase64Media,
     normalizeMimeType,
     sanitizeMediaName,

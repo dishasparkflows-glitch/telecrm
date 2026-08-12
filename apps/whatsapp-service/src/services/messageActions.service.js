@@ -1,6 +1,6 @@
 const SUPPORTED_FORWARD_TYPES = new Set(['text', 'image', 'video', 'audio', 'document']);
 
-const messagePeerPhone = (message) => String(message.direction === 'inbound' ? message.from : message.to);
+const messagePeerPhone = (message) => String(message.message?.direction === 'inbound' ? message.message?.from : message.message?.to);
 const phoneJid = (phone) => `${String(phone).replace(/\D/g, '')}@s.whatsapp.net`;
 
 function validateReactionEmoji(value, { allowEmpty = true } = {}) {
@@ -23,37 +23,42 @@ function validateReactionEmoji(value, { allowEmpty = true } = {}) {
 function snapshotMessage(message) {
     if (!message) return null;
     return {
-        waMessageId: message.waMessageId || null,
-        direction: message.direction,
-        from: message.from,
-        to: message.to,
-        type: message.type || 'text',
-        content: String(message.content || '').slice(0, 2000),
-        mediaName: message.mediaName || null,
-        mediaMimeType: message.mediaMimeType || null,
+        waMessageId: message.provider?.waMessageId || null,
+        direction: message.message?.direction,
+        from: message.message?.from,
+        to: message.message?.to,
+        type: message.message?.type || 'text',
+        content: String(message.message?.content || '').slice(0, 2000),
+        mediaName: message.media?.mediaName || null,
+        mediaMimeType: message.media?.mediaMimeType || null,
         provider: message.provider || null,
     };
 }
 
 function quotedContent(source) {
-    switch (source.type) {
-        case 'image': return { imageMessage: { caption: source.content || '', mimetype: source.mediaMimeType || undefined } };
-        case 'video': return { videoMessage: { caption: source.content || '', mimetype: source.mediaMimeType || undefined } };
-        case 'audio': return { audioMessage: { mimetype: source.mediaMimeType || 'audio/ogg' } };
-        case 'document': return { documentMessage: { caption: source.content || '', fileName: source.mediaName || undefined, mimetype: source.mediaMimeType || undefined } };
-        default: return { conversation: String(source.content || '') };
+    const type = source.message?.type || 'text';
+    const content = source.message?.content || '';
+    const mediaName = source.media?.mediaName || undefined;
+    const mediaMimeType = source.media?.mediaMimeType || undefined;
+    
+    switch (type) {
+        case 'image': return { imageMessage: { caption: content, mimetype: mediaMimeType } };
+        case 'video': return { videoMessage: { caption: content, mimetype: mediaMimeType } };
+        case 'audio': return { audioMessage: { mimetype: mediaMimeType || 'audio/ogg' } };
+        case 'document': return { documentMessage: { caption: content, fileName: mediaName, mimetype: mediaMimeType } };
+        default: return { conversation: String(content) };
     }
 }
 
 function buildBaileysQuotedMessage(source, targetPhone) {
-    if (!source?.waMessageId) throw new Error('Source message has no WhatsApp message ID');
-    const remoteJid = source.providerMetadata?.remoteJid || phoneJid(targetPhone || messagePeerPhone(source));
-    const participant = source.providerMetadata?.participant;
+    if (!source?.provider?.waMessageId) throw new Error('Source message has no WhatsApp message ID');
+    const remoteJid = source.provider?.providerMetadata?.remoteJid || phoneJid(targetPhone || messagePeerPhone(source));
+    const participant = source.provider?.providerMetadata?.participant;
     return {
         key: {
             remoteJid,
-            id: source.waMessageId,
-            fromMe: source.direction === 'outbound',
+            id: source.provider?.waMessageId,
+            fromMe: source.message?.direction === 'outbound',
             ...(participant ? { participant } : {}),
         },
         message: quotedContent(source),
@@ -66,7 +71,7 @@ function buildBaileysReactionPayload(source, emoji, targetPhone) {
 }
 
 function canNativeForwardBaileys(source) {
-    return Boolean(source?.provider === 'baileys' && source.waMessageId && source.type === 'text' && String(source.content || '').trim());
+    return Boolean(source?.provider?.name === 'baileys' && source.provider?.waMessageId && source.message?.type === 'text' && String(source.message?.content || '').trim());
 }
 
 function buildBaileysForwardPayload(source) {
@@ -97,9 +102,10 @@ function buildMetaReactionPayload(to, sourceWaMessageId, emoji) {
 }
 
 function assertForwardable(source) {
-    if (!SUPPORTED_FORWARD_TYPES.has(source?.type)) throw new Error(`Messages of type ${source?.type || 'unknown'} cannot be forwarded`);
-    if (source.type === 'text' && !String(source.content || '').trim()) throw new Error('Source text message is empty');
-    if (source.type !== 'text' && !source.mediaObjectKey && !source.mediaUrl) throw new Error('Source media is no longer available');
+    const type = source?.message?.type;
+    if (!SUPPORTED_FORWARD_TYPES.has(type)) throw new Error(`Messages of type ${type || 'unknown'} cannot be forwarded`);
+    if (type === 'text' && !String(source.message?.content || '').trim()) throw new Error('Source text message is empty');
+    if (type !== 'text' && !source.media?.mediaObjectKey && !source.media?.mediaUrl) throw new Error('Source media is no longer available');
     return true;
 }
 

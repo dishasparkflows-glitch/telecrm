@@ -1,5 +1,30 @@
 import { baseApi } from '../api/baseApi'
 
+export const flattenMessage = (msg) => {
+    if (!msg || !msg.message) return msg;
+    return {
+        _id: msg._id,
+        ...msg.message,
+        ...msg.media,
+        ...msg.provider,
+        ...msg.delivery,
+        ...msg.automation,
+        ...msg.readState,
+        meta: msg.meta,
+        createdAt: msg.createdAt || msg.meta?.createdAt,
+        updatedAt: msg.updatedAt || msg.meta?.updatedAt,
+        leadId: msg.leadId,
+        userId: msg.userId,
+        branchId: msg.branchId,
+        tenantId: msg.tenantId,
+        replyTo: msg.replyTo,
+        isForwarded: msg.isForwarded || msg.message?.isForwarded,
+        forwardedFrom: msg.forwardedFrom,
+        reactions: msg.reactions,
+        templateName: msg.templateName
+    };
+};
+
 export const whatsappApi = baseApi.injectEndpoints({
     endpoints: (builder) => ({
         sendMessage: builder.mutation({
@@ -11,7 +36,7 @@ export const whatsappApi = baseApi.injectEndpoints({
             async onQueryStarted(arg, { dispatch, queryFulfilled }) {
                 try {
                     const { data: response } = await queryFulfilled
-                    const message = response?.data
+                    const message = flattenMessage(response?.data)
                     if (!arg?.leadId || !message?._id) return
                     dispatch(whatsappApi.util.updateQueryData('getChat', arg.leadId, (draft) => {
                         if (!Array.isArray(draft?.data)) return
@@ -42,13 +67,7 @@ export const whatsappApi = baseApi.injectEndpoints({
             query: ({ id, emoji }) => ({ url: `/whatsapp/messages/${id}/reaction`, method: 'PUT', body: { emoji } }),
             invalidatesTags: [{ type: 'WhatsApp', id: 'INBOX' }],
         }),
-        uploadMedia: builder.mutation({
-            query: (data) => ({
-                url: '/whatsapp/media',
-                method: 'POST',
-                body: data,
-            }),
-        }),
+
         getMessageMedia: builder.query({
             query: ({ id, download = false }) => ({
                 url: `/whatsapp/messages/${id}/media`,
@@ -57,6 +76,12 @@ export const whatsappApi = baseApi.injectEndpoints({
         }),
         getChat: builder.query({
             query: (leadId) => `/whatsapp/chat/${leadId}`,
+            transformResponse: (response) => {
+                if (response?.data) {
+                    return { ...response, data: response.data.map(flattenMessage) };
+                }
+                return response;
+            },
             providesTags: (result, error, leadId) => [{ type: 'WhatsApp', id: leadId }],
         }),
         getTeamInbox: builder.query({
@@ -64,6 +89,18 @@ export const whatsappApi = baseApi.injectEndpoints({
                 url: '/whatsapp/team-inbox',
                 params,
             }),
+            transformResponse: (response) => {
+                if (response?.data) {
+                    return {
+                        ...response,
+                        data: response.data.map(conv => {
+                            if (conv.lastMessage) return { ...conv, lastMessage: flattenMessage(conv.lastMessage) };
+                            return conv;
+                        })
+                    };
+                }
+                return response;
+            },
             providesTags: [{ type: 'WhatsApp', id: 'INBOX' }],
         }),
         broadcast: builder.mutation({
@@ -136,6 +173,12 @@ export const whatsappApi = baseApi.injectEndpoints({
         }),
         getInboxChat: builder.query({
             query: (phone) => `/whatsapp/inbox-chat/${encodeURIComponent(phone)}`,
+            transformResponse: (response) => {
+                if (response?.data) {
+                    return { ...response, data: response.data.map(flattenMessage) };
+                }
+                return response;
+            },
             providesTags: (result, error, phone) => [{ type: 'WhatsApp', id: `INBOX_${phone}` }],
         }),
         markInboxRead: builder.mutation({
@@ -208,7 +251,6 @@ export const {
     useReplyToMessageMutation,
     useForwardMessageMutation,
     useReactToMessageMutation,
-    useUploadMediaMutation,
     useGetMessageMediaQuery,
     useLazyGetMessageMediaQuery,
     useGetChatQuery,

@@ -6,8 +6,8 @@ const { ApiResponse, ApiError, asyncHandler, getPresignedUploadUrl, getPresigned
  */
 const getUploadUrl = asyncHandler(async (req, res) => {
     // Both tenantId and userId can be used depending on context
-    const tenantId = req.headers['x-tenant-id'] || 'system';
-    const userId = req.headers['x-user-id'];
+    const tenantId = req.headers['x-tenant-id'] || req.body.tenantId || 'system';
+    const userId = req.headers['x-user-id'] || req.body.userId;
 
     const uploadType = req.body.uploadType || "misc";
     const subUploadType = req.body.subUploadType;
@@ -49,8 +49,20 @@ const getUploadUrl = asyncHandler(async (req, res) => {
 
     const timestamp = Date.now();
 
+    const leadId = req.body.leadId;
+
     // 🔧 Base path for this CRM project
-    let keyPath = `tenants/${tenantId}/${uploadType}`;
+    let keyPath = `tenants/${tenantId}`;
+
+    if (userId) {
+        keyPath += `/users/${userId}`;
+    }
+
+    if (leadId) {
+        keyPath += `/leads/${leadId}`;
+    }
+
+    keyPath += `/${uploadType}`;
 
     if (subUploadType) {
         keyPath += `/${subUploadType}`;

@@ -1,5 +1,5 @@
 const { WhatsappMessage, Template, ChatbotRule } = require('../models/WhatsappModels');
-const { ApiResponse, ApiError, asyncHandler, buildScopeFilter } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const mongoose = require('mongoose');
 const whatsappApi = require('../services/whatsappApi.service');
@@ -47,10 +47,7 @@ const sendMessage = asyncHandler(async (req, res) => {
             const metadata = await mediaStorage.assertMediaExists(mediaObjectKey, tenantId);
             if (metadata.ContentType) normalizedMediaMimeType = mediaStorage.validateMimeType(metadata.ContentType);
             if (metadata.ContentLength != null) normalizedMediaSize = mediaStorage.validateMediaSize(Number(metadata.ContentLength));
-            resolvedMediaUrl = await mediaStorage.createSignedMediaUrl(mediaObjectKey, tenantId, {
-                mimeType: normalizedMediaMimeType,
-                name: mediaName,
-            });
+            resolvedMediaUrl = await getPresignedDownloadUrl(mediaObjectKey);
         }
     } catch (error) {
         throw ApiError.badRequest(`Invalid media: ${error.message}`);
@@ -150,7 +147,7 @@ const sendMessage = asyncHandler(async (req, res) => {
         return ApiResponse.success(res, message, `Message saved but delivery failed: ${waResult.error || 'Unknown error'}`, 207);
     }
 
-    ApiResponse.created(res, message, 'Message sent via WhatsApp');
+    ApiResponse.created(res, null, 'Message sent via WhatsApp');
 });
 
 const requireActionIdentity = (req) => {
@@ -194,10 +191,7 @@ const resolveReplyPayload = async (body, tenantId) => {
             const metadata = await mediaStorage.assertMediaExists(body.mediaObjectKey, tenantId);
             if (metadata.ContentType) mediaMimeType = mediaStorage.validateMimeType(metadata.ContentType);
             if (metadata.ContentLength != null) mediaSize = mediaStorage.validateMediaSize(Number(metadata.ContentLength));
-            mediaUrl = await mediaStorage.createSignedMediaUrl(body.mediaObjectKey, tenantId, {
-                mimeType: mediaMimeType,
-                name: body.mediaName,
-            });
+            mediaUrl = await getPresignedDownloadUrl(body.mediaObjectKey);
         }
     } catch (error) {
         throw ApiError.badRequest(`Invalid media: ${error.message}`);
@@ -224,6 +218,7 @@ const publishActionEvent = async (message) => {
         await message.save();
     }
 };
+
 
 const persistOutboundAction = async ({ identity, source, to, outbound, result, action }) => {
     if (result.waMessageId && baileysService.consumeMessageConfirmation(identity.tenantId, identity.userId, result.waMessageId)) {
@@ -263,7 +258,7 @@ const persistOutboundAction = async ({ identity, source, to, outbound, result, a
             isForwarded: true,
             forwardedFrom: {
                 messageId: source._id,
-                waMessageId: source.waMessageId || null,
+                waMessageId: source.provider?.waMessageId || null,
                 provider: source.provider || null,
                 mode: result.forwardMode || 'resend',
             },
@@ -277,7 +272,7 @@ const persistOutboundAction = async ({ identity, source, to, outbound, result, a
 const replyToMessage = asyncHandler(async (req, res) => {
     const identity = requireActionIdentity(req);
     const source = await findActionSource(req);
-    if (!source.waMessageId) throw ApiError.badRequest('Source message has no provider message ID and cannot be quoted');
+    if (!source.provider?.waMessageId) throw ApiError.badRequest('Source message has no provider message ID and cannot be quoted');
     const expectedTo = whatsappApi.normalizePhone(messagePeerPhone(source));
     const to = whatsappApi.normalizePhone(req.body.to || expectedTo);
     if (to !== expectedTo) throw ApiError.badRequest('A reply must target the source message conversation');
@@ -291,7 +286,7 @@ const replyToMessage = asyncHandler(async (req, res) => {
         result = { waMessageId: error.waMessageId, status: 'queued', provider: 'baileys', deliveryUncertain: true };
     }
     const message = await persistOutboundAction({ identity, source, to, outbound, result, action: 'reply' });
-    return ApiResponse.success(res, message, result.deliveryUncertain ? 'Reply submitted; delivery confirmation is pending' : 'Reply sent', result.deliveryUncertain ? 202 : 201);
+    return ApiResponse.success(res, null, result.deliveryUncertain ? 'Reply submitted; delivery confirmation is pending' : 'Reply sent', result.deliveryUncertain ? 202 : 201);
 });
 
 const forwardMessage = asyncHandler(async (req, res) => {
@@ -303,10 +298,7 @@ const forwardMessage = asyncHandler(async (req, res) => {
 
     let mediaUrl = source.media?.mediaUrl || null;
     if (source.media?.mediaObjectKey) {
-        mediaUrl = await mediaStorage.createSignedMediaUrl(source.media.mediaObjectKey, identity.tenantId, {
-            mimeType: source.media.mediaMimeType,
-            name: source.media.mediaName,
-        });
+        mediaUrl = await getPresignedDownloadUrl(source.media.mediaObjectKey);
     }
     const outbound = {
         type: source.message?.type || 'text',
@@ -327,21 +319,26 @@ const forwardMessage = asyncHandler(async (req, res) => {
         result = { waMessageId: error.waMessageId, status: 'queued', provider: 'baileys', forwardMode: 'resend', deliveryUncertain: true };
     }
     const message = await persistOutboundAction({ identity, source, to, outbound, result, action: 'forward' });
-    return ApiResponse.success(res, message, result.deliveryUncertain ? 'Forward submitted; delivery confirmation is pending' : 'Message forwarded', result.deliveryUncertain ? 202 : 201);
+    return ApiResponse.success(res, null, result.deliveryUncertain ? 'Forward submitted; delivery confirmation is pending' : 'Message forwarded', result.deliveryUncertain ? 202 : 201);
 });
 
 const reactToMessage = asyncHandler(async (req, res) => {
     const identity = requireActionIdentity(req);
     const source = await findActionSource(req);
-    if (!source.waMessageId) throw ApiError.badRequest('Source message has no provider message ID and cannot be reacted to');
+    if (!source.provider?.waMessageId) throw ApiError.badRequest('Source message has no provider message ID and cannot be reacted to');
     let emoji;
     try { emoji = validateReactionEmoji(req.body.emoji); } catch (error) { throw ApiError.badRequest(error.message); }
+
+    const actorId = String(identity.userId);
+    const existingReaction = (source.reactions || []).find(r => String(r.actorUserId || '') === actorId && r.direction === 'outbound');
+    if (emoji && existingReaction && existingReaction.emoji === emoji) {
+        emoji = '';
+    }
 
     const actorPhone = identity.from === 'business'
         ? null
         : (() => { try { return whatsappApi.normalizePhone(identity.from); } catch { return null; } })();
     const result = await whatsappApi.sendReaction(source, emoji, identity.tenantId, identity.userId);
-    const actorId = String(identity.userId);
     source.reactions = (source.reactions || []).filter(reaction => String(reaction.actorUserId || '') !== actorId || reaction.direction !== 'outbound');
     if (emoji) {
         source.reactions.push({
@@ -356,40 +353,9 @@ const reactToMessage = asyncHandler(async (req, res) => {
     }
     await source.save();
     realtime.emitMessage(identity.tenantId, identity.userId, source);
-    ApiResponse.success(res, source, emoji ? 'Reaction updated' : 'Reaction removed');
+    ApiResponse.success(res, null, emoji ? 'Reaction updated' : 'Reaction removed');
 });
 
-const uploadMedia = asyncHandler(async (req, res) => {
-    const tenantId = req.headers['x-tenant-id'];
-    const userId = req.headers['x-user-id'];
-    if (!mongoose.isValidObjectId(tenantId) || !mongoose.isValidObjectId(userId)) {
-        throw ApiError.unauthorized('Authenticated tenant user identity is required');
-    }
-    const { data, mimeType, name } = req.body || {};
-    let buffer;
-    let normalizedMimeType;
-    try {
-        buffer = mediaStorage.decodeBase64Media(data);
-        normalizedMimeType = mediaStorage.validateMimeType(mimeType);
-    } catch (error) {
-        throw ApiError.badRequest(error.message);
-    }
-
-    const mediaName = mediaStorage.sanitizeMediaName(name);
-    const objectKey = await mediaStorage.uploadPrivateMedia({ buffer, tenantId, mimeType: normalizedMimeType });
-    const previewUrl = await mediaStorage.createSignedMediaUrl(objectKey, tenantId, {
-        mimeType: normalizedMimeType,
-        name: mediaName,
-    });
-    ApiResponse.created(res, {
-        objectKey,
-        previewUrl,
-        expiresIn: mediaStorage.PREVIEW_URL_TTL_SECONDS,
-        name: mediaName,
-        mimeType: normalizedMimeType,
-        size: buffer.length,
-    }, 'Media uploaded');
-});
 
 const getMessageMedia = asyncHandler(async (req, res) => {
     disableMessageCache(res);
@@ -403,12 +369,8 @@ const getMessageMedia = asyncHandler(async (req, res) => {
         .select('+media.mediaObjectKey media.mediaName media.mediaMimeType');
     if (!message || !message.media?.mediaObjectKey) throw ApiError.notFound('Message media not found');
 
-    const url = await mediaStorage.createSignedMediaUrl(message.media.mediaObjectKey, tenantId, {
-        mimeType: message.media.mediaMimeType,
-        name: message.media.mediaName,
-        download: req.query.download === '1',
-    });
-    ApiResponse.success(res, { url, expiresIn: mediaStorage.PREVIEW_URL_TTL_SECONDS });
+    const url = await getPresignedDownloadUrl(message.media.mediaObjectKey);
+    ApiResponse.success(res, { url });
 });
 
 const getChat = asyncHandler(async (req, res) => {
@@ -452,7 +414,7 @@ const getChat = asyncHandler(async (req, res) => {
     // Deduplicate by waMessageId (same message might match multiple conditions)
     const seen = new Set();
     const unique = messages.filter(m => {
-        const key = m.waMessageId || m._id.toString();
+        const key = m.provider?.waMessageId || m._id.toString();
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -710,7 +672,7 @@ const createTemplate = asyncHandler(async (req, res) => {
         const msg = isConfigError
             ? 'Template saved as draft. Configure WhatsApp integration to submit for Meta approval.'
             : `Template saved as draft. Meta submission failed: ${metaErr.message}`;
-        ApiResponse.created(res, { ...template.toObject(), _metaError: msg }, msg);
+        ApiResponse.created(res, null, msg);
     }
 });
 
@@ -816,7 +778,7 @@ const deleteChatbotRule = asyncHandler(async (req, res) => {
 
 module.exports = {
     sendMessage, replyToMessage, forwardMessage, reactToMessage,
-    uploadMedia, getMessageMedia, getChat, getTeamInbox, getInboxChat, markInboxRead, broadcast,
+    getMessageMedia, getChat, getTeamInbox, getInboxChat, markInboxRead, broadcast,
     getTemplates, createTemplate, updateTemplate, deleteTemplate, syncTemplatesFromMeta,
     getChatbotRules, createChatbotRule, updateChatbotRuleFn, deleteChatbotRule,
 };

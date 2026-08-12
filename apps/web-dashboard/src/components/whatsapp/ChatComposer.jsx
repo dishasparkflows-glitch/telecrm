@@ -1,17 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { FileText, Loader2, Paperclip, Send, Smile, X } from 'lucide-react'
-import { useUploadMediaMutation } from '../../features/whatsapp/whatsappApi'
+import { useGetUploadUrlMutation } from '../../features/uploads/uploadApi'
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'))
 const MAX_MEDIA_BYTES = 15 * 1024 * 1024
 const ACCEPTED_MEDIA = 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/3gpp,video/quicktime,video/webm,audio/mpeg,audio/mp4,audio/aac,audio/ogg,audio/wav,audio/webm,application/pdf,text/plain,text/csv,text/rtf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation'
-
-const readAsDataUrl = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader()
-  reader.onload = () => resolve(reader.result)
-  reader.onerror = () => reject(new Error('Unable to read selected file'))
-  reader.readAsDataURL(file)
-})
 
 const mediaTypeFor = (mimeType) => {
   if (mimeType.startsWith('image/')) return 'image'
@@ -20,12 +13,12 @@ const mediaTypeFor = (mimeType) => {
   return 'document'
 }
 
-export default function ChatComposer({ value, onChange, onSendText, onSendMedia, sending, disabled, toast, placeholder = 'Type a message…' }) {
+export default function ChatComposer({ leadId, value, onChange, onSendText, onSendMedia, sending, disabled, toast, placeholder = 'Type a message…' }) {
   const inputRef = useRef(null)
   const fileRef = useRef(null)
   const [showEmoji, setShowEmoji] = useState(false)
   const [selectedFile, setSelectedFile] = useState(null)
-  const [uploadMedia, { isLoading: uploading }] = useUploadMediaMutation()
+  const [getUploadUrl, { isLoading: uploading }] = useGetUploadUrlMutation()
   const imagePreview = useMemo(() => selectedFile?.type.startsWith('image/') ? URL.createObjectURL(selectedFile) : null, [selectedFile])
   useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview) }, [imagePreview])
 
@@ -40,15 +33,34 @@ export default function ChatComposer({ value, onChange, onSendText, onSendMedia,
   const submit = async () => {
     if (selectedFile) {
       try {
-        const data = await readAsDataUrl(selectedFile)
-        const uploaded = await uploadMedia({ data, mimeType: selectedFile.type, name: selectedFile.name }).unwrap()
+        const presigned = await getUploadUrl({
+          uploadType: 'whatsapp-media',
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size,
+          leadId,
+        }).unwrap()
+
+        const { uploadUrl, key } = presigned.data
+
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: selectedFile,
+          headers: {
+            'Content-Type': selectedFile.type,
+          },
+        })
+
+        if (!uploadResponse.ok) {
+           throw new Error('Failed to upload file to storage')
+        }
+
         await onSendMedia({
           type: mediaTypeFor(selectedFile.type),
           content: value.trim(),
-          mediaObjectKey: uploaded.data.objectKey,
-          mediaName: uploaded.data.name,
-          mediaMimeType: uploaded.data.mimeType,
-          mediaSize: uploaded.data.size,
+          mediaObjectKey: key,
+          mediaName: selectedFile.name,
+          mediaMimeType: selectedFile.type,
+          mediaSize: selectedFile.size,
         })
         setSelectedFile(null)
         onChange('')

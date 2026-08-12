@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { io as socketIO } from 'socket.io-client'
-import { whatsappApi, useGetTeamInboxQuery, useGetInboxChatQuery, useSendMessageMutation, useReplyToMessageMutation, useMarkInboxReadMutation } from '../../features/whatsapp/whatsappApi'
+import { whatsappApi, useGetTeamInboxQuery, useGetInboxChatQuery, useSendMessageMutation, useReplyToMessageMutation, useMarkInboxReadMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
 import PageHeader from '../../components/layout/PageHeader'
 import { useToast } from '../../components/ui/Toast'
 import ChatComposer from '../../components/whatsapp/ChatComposer'
@@ -46,7 +46,7 @@ function MessageBubble({ msg, contacts, onReply, toast }) {
         className={`relative max-w-[72%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
           isOut
             ? 'bg-[#dcf8c6] text-gray-800 rounded-br-sm'
-            : 'bg-white dark:bg-[#202c33] text-[var(--vz-heading)] rounded-bl-sm border border-[var(--vz-border)]'
+            : 'bg-[var(--vz-card-bg)] text-[var(--vz-heading)] rounded-bl-sm border border-[var(--vz-border)]'
         }`}
       >
         <MessageActions message={msg} contacts={contacts} onReply={onReply} toast={toast} />
@@ -158,12 +158,13 @@ export default function TeamInbox() {
 
     socket.on('wa:message', ({ message }) => {
       if (!message?._id) return
-      const phone = message.direction === 'inbound' ? message.from : message.to
+      const flatMsg = flattenMessage(message)
+      const phone = flatMsg.direction === 'inbound' ? flatMsg.from : flatMsg.to
       dispatch(whatsappApi.util.updateQueryData('getInboxChat', phone, (draft) => {
         if (!Array.isArray(draft?.data)) return
-        const index = draft.data.findIndex((item) => item._id === message._id)
-        if (index >= 0) draft.data[index] = message
-        else draft.data.push(message)
+        const index = draft.data.findIndex((item) => item._id === flatMsg._id)
+        if (index >= 0) draft.data[index] = flatMsg
+        else draft.data.push(flatMsg)
         draft.data.sort((a, b) => new Date(a.meta?.createdAt) - new Date(b.meta?.createdAt))
       }))
       dispatch(whatsappApi.util.invalidateTags([{ type: 'WhatsApp', id: 'INBOX' }]))
@@ -330,8 +331,9 @@ export default function TeamInbox() {
 
               {/* Messages area */}
               <div
-                className="flex-1 overflow-y-auto p-4 space-y-1"
+                className="flex-1 overflow-y-auto p-4 space-y-3"
                 style={{
+                  backgroundColor: 'var(--vz-body-bg)',
                   backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.03) 1px, transparent 1px)',
                   backgroundSize: '20px 20px',
                 }}
@@ -359,6 +361,7 @@ export default function TeamInbox() {
                   </div>
                 )}
                 <ChatComposer
+                  leadId={conversations.find(c => c._id === selectedPhone)?.leadId || null}
                   value={reply}
                   onChange={setReply}
                   onSendText={handleSend}

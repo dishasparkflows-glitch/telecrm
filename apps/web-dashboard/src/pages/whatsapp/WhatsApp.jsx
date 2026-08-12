@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { io as socketIO } from 'socket.io-client'
 import { ROLES } from '../../utils/constants'
-import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation } from '../../features/whatsapp/whatsappApi'
+import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
 import { useGetLeadsQuery } from '../../features/leads/leadApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
@@ -467,9 +467,10 @@ export default function WhatsApp() {
 
     socket.on('wa:message', ({ message: incoming }) => {
       if (!incoming?._id) return
-      const incomingPhone = String(incoming.direction === 'inbound' ? incoming.from : incoming.to).replace(/\D/g, '')
-      const matchedLead = incoming.leadId
-        ? String(incoming.leadId)
+      const flatMsg = flattenMessage(incoming)
+      const incomingPhone = String(flatMsg.direction === 'inbound' ? flatMsg.from : flatMsg.to).replace(/\D/g, '')
+      const matchedLead = flatMsg.leadId
+        ? String(flatMsg.leadId)
         : leads.find((lead) => {
             const leadPhone = String(lead.contact?.phone || '').replace(/\D/g, '')
             return leadPhone && (leadPhone === incomingPhone || leadPhone.endsWith(incomingPhone) || incomingPhone.endsWith(leadPhone))
@@ -478,9 +479,9 @@ export default function WhatsApp() {
       if (matchedLead) {
         dispatch(whatsappApi.util.updateQueryData('getChat', matchedLead, (draft) => {
           if (!Array.isArray(draft?.data)) return
-          const index = draft.data.findIndex((item) => item._id === incoming._id)
-          if (index >= 0) draft.data[index] = incoming
-          else draft.data.push(incoming)
+          const index = draft.data.findIndex((item) => item._id === flatMsg._id)
+          if (index >= 0) draft.data[index] = flatMsg
+          else draft.data.push(flatMsg)
           draft.data.sort((a, b) => new Date(a.meta?.createdAt) - new Date(b.meta?.createdAt))
         }))
       }
@@ -820,8 +821,8 @@ export default function WhatsApp() {
                               {['image', 'video', 'audio', 'document'].includes(msg.type) && (
                                 <MessageMedia message={msg} outgoing={isOut} />
                               )}
-                              {(msg.content || msg.body || msg.message) && (
-                                <p className={`leading-relaxed ${msg.type !== 'text' ? 'mt-1.5' : ''}`}>{msg.content || msg.body || msg.message}</p>
+                              {(msg.content || msg.body || (typeof msg.message === 'string' && msg.message)) && (
+                                <p className={`leading-relaxed ${msg.type !== 'text' ? 'mt-1.5' : ''}`}>{msg.content || msg.body || (typeof msg.message === 'string' ? msg.message : null)}</p>
                               )}
                               {msg.reactions?.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1">{msg.reactions.map((reaction, index) => <span key={`${reaction.emoji}-${index}`} className="px-1.5 py-0.5 rounded-full bg-black/10 text-sm">{reaction.emoji}</span>)}</div>
@@ -887,6 +888,7 @@ export default function WhatsApp() {
                       </button>
                       <div className="flex-1 min-w-0">
                         <ChatComposer
+                          leadId={lead?._id || null}
                           value={message}
                           onChange={setMessage}
                           onSendText={handleSend}
