@@ -97,6 +97,24 @@ const normalizeExotelNumber = (number) => {
 };
 
 /**
+ * Normalizes Indian phone numbers to E.164 format for Twilio.
+ */
+const normalizeTwilioNumber = (number) => {
+    if (!number) return '';
+    let digits = String(number).replace(/\D/g, '');
+    
+    if (digits.length === 10) {
+        return '+91' + digits;
+    } else if (digits.length === 12 && digits.startsWith('91')) {
+        return '+' + digits;
+    } else if (digits.length === 11 && digits.startsWith('0')) {
+        return '+91' + digits.substring(1);
+    }
+    
+    return '+' + digits;
+};
+
+/**
  * Initiate a call through the configured provider.
  * @param {Object} options - Call options
  * @returns {{ externalCallId, provider, status }}
@@ -205,19 +223,34 @@ const initiateCall = async ({ fromNumber, toNumber, virtualNumber, callId }) => 
         const url = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Calls.json`;
 
         const params = new URLSearchParams();
-        const voiceWebhook = env.TWILIO_VOICE_WEBHOOK_URL || 'https://your-domain.com/webhooks/twilio/voice';
+        const voiceWebhook = env.TWILIO_VOICE_WEBHOOK_URL;
         const voiceUrl = new URL(voiceWebhook);
         if (callId) voiceUrl.searchParams.append('callId', String(callId));
 
         params.append('Url', voiceUrl.toString()); // Our own TwiML webhook
-        params.append('To', fromNumber); // Twilio calls the agent first
-        params.append('From', virtualNumber || config.twilioPhoneNumber);
+        params.append('To', normalizeTwilioNumber(fromNumber)); // Twilio calls the agent first
+        params.append('From', config.twilioPhoneNumber); // Twilio number to show as caller ID
+        params.append('Record', 'true'); // Tell Twilio to record the call
 
-        const res = await axios.post(url, params.toString(), {
-            auth: { username: config.accountSid, password: config.authToken },
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 15000,
-        });
+
+        let res;
+        try {
+            res = await axios.post(url, params.toString(), {
+                auth: { username: config.accountSid, password: config.authToken },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                timeout: 15000,
+            });
+        } catch (error) {
+            const status = error.response?.status;
+            const twilioError = error.response?.data?.message || error.message;
+            const twilioCode = error.response?.data?.code;
+            
+            const mappedError = new Error(twilioError);
+            mappedError.code = twilioCode ? `TWILIO_${twilioCode}` : 'TWILIO_PROVIDER_ERROR';
+            mappedError.status = status === 400 ? 400 : (status === 401 ? 401 : 502);
+            mappedError.providerData = error.response?.data || { message: twilioError };
+            throw mappedError;
+        }
 
         const externalCallId = res.data?.sid;
         if (!externalCallId) {
@@ -265,10 +298,27 @@ const getCallStatus = async (tenantId, externalCallId) => {
             auth: { username: config.accountSid, password: config.authToken },
             timeout: 10000,
         });
+        
+        // Fetch recording URL from Twilio
+        let recordingUrl = null;
+        try {
+            const recordingsUrl = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Calls/${externalCallId}/Recordings.json`;
+            const recordingsRes = await axios.get(recordingsUrl, {
+                auth: { username: config.accountSid, password: config.authToken },
+                timeout: 10000,
+            });
+            const recording = recordingsRes.data?.recordings?.[0];
+            if (recording) {
+                recordingUrl = `https://api.twilio.com${recording.uri.replace('.json', '.mp3')}`;
+            }
+        } catch (e) {
+            console.error(`Failed to fetch Twilio recording for ${externalCallId}:`, e.message);
+        }
+
         return {
             status: res.data?.status || 'unknown',
             duration: parseInt(res.data?.duration) || 0,
-            recordingUrl: null, // Twilio recordings need separate API call
+            recordingUrl: recordingUrl,
         };
     }
 

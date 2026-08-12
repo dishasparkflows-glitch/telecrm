@@ -6,19 +6,19 @@ const { uploadBufferToR2 } = require('@sparkcrm/shared-utils');
 
 let isSyncing = false;
 
-const syncMissingExotelRecordings = async () => {
+const syncMissingRecordings = async () => {
     if (isSyncing) return;
     isSyncing = true;
     
     try {
-        console.log('🔄 [CRON] Starting sweep for missing Exotel recordings...');
+        console.log('🔄 [CRON] Starting sweep for missing recordings...');
         
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
 
         // Find calls from today that are still active and missing a recording URL
         const stuckCalls = await CallLog.find({
-            'provider.name': 'exotel',
+            'provider.name': { $in: ['exotel', 'twilio'] },
             isSyncing: { $ne: true },
             'audit.createdAt': { $gte: startOfToday },
             'call.status': { $in: ['initiated', 'ringing', 'in_progress'] },
@@ -80,13 +80,15 @@ const syncMissingExotelRecordings = async () => {
                 if (details.recordingUrl && (!callLog.recording.url)) {
                     console.log(`[CRON] Recording recovered for Call SID: ${callSid}. Downloading from Exotel...`);
                     try {
-                        // Download the audio file from Exotel (requires Basic Auth)
-                        const exotelAuth = config.provider === 'exotel'
-                            ? { username: config.apiKey, password: config.apiToken }
-                            : undefined;
+                        let authOptions = undefined;
+                        if (config.provider === 'exotel') {
+                            authOptions = { username: config.apiKey, password: config.apiToken };
+                        } else if (config.provider === 'twilio') {
+                            authOptions = { username: config.accountSid, password: config.authToken };
+                        }
                         const response = await axios.get(details.recordingUrl, {
                             responseType: 'arraybuffer',
-                            auth: exotelAuth,
+                            auth: authOptions,
                         });
                         console.log(`✅ [CRON] Recording downloaded, size: ${response.data.byteLength} bytes`);
                         const buffer = Buffer.from(response.data);
@@ -156,12 +158,12 @@ const syncMissingExotelRecordings = async () => {
 const registerCronJobs = () => {
     // Run every 5 minutes
     cron.schedule('*/5 * * * *', () => {
-        syncMissingExotelRecordings().catch(console.error);
+        syncMissingRecordings().catch(console.error);
     });
     console.log('✅ call-service: Cron jobs registered');
 };
 
 module.exports = {
     registerCronJobs,
-    syncMissingExotelRecordings
+    syncMissingRecordings
 };

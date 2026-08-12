@@ -298,6 +298,10 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                 const { findLeadByPhone } = require('./leadLookup.service');
                 const lead = await findLeadByPhone(tenantId, from);
                 const leadId = lead?._id || null;
+                if (!leadId) {
+                    console.log(`📩 [Baileys] Ignored message from ${from} (not a lead)`);
+                    continue;
+                }
 
                 let mediaObjectKey = null;
                 const mediaMimeType = mediaMessage?.mimetype ? mediaStorage.normalizeMimeType(mediaMessage.mimetype) : null;

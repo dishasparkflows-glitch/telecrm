@@ -35,3 +35,6 @@ tmp/
 
 # Misc
 *.tsbuildinfo
+
+# WhatsApp Sessions
+apps/whatsapp-service/sessions/

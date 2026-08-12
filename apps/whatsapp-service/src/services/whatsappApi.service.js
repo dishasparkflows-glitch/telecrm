@@ -52,6 +52,12 @@ const normalizePhone = (phone) => {
  * or     { configured: false, reason }
  */
 const buildMetaConfig = (doc, userId = null) => {
+    // mode = 'qr' — Baileys handles sending. Mark as configured so send functions are called.
+    // QR mode does not require Meta API access tokens.
+    if (doc.mode === 'qr') {
+        return { configured: true, mode: 'qr' };
+    }
+
     const accessToken = doc.getDecryptedAccessToken();
     if (!accessToken) {
         return { configured: false, reason: 'Access token missing — save credentials in WhatsApp Setup' };
@@ -105,8 +111,7 @@ const buildMetaConfig = (doc, userId = null) => {
         };
     }
 
-    // mode = 'qr' — Baileys handles sending. Mark as configured so send functions are called.
-    return { configured: true, mode: 'qr' };
+    return { configured: false, reason: 'Invalid WhatsApp mode configured' };
 };
 
 // ─── Core config resolver ─────────────────────────────────────────────────────

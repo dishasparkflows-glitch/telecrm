@@ -26,6 +26,10 @@ async function publishInboundEvent(message, provider) {
 async function processInboundMessage({ tenantId, branchId = null, userId = null, from, to, type = 'text', content = '', mediaUrl = null, waMessageId, provider }) {
     if (!tenantId || !from || !to || !waMessageId) throw new Error('Inbound message identity is incomplete');
     const lead = await findLeadByPhone(tenantId, from);
+    if (!lead) {
+        console.log(`📩 [Inbound Service] Ignored message from ${from} (not a lead)`);
+        return { created: false, lead: null, ignored: true };
+    }
     let message;
     try {
         message = await WhatsappMessage.create({

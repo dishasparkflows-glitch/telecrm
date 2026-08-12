@@ -502,7 +502,7 @@ export default function WhatsApp() {
   const actionContacts = leads.map((lead) => ({ id: lead._id, name: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim(), phone: lead.contact?.phone }))
 
   const filteredLeads = contactSearch
-    ? leads.filter((l) => `${l.firstName} ${l.lastName}`.toLowerCase().includes(contactSearch.toLowerCase()))
+    ? leads.filter((l) => `${l.contact?.firstName} ${l.contact?.lastName}`.toLowerCase().includes(contactSearch.toLowerCase()))
     : leads
 
   // Resolve template body for a specific lead (fill {{N}} from lead fields)
@@ -519,7 +519,7 @@ export default function WhatsApp() {
   const handleSend = async () => {
     if (!message.trim() || !selectedLead) return
     const lead = leads.find(l => l._id === selectedLead)
-    if (!lead?.phone) return toast('This lead has no phone number on record', 'error')
+    if (!lead?.contact?.phone) return toast('This lead has no phone number on record', 'error')
     try {
       const result = replyingTo
         ? await replyToMessage({ id: replyingTo._id, to: lead.contact?.phone, leadId: selectedLead, type: 'text', content: message }).unwrap()
@@ -538,7 +538,7 @@ export default function WhatsApp() {
 
   const handleSendMedia = async (media) => {
     const lead = leads.find((item) => item._id === selectedLead)
-    if (!lead?.phone) throw new Error('This lead has no phone number')
+    if (!lead?.contact?.phone) throw new Error('This lead has no phone number')
     const result = replyingTo
       ? await replyToMessage({ id: replyingTo._id, to: lead.contact?.phone, leadId: selectedLead, ...media }).unwrap()
       : await sendMessage({ leadId: selectedLead, to: lead.contact?.phone, ...media }).unwrap()
@@ -548,7 +548,7 @@ export default function WhatsApp() {
 
   const handleSendTemplate = async (template) => {
     const lead = leads.find(l => l._id === selectedLead)
-    if (!lead?.phone) return toast('This lead has no phone number', 'error')
+    if (!lead?.contact?.phone) return toast('This lead has no phone number', 'error')
     const resolvedBody = resolveTemplate(template, lead)
     try {
       const result = await sendMessage({
@@ -652,15 +652,15 @@ export default function WhatsApp() {
     if (!selectedTemplate) return
     setBroadcastLoading(true)
     try {
-      const recipients = leads.filter(l => l.phone).map(l => ({
+      const recipients = leads.filter(l => l.contact?.phone).map(l => ({
         _id: l._id,
         leadId: l._id,
-        phone: l.phone,
-        firstName: l.firstName || '',
-        lastName: l.lastName || '',
-        company: l.company || '',
-        email: l.email || '',
-        city: l.city || '',
+        phone: l.contact?.phone,
+        firstName: l.contact?.firstName || '',
+        lastName: l.contact?.lastName || '',
+        company: l.contact?.company || '',
+        email: l.contact?.email || '',
+        city: l.address?.city || '',
         source: l.source || '',
       }))
       await sendBroadcast({
@@ -745,14 +745,14 @@ export default function WhatsApp() {
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                          {lead?.firstName?.[0]}{lead?.lastName?.[0]}
+                          {lead?.contact?.firstName?.[0]}{lead?.contact?.lastName?.[0]}
                         </div>
                         <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-success border-2 border-[var(--vz-card-bg)]" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[var(--vz-heading)]">{lead?.firstName} {lead?.lastName}</p>
+                        <p className="text-sm font-semibold text-[var(--vz-heading)]">{lead?.contact?.firstName} {lead?.contact?.lastName}</p>
                         <p className="text-[11px] text-[var(--vz-text-muted)] flex items-center gap-1">
-                          <Phone size={9} /> {lead?.phone || 'No phone number'}
+                          <Phone size={9} /> {lead?.contact?.phone || 'No phone number'}
                         </p>
                       </div>
                     </div>
@@ -762,7 +762,7 @@ export default function WhatsApp() {
                         <input value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Search chat"
                           className="w-36 pl-7 pr-2 py-1.5 text-xs rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)] outline-none focus:border-primary" />
                       </div>
-                    {!lead?.phone && (
+                    {!lead?.contact?.phone && (
                       <div className="flex items-center gap-1.5 text-[11px] text-warning bg-warning/10 px-2.5 py-1 rounded-full border border-warning/20">
                         <AlertCircle size={11} /> No phone — messages will be queued
                       </div>
@@ -892,7 +892,7 @@ export default function WhatsApp() {
                           onSendText={handleSend}
                           onSendMedia={handleSendMedia}
                           sending={sending || replying}
-                          disabled={!lead?.phone}
+                          disabled={!lead?.contact?.phone}
                           toast={toast}
                         />
                       </div>
@@ -1086,7 +1086,7 @@ export default function WhatsApp() {
                       <Users size={24} />
                     </div>
                     <div>
-                      <p className="text-base font-bold text-[var(--vz-heading)]">{leads.filter(l => l.phone).length} Recipients</p>
+                      <p className="text-base font-bold text-[var(--vz-heading)]">{leads.filter(l => l.contact?.phone).length} Recipients</p>
                       <p className="text-xs text-[var(--vz-text-muted)]">All leads with valid phone numbers</p>
                     </div>
                   </div>
@@ -1106,7 +1106,7 @@ export default function WhatsApp() {
               <div className="pt-6">
                 <Button 
                   className="w-full h-12 text-sm font-bold rounded-xl shadow-lg shadow-primary/20" 
-                  disabled={!selectedTemplate || broadcastLoading || leads.filter(l => l.phone).length === 0} 
+                  disabled={!selectedTemplate || broadcastLoading || leads.filter(l => l.contact?.phone).length === 0} 
                   onClick={handleBroadcast}
                 >
                   {broadcastLoading ? (
@@ -1120,7 +1120,7 @@ export default function WhatsApp() {
                     </span>
                   )}
                 </Button>
-                {leads.filter(l => l.phone).length === 0 && (
+                {leads.filter(l => l.contact?.phone).length === 0 && (
                   <p className="text-[10px] text-center text-danger mt-2">No leads with phone numbers available to broadcast.</p>
                 )}
               </div>

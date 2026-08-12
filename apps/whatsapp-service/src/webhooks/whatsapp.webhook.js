@@ -9,6 +9,7 @@ const { env } = require('@sparkcrm/shared-config');
 const whatsappApi = require('../services/whatsappApi.service');
 const realtime = require('../services/realtime.service');
 const { snapshotMessage } = require('../services/messageActions.service');
+const { findLeadByPhone } = require('../services/leadLookup.service');
 
 /**
  * GET /webhooks/whatsapp
@@ -302,6 +303,12 @@ router.post(
                 const exists = await WhatsappMessage.exists({ tenantId, waMessageId: msg.id });
                 if (exists) {
                     console.log(`⏭️  Duplicate webhook — waMessageId ${msg.id} already stored`);
+                    continue;
+                }
+
+                const lead = await findLeadByPhone(tenantId, msg.from);
+                if (!lead) {
+                    console.log(`📩 [Cloud API] Ignored message from ${msg.from} (not a lead)`);
                     continue;
                 }
 

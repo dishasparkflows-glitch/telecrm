@@ -91,6 +91,8 @@ const env = {
     EXOTEL_TOKEN: process.env.EXOTEL_TOKEN || '',
     EXOTEL_CALLBACK_URL: process.env.EXOTEL_CALLBACK_URL || '',
 
+    TWILIO_VOICE_WEBHOOK_URL: process.env.TWILIO_VOICE_WEBHOOK_URL || '',
+
     WABA_API_URL: process.env.WABA_API_URL || 'https://graph.facebook.com/v17.0',
     WABA_TOKEN: process.env.WABA_TOKEN || '',
     WABA_PHONE_NUMBER_ID: process.env.WABA_PHONE_NUMBER_ID || '',
