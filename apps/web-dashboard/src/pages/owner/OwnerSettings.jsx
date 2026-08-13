@@ -34,7 +34,7 @@ const EXOTEL_FIELDS = [
 const TWILIO_FIELDS = [
   { key: 'accountSid', label: 'Account SID', placeholder: 'Twilio Account SID', sensitive: false },
   { key: 'authToken', label: 'Auth Token', placeholder: 'Twilio Auth Token', sensitive: true },
-  { key: 'twilioPhoneNumber', label: 'Twilio Phone Number', placeholder: 'e.g. +14155552671', sensitive: false },
+  { key: 'phoneNumber', label: 'Twilio Phone Number', placeholder: 'e.g. +14155552671', sensitive: false },
 ]
 
 export default function OwnerSettings() {
@@ -89,10 +89,25 @@ export default function OwnerSettings() {
       : EXOTEL_FIELDS
 
   const handleCredentialChange = (key, value) => {
-    setCurrentForm(prev => ({
-      ...prev,
-      credentials: { ...prev.credentials, [key]: value },
-    }))
+    setCurrentForm(prev => {
+      if (activeTab === 'calling') {
+        const provider = prev.provider;
+        return {
+          ...prev,
+          credentials: {
+            ...prev.credentials,
+            [provider]: {
+              ...(prev.credentials[provider] || {}),
+              [key]: value
+            }
+          }
+        }
+      }
+      return {
+        ...prev,
+        credentials: { ...prev.credentials, [key]: value },
+      }
+    })
   }
 
   const handleSave = async () => {
@@ -129,7 +144,7 @@ export default function OwnerSettings() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 size={28} className="animate-spin text-[var(--vz-primary)]" />
+        <Loader2 size={28} className="animate-spin text-primary" />
       </div>
     )
   }
@@ -152,7 +167,7 @@ export default function OwnerSettings() {
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                 isActive
-                  ? 'bg-[var(--vz-primary)] text-white shadow-sm'
+                  ? 'bg-primary text-white shadow-sm'
                   : 'text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] hover:bg-[var(--vz-light)]'
               }`}
             >
@@ -226,8 +241,8 @@ export default function OwnerSettings() {
                     onClick={() => setCurrentForm(prev => ({ ...prev, provider: p, credentials: {} }))}
                     className={`flex-1 py-3 px-4 rounded-xl border-2 text-sm font-bold transition-all ${
                       currentForm.provider === p
-                        ? 'border-[var(--vz-primary)] bg-[var(--vz-primary)]/5 text-[var(--vz-primary)]'
-                        : 'border-[var(--vz-border)] text-[var(--vz-text-muted)] hover:border-[var(--vz-primary)]/30'
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-[var(--vz-border)] text-[var(--vz-text-muted)] hover:border-primary/30'
                     }`}
                   >
                     {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -247,10 +262,14 @@ export default function OwnerSettings() {
                 </label>
                 <input
                   type={field.sensitive ? 'password' : 'text'}
-                  value={currentForm.credentials[field.key] || ''}
+                  value={
+                    activeTab === 'calling' 
+                      ? (currentForm.credentials[currentForm.provider]?.[field.key] || '')
+                      : (currentForm.credentials[field.key] || '')
+                  }
                   onChange={e => handleCredentialChange(field.key, e.target.value)}
                   placeholder={field.placeholder}
-                  className="w-full px-3 py-2.5 rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)] text-[var(--vz-body-color)] text-sm focus:outline-none focus:border-[var(--vz-primary)] focus:ring-1 focus:ring-[var(--vz-primary)]/30 transition-all"
+                  className="w-full px-3 py-2.5 rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)] text-[var(--vz-body-color)] text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
                   autoComplete="off"
                 />
               </div>
@@ -271,7 +290,7 @@ export default function OwnerSettings() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold bg-[var(--vz-primary)] text-white hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold bg-primary text-white hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
             >
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               Save Configuration

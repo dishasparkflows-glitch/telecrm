@@ -37,9 +37,18 @@ const communicationConfigSchema = new mongoose.Schema(
         // Encrypted credentials stored as a flexible Map
         // Keys vary by provider. All sensitive values are AES-256-GCM encrypted.
         credentials: {
-            type: Map,
-            of: String,
-            default: {},
+            exotel: {
+                apiKey: { type: String, default: null },
+                apiToken: { type: String, default: null },
+                sid: { type: String, default: null },
+                subdomain: { type: String, default: 'api.exotel.com' },
+                callerId: { type: String, default: null },
+            },
+            twilio: {
+                accountSid: { type: String, default: null },
+                authToken: { type: String, default: null },
+                phoneNumber: { type: String, default: null },
+            },
         },
 
         // Last successful connection test

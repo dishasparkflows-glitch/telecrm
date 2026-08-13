@@ -119,7 +119,7 @@ export default function Topbar() {
             </button>
 
             {branchOpen && (
-              <div className="absolute right-0 top-11 w-[220px] bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-lg shadow-lg overflow-hidden z-50">
+              <div className="absolute left-0 top-11 w-[220px] bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-lg shadow-lg overflow-hidden z-50">
                 <div className="px-4 py-2.5 border-b border-[var(--vz-border)]">
                   <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase tracking-wide">
                     Switch Branch

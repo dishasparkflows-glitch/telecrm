@@ -203,7 +203,7 @@ export default function Notifications() {
               checked={isAllSelected}
               ref={(el) => { if (el) el.indeterminate = isIndeterminate }}
               onChange={handleSelectAll}
-              className="w-4 h-4 rounded cursor-pointer accent-[var(--vz-primary)]"
+              className="w-4 h-4 rounded cursor-pointer accent-primary"
             />
             Select All
           </label>
@@ -281,7 +281,7 @@ export default function Notifications() {
                     checked={isSelected}
                     onClick={(e) => e.stopPropagation()}
                     onChange={(e) => toggleSelection(e, notif._id)}
-                    className="w-4 h-4 rounded cursor-pointer accent-[var(--vz-primary)] shrink-0"
+                    className="w-4 h-4 rounded cursor-pointer accent-primary shrink-0"
                   />
 
                   {/* Icon with unread dot */}

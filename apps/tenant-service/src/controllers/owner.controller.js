@@ -639,14 +639,28 @@ const getCommunicationConfigs = asyncHandler(async (req, res) => {
     // Sanitize sensitive credential values — show masked versions
     const sanitized = configs.map(config => {
         const cred = config.credentials || {};
-        const safe = {};
-        for (const [key, val] of Object.entries(cred)) {
-            if (SENSITIVE_KEYS.includes(key) && val) {
-                safe[key] = '••••••••';
-            } else {
-                safe[key] = val;
+        let safe = {};
+        
+        if (config.type === 'whatsapp') {
+            for (const [key, val] of Object.entries(cred)) {
+                if (SENSITIVE_KEYS.includes(key) && val) {
+                    safe[key] = '••••••••';
+                } else {
+                    safe[key] = val;
+                }
             }
+        } else if (config.type === 'calling') {
+            safe = { exotel: {}, twilio: {} };
+            for (const prov of ['exotel', 'twilio']) {
+                const provCreds = cred[prov] || {};
+                for (const [key, val] of Object.entries(provCreds)) {
+                    safe[prov][key] = SENSITIVE_KEYS.includes(key) && val ? '••••••••' : val;
+                }
+            }
+        } else {
+            safe = cred;
         }
+        
         return { ...config, credentials: safe };
     });
 
@@ -686,15 +700,33 @@ const updateCommunicationConfig = asyncHandler(async (req, res) => {
 
     // Encrypt sensitive credentials before storing
     if (credentials && typeof credentials === 'object') {
-        for (const [key, value] of Object.entries(credentials)) {
-            if (!value || value === '••••••••') continue; // Skip masked/empty values
-            if (key === 'subdomain' && type === 'calling' && provider === 'exotel') {
-                config.credentials.set(key, validateExotelHost(value));
-            } else if (SENSITIVE_KEYS.includes(key)) {
-                config.credentials.set(key, encrypt(value));
-            } else {
-                config.credentials.set(key, value);
+        if (type === 'whatsapp') {
+            for (const [key, value] of Object.entries(credentials)) {
+                if (!value || value === '••••••••') continue;
+                if (SENSITIVE_KEYS.includes(key)) {
+                    config.credentials.set(key, encrypt(value));
+                } else {
+                    config.credentials.set(key, value);
+                }
             }
+        } else if (type === 'calling') {
+            if (!config.credentials) config.credentials = {};
+            if (!config.credentials.exotel) config.credentials.exotel = {};
+            if (!config.credentials.twilio) config.credentials.twilio = {};
+
+            const providerCreds = credentials[provider] || {};
+            for (const [key, value] of Object.entries(providerCreds)) {
+                if (!value || value === '••••••••') continue;
+                if (key === 'subdomain' && provider === 'exotel') {
+                    config.credentials.exotel[key] = validateExotelHost(value);
+                } else if (SENSITIVE_KEYS.includes(key)) {
+                    config.credentials[provider][key] = encrypt(value);
+                } else {
+                    config.credentials[provider][key] = value;
+                }
+            }
+            // Mongoose needs to be told a mixed/nested object changed
+            config.markModified('credentials');
         }
     }
 
@@ -703,9 +735,19 @@ const updateCommunicationConfig = asyncHandler(async (req, res) => {
     await config.save();
 
     // Return sanitized response
-    const safe = {};
-    for (const [key, val] of config.credentials.entries()) {
-        safe[key] = SENSITIVE_KEYS.includes(key) ? '••••••••' : val;
+    let safe = {};
+    if (type === 'whatsapp') {
+        for (const [key, val] of config.credentials.entries()) {
+            safe[key] = SENSITIVE_KEYS.includes(key) ? '••••••••' : val;
+        }
+    } else {
+        safe = { exotel: {}, twilio: {} };
+        for (const prov of ['exotel', 'twilio']) {
+            const creds = config.credentials[prov] || {};
+            for (const [key, val] of Object.entries(creds)) {
+                safe[prov][key] = SENSITIVE_KEYS.includes(key) && val ? '••••••••' : val;
+            }
+        }
     }
 
     ApiResponse.success(res, { ...config.toObject(), credentials: safe }, `${type} config updated`);
@@ -746,10 +788,10 @@ const testCommunicationConfig = asyncHandler(async (req, res) => {
             config.testMessage = `Connected! Phone: ${metaRes.data.display_phone_number || phoneNumberId}`;
         } else if (type === 'calling') {
             if (config.provider === 'exotel') {
-                const apiKey = decrypt(config.credentials.get('apiKey'));
-                const apiToken = decrypt(config.credentials.get('apiToken'));
-                const sid = config.credentials.get('sid');
-                const subdomain = validateExotelHost(config.credentials.get('subdomain'));
+                const apiKey = decrypt(config.credentials.exotel?.apiKey);
+                const apiToken = decrypt(config.credentials.exotel?.apiToken);
+                const sid = config.credentials.exotel?.sid;
+                const subdomain = validateExotelHost(config.credentials.exotel?.subdomain);
 
                 if (!apiKey || !apiToken || !sid) {
                     throw new Error('API Key, API Token, and SID are required');
@@ -766,8 +808,8 @@ const testCommunicationConfig = asyncHandler(async (req, res) => {
                 config.testStatus = 'success';
                 config.testMessage = `Connected to Exotel account: ${sid}`;
             } else if (config.provider === 'twilio') {
-                const accountSid = config.credentials.get('accountSid');
-                const authToken = decrypt(config.credentials.get('authToken'));
+                const accountSid = config.credentials.twilio?.accountSid;
+                const authToken = decrypt(config.credentials.twilio?.authToken);
 
                 if (!accountSid || !authToken) {
                     throw new Error('Account SID and Auth Token are required');

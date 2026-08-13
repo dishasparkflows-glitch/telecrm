@@ -36,23 +36,24 @@ const getConfig = async () => {
         }
 
         const cred = config.credentials || {};
-        const getVal = (key) => typeof cred.get === 'function' ? cred.get(key) : cred[key];
 
         if (config.provider === 'exotel') {
+            const exotelCred = cred.exotel || {};
             cachedConfig = {
                 provider: 'exotel',
-                apiKey: decrypt(getVal('apiKey')),
-                apiToken: decrypt(getVal('apiToken')),
-                sid: getVal('sid'),
-                subdomain: getVal('subdomain') || 'api.exotel.com',
-                callerId: getVal('callerId'),
+                apiKey: decrypt(exotelCred.apiKey),
+                apiToken: decrypt(exotelCred.apiToken),
+                sid: exotelCred.sid,
+                subdomain: exotelCred.subdomain || 'api.exotel.com',
+                callerId: exotelCred.callerId,
             };
         } else if (config.provider === 'twilio') {
+            const twilioCred = cred.twilio || {};
             cachedConfig = {
                 provider: 'twilio',
-                accountSid: getVal('accountSid'),
-                authToken: decrypt(getVal('authToken')),
-                twilioPhoneNumber: getVal('twilioPhoneNumber'),
+                accountSid: twilioCred.accountSid,
+                authToken: decrypt(twilioCred.authToken),
+                phoneNumber: twilioCred.phoneNumber,
             };
         }
 
@@ -180,7 +181,7 @@ const initiateTwilioCall = async (config, { fromNumber, toNumber, callId }) => {
 
     params.append('Url', voiceUrl.toString()); // Our own TwiML webhook
     params.append('To', normalizeTwilioNumber(fromNumber)); // Twilio calls the agent first
-    params.append('From', config.twilioPhoneNumber); // Twilio number to show as caller ID
+    params.append('From', config.phoneNumber); // Twilio number to show as caller ID
     params.append('Record', 'true'); // Tell Twilio to record the call
 
     // Set up real-time status callbacks

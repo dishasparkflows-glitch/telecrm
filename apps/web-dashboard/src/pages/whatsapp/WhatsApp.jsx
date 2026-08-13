@@ -832,7 +832,7 @@ export default function WhatsApp() {
                               ${isOut
                                 ? 'bg-primary text-white rounded-br-md'
                                 : 'bg-[var(--vz-card-bg)] text-[var(--vz-heading)] rounded-bl-md border border-[var(--vz-border)]'}`}>
-                              <MessageActions message={msg} contacts={actionContacts} onReply={setReplyingTo} toast={toast} />
+                              <MessageActions message={msg} outgoing={isOut} contacts={actionContacts} onReply={setReplyingTo} toast={toast} />
                               {msg.isForwarded && <p className={`text-[10px] italic mb-1 ${isOut ? 'text-white/60' : 'text-[var(--vz-text-muted)]'}`}>Forwarded</p>}
                               {msg.replyTo?.snapshot && (
                                 <button type="button" onClick={() => document.getElementById(`wa-message-${msg.replyTo.messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
