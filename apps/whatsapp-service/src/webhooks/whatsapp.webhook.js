@@ -382,23 +382,23 @@ router.post(
                             isActive: true,
                             $or: [
                                 {
-                                    matchType: 'exact',
-                                    triggerKeyword: content.trim().toLowerCase(),
+                                    'rule.matchType': 'exact',
+                                    'rule.triggerKeyword': content.trim().toLowerCase(),
                                 },
                                 {
-                                    matchType: 'contains',
+                                    'rule.matchType': 'contains',
                                     $expr: {
                                         $gt: [
-                                            { $indexOfCP: [{ $toLower: content }, { $toLower: '$triggerKeyword' }] },
+                                            { $indexOfCP: [{ $toLower: content }, { $toLower: '$rule.triggerKeyword' }] },
                                             -1,
                                         ],
                                     },
                                 },
                                 {
-                                    matchType: 'startsWith',
+                                    'rule.matchType': 'startsWith',
                                     $expr: {
                                         $eq: [
-                                            { $indexOfCP: [{ $toLower: content }, { $toLower: '$triggerKeyword' }] },
+                                            { $indexOfCP: [{ $toLower: content }, { $toLower: '$rule.triggerKeyword' }] },
                                             0,
                                         ],
                                     },
@@ -407,16 +407,16 @@ router.post(
                         }).sort({ priority: -1 });
 
                         if (matchedRule) {
-                            console.log(`🤖 Chatbot matched: "${matchedRule.triggerKeyword}" → ${matchedRule.responseType}`);
+                            console.log(`🤖 Chatbot matched: "${matchedRule.rule?.triggerKeyword}" → ${matchedRule.rule?.responseType}`);
 
                             let replyResult = { waMessageId: null, status: 'failed' };
-                            if (matchedRule.responseType === 'template' && matchedRule.templateName) {
+                            if (matchedRule.rule?.responseType === 'template' && matchedRule.templateName) {
                                 replyResult = await whatsappApi.sendTemplateMessage(
                                     msg.from, matchedRule.templateName, 'en', [], tenantId
                                 );
                             } else {
                                 replyResult = await whatsappApi.sendTextMessage(
-                                    msg.from, matchedRule.responseContent, tenantId
+                                    msg.from, matchedRule.rule?.responseContent, tenantId
                                 );
                             }
 
@@ -427,10 +427,10 @@ router.post(
                                     direction:    'outbound',
                                     from:         bizNumber,
                                     to:           msg.from,
-                                    type:         matchedRule.responseType === 'template' ? 'template' : 'text',
-                                    content:      matchedRule.responseContent,
+                                    type:         matchedRule.rule?.responseType === 'template' ? 'template' : 'text',
+                                    content:      matchedRule.rule?.responseType === 'template' ? '' : matchedRule.rule?.responseContent,
                                 },
-                                templateName: matchedRule.responseType === 'template' ? matchedRule.templateName : null,
+                                templateName: matchedRule.rule?.responseType === 'template' ? matchedRule.templateName : null,
                                 delivery: { status: replyResult.status },
                                 provider: {
                                     waMessageId: replyResult.waMessageId,

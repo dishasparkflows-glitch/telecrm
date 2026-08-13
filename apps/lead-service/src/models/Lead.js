@@ -27,47 +27,47 @@ const leadSchema = new mongoose.Schema(
             },
             lastName: {
                 type: String,
+                required: [true, 'Last name is required'],
                 trim: true,
-                default: '',
             },
             email: {
                 type: String,
+                required: [true, 'Email is required'],
                 lowercase: true,
                 trim: true,
-                default: '',
             },
             emailNormalized: {
                 type: String,
                 lowercase: true,
                 trim: true,
-                default: '',
                 index: true,
+            },
+            countryCode: {
+                type: String,
+                trim: true,
+                default: '+91',
             },
             phone: {
                 type: String,
+                required: [true, 'Phone number is required'],
                 trim: true,
-                default: '',
             },
             phoneNormalized: {
                 type: String,
                 trim: true,
-                default: '',
                 index: true,
             },
             alternatePhone: {
                 type: String,
                 trim: true,
-                default: '',
             },
             company: {
                 type: String,
                 trim: true,
-                default: '',
             },
             designation: {
                 type: String,
                 trim: true,
-                default: '',
             },
         },
         // ─── Pipeline ───
@@ -93,7 +93,6 @@ const leadSchema = new mongoose.Schema(
         },
         sourceDetails: {
             type: String,
-            default: '',
         },
         assignedTo: {
             type: mongoose.Schema.Types.ObjectId,
@@ -105,38 +104,38 @@ const leadSchema = new mongoose.Schema(
             default: null,
         },
         origin: {
-            provider: { type: String, default: '' },
-            sourceId: { type: String, default: '' },
-            sourceName: { type: String, default: '' },
-            rawSource: { type: String, default: '' },
+            provider: { type: String },
+            sourceId: { type: String },
+            sourceName: { type: String },
+            rawSource: { type: String },
         },
         firstTouch: {
-            campaignId: { type: String, default: '' },
-            campaignName: { type: String, default: '' },
-            adSetId: { type: String, default: '' },
-            adSetName: { type: String, default: '' },
-            adId: { type: String, default: '' },
-            adName: { type: String, default: '' },
-            formId: { type: String, default: '' },
-            formName: { type: String, default: '' },
+            campaignId: { type: String },
+            campaignName: { type: String },
+            adSetId: { type: String },
+            adSetName: { type: String },
+            adId: { type: String },
+            adName: { type: String },
+            formId: { type: String },
+            formName: { type: String },
             capturedAt: { type: Date, default: null },
         },
         lastTouch: {
-            campaignId: { type: String, default: '' },
-            campaignName: { type: String, default: '' },
-            adSetId: { type: String, default: '' },
-            adSetName: { type: String, default: '' },
-            adId: { type: String, default: '' },
-            adName: { type: String, default: '' },
-            formId: { type: String, default: '' },
-            formName: { type: String, default: '' },
+            campaignId: { type: String },
+            campaignName: { type: String },
+            adSetId: { type: String },
+            adSetName: { type: String },
+            adId: { type: String },
+            adName: { type: String },
+            formId: { type: String },
+            formName: { type: String },
             capturedAt: { type: Date, default: null },
         },
         consent: {
             whatsappOptIn: { type: Boolean, default: false },
             whatsappOptInAt: { type: Date, default: null },
             marketingOptIn: { type: Boolean, default: false },
-            source: { type: String, default: '' },
+            source: { type: String },
         },
         externalIdentities: [
             {
@@ -216,10 +215,10 @@ const leadSchema = new mongoose.Schema(
 
         // ─── Location ───
         address: {
-            city: { type: String, default: '' },
-            state: { type: String, default: '' },
+            city: { type: String },
+            state: { type: String },
             country: { type: String, default: 'India' },
-            pincode: { type: String, default: '' },
+            pincode: { type: String },
         },
 
         // ─── Meta ───

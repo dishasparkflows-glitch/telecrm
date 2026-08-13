@@ -43,7 +43,8 @@ const CONTACT_FIELDS = Object.freeze([
     'phoneNormalized',
     'alternatePhone',
     'company',
-    'designation'
+    'designation',
+    'countryCode'
 ]);
 
 function isPlainObject(value) {

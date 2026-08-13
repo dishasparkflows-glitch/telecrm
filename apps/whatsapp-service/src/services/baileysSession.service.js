@@ -394,23 +394,23 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                             isActive: true,
                             $or: [
                                 {
-                                    matchType: 'exact',
-                                    triggerKeyword: incomingText,
+                                    'rule.matchType': 'exact',
+                                    'rule.triggerKeyword': incomingText,
                                 },
                                 {
-                                    matchType: 'contains',
+                                    'rule.matchType': 'contains',
                                     $expr: {
                                         $gt: [
-                                            { $indexOfCP: [incomingText, { $toLower: '$triggerKeyword' }] },
+                                            { $indexOfCP: [incomingText, { $toLower: '$rule.triggerKeyword' }] },
                                             -1,
                                         ],
                                     },
                                 },
                                 {
-                                    matchType: 'startsWith',
+                                    'rule.matchType': 'startsWith',
                                     $expr: {
                                         $eq: [
-                                            { $indexOfCP: [incomingText, { $toLower: '$triggerKeyword' }] },
+                                            { $indexOfCP: [incomingText, { $toLower: '$rule.triggerKeyword' }] },
                                             0,
                                         ],
                                     },
@@ -419,9 +419,9 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                         }).sort({ priority: -1 });
 
                         if (matchedRule) {
-                            console.log(`🤖 [Baileys] Chatbot matched: "${matchedRule.triggerKeyword}" → sending auto-reply`);
+                            console.log(`🤖 [Baileys] Chatbot matched: "${matchedRule.rule?.triggerKeyword}" → sending auto-reply`);
                             const replyJid = `${String(from).replace(/\D/g, '')}@s.whatsapp.net`;
-                            const replyText = matchedRule.responseContent || '';
+                            const replyText = matchedRule.rule?.responseContent || '';
                             const currentSession = sessions.get(key);
                             if (replyText && currentSession?.sock) {
                                 const replyMessageId = generateMessageIDV2(currentSession.sock.user?.id);

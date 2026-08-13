@@ -5,7 +5,7 @@ const { normalizePhone } = require('../src/services/whatsappApi.service');
 const { sessionDir, statusFromBaileysAck } = require('../src/services/baileysSession.service');
 
 test('normalizes and validates WhatsApp phone numbers', () => {
-    assert.equal(normalizePhone('9876543210'), '919876543210');
+    assert.equal(normalizePhone('9876543210'), '9876543210');
     assert.equal(normalizePhone('+1 (555) 234-5678'), '15552345678');
     assert.throws(() => normalizePhone('../bad'));
 });

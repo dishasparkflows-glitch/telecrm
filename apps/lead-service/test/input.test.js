@@ -5,7 +5,7 @@ const { pagination, normalizeEmail, normalizePhone, escapeRegex } = require('../
 test('normalizes lead contact identifiers', () => {
     assert.equal(normalizeEmail(' Test@Example.COM '), 'test@example.com');
     assert.equal(normalizePhone('+91 98765-43210'), '919876543210');
-    assert.equal(normalizePhone('9876543210'), '919876543210');
+    assert.equal(normalizePhone('9876543210'), '9876543210');
     assert.throws(() => normalizeEmail('not-an-email'));
     assert.throws(() => normalizePhone('123'));
 });

@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { io as socketIO } from 'socket.io-client'
 import { ROLES } from '../../utils/constants'
-import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
+import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useGetApprovedTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
 import { useGetActiveLeadsQuery, useGetLeadQuery } from '../../features/leads/leadApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
@@ -267,12 +267,11 @@ function TemplateForm({ form, onChange }) {
   const handleBodyChange = (e) => {
     const body = e.target.value
     const newVars = parseVariables(body)
-    // Merge with existing var labels/examples so user doesn't lose work
     const merged = newVars.map(nv => {
       const existing = (form.variables || []).find(v => v.index === nv.index)
       return existing ? { ...nv, ...existing } : nv
     })
-    onChange({ ...form, body, variables: merged })
+    onChange({ ...form, content: { ...(form.content || {}), body }, variables: merged })
   }
 
   const updateVar = (index, field, value) => {
@@ -284,7 +283,7 @@ function TemplateForm({ form, onChange }) {
 
   // Build the same bold-variable preview with React nodes so template text
   // always remains text and can never be interpreted as executable HTML.
-  const preview = (form.body || '').split(/(\{\{\d+\}\})/g).map((part, index) => {
+  const preview = (form.content?.body || '').split(/(\{\{\d+\}\})/g).map((part, index) => {
     const match = part.match(/^\{\{(\d+)\}\}$/)
     if (!match) return part
 
@@ -322,7 +321,7 @@ function TemplateForm({ form, onChange }) {
           </span>
         </label>
         <textarea
-          value={form.body}
+          value={form.content?.body || ''}
           onChange={handleBodyChange}
           className="w-full p-3 border border-[var(--vz-border)] rounded-lg bg-[var(--vz-input-bg)] text-[var(--vz-text)] text-sm min-h-[120px] focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y font-mono"
           placeholder={`Hello {{1}},\n\nYour appointment at {{2}} is confirmed for {{3}}.`}
@@ -330,7 +329,7 @@ function TemplateForm({ form, onChange }) {
       </div>
 
       {/* Live preview */}
-      {form.body && (
+      {form.content?.body && (
         <div className="p-3 rounded-lg bg-[#e7fbd4] border border-green-200">
           <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wider mb-1 flex items-center gap-1"><Eye size={10}/> Preview</p>
           <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{preview}</p>
@@ -378,18 +377,18 @@ function TemplateForm({ form, onChange }) {
         <div className="space-y-1">
           <Select
             label="Category"
-            value={form.category || 'UTILITY'}
+            value={form.category || 'utility'}
             onChange={val => onChange({ ...form, category: val })}
             options={[
-              { value: 'UTILITY', label: 'Utility' },
-              { value: 'MARKETING', label: 'Marketing' },
-              { value: 'AUTHENTICATION', label: 'Authentication' }
+              { value: 'utility', label: 'Utility' },
+              { value: 'marketing', label: 'Marketing' },
+              { value: 'authentication', label: 'Authentication' }
             ]}
           />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium text-[var(--vz-heading)]">Footer (optional)</label>
-          <input value={form.footer || ''} onChange={e => onChange({ ...form, footer: e.target.value })}
+          <input value={form.content?.footer || ''} onChange={e => onChange({ ...form, content: { ...(form.content || {}), footer: e.target.value } })}
             placeholder="e.g. SparkCRM Team"
             className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)] text-[var(--vz-text)] focus:outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
@@ -419,11 +418,11 @@ export default function WhatsApp() {
   const [leadsPage, setLeadsPage] = useState(1)
   const [showCreateTemplate, setShowCreateTemplate] = useState(false)
   const [showEditTemplate, setShowEditTemplate] = useState(false)
-  const [templateForm, setTemplateForm] = useState({ name: '', body: '', category: 'UTILITY', language: 'en' })
+  const [templateForm, setTemplateForm] = useState({ name: '', content: { body: '', headertype: 'none', headercontent: '', footer: '' }, category: 'utility', language: 'en', variables: [] })
   const [editTemplateForm, setEditTemplateForm] = useState(null)
   const [showCreateRule, setShowCreateRule] = useState(false)
   const [showEditRule, setShowEditRule] = useState(false)
-  const [ruleForm, setRuleForm] = useState({ triggerKeyword: '', responseContent: '', isActive: true })
+  const [ruleForm, setRuleForm] = useState({ rule: { triggerKeyword: '', responseContent: '' }, isActive: true })
   const [editRuleForm, setEditRuleForm] = useState(null)
   const [syncing, setSyncing] = useState(false)
   
@@ -443,7 +442,10 @@ export default function WhatsApp() {
     skipPollingIfUnfocused: true,
   })
   const { data: templatesData, isFetching: isTemplatesFetching } = useGetTemplatesQuery(undefined, {
-    skip: activeTab !== 'templates' && activeTab !== 'broadcasts' && !showTemplatePicker,
+    skip: activeTab !== 'templates',
+  })
+  const { data: approvedTemplatesData, isFetching: isApprovedFetching } = useGetApprovedTemplatesQuery(undefined, {
+    skip: activeTab !== 'broadcasts' && !showTemplatePicker,
   })
   const { data: chatbotData } = useGetChatbotRulesQuery(undefined, {
     skip: activeTab !== 'chatbot',
@@ -462,6 +464,7 @@ export default function WhatsApp() {
   const leads = useMemo(() => leadsData?.data || [], [leadsData?.data])
   const messages = useMemo(() => chatData?.data || [], [chatData?.data])
   const templates = templatesData?.data || []
+  const approvedTemplates = approvedTemplatesData?.data || []
   const chatbotRules = chatbotData?.data || []
 
   // Message events use the same authenticated per-agent Socket.IO room as QR
@@ -515,8 +518,8 @@ export default function WhatsApp() {
 
   // Resolve template body for a specific lead (fill {{N}} from lead fields)
   const resolveTemplate = useCallback((template, lead) => {
-    if (!template || !lead) return template?.body || ''
-    let body = template.body
+    if (!template || !lead) return template?.content?.body || ''
+    let body = template.content?.body || ''
     ;(template.variables || []).forEach(v => {
       const fieldVal = lead[v.field] || v.example || `{{${v.index}}}`
       body = body.replace(new RegExp(`\\{\\{${v.index}\\}\\}`, 'g'), fieldVal)
@@ -585,14 +588,14 @@ export default function WhatsApp() {
       await createTemplate(templateForm).unwrap()
       toast('Template submitted for WhatsApp approval', 'success')
       setShowCreateTemplate(false)
-      setTemplateForm({ name: '', body: '', category: 'UTILITY', language: 'en', variables: [], footer: '' })
+      setTemplateForm({ name: '', content: { body: '', headertype: 'none', headercontent: '', footer: '' }, category: 'utility', language: 'en', variables: [] })
     } catch (e) { toast(e?.data?.message || 'Failed to create template', 'error') }
   }
 
   const handleEditTemplateOpen = (t) => {
     setEditTemplateForm({
-      id: t._id, name: t.name, body: t.body, category: t.category,
-      language: t.language, variables: t.variables || [], footer: t.footer || ''
+      id: t._id, name: t.name, content: t.content || { body: '', headertype: 'none', headercontent: '', footer: '' }, category: t.category,
+      language: t.language, variables: t.variables || []
     })
     setShowEditTemplate(true)
   }
@@ -630,12 +633,12 @@ export default function WhatsApp() {
       await createRule(ruleForm).unwrap()
       toast('Rule created', 'success')
       setShowCreateRule(false)
-      setRuleForm({ triggerKeyword: '', responseContent: '', isActive: true })
+      setRuleForm({ rule: { triggerKeyword: '', responseContent: '' }, isActive: true })
     } catch { toast('Failed to create rule', 'error') }
   }
 
   const handleEditRuleOpen = (r) => {
-    setEditRuleForm({ id: r._id, triggerKeyword: r.triggerKeyword || '', responseContent: r.responseContent || '', isActive: r.isActive ?? true })
+    setEditRuleForm({ id: r._id, rule: { triggerKeyword: r.rule?.triggerKeyword || '', responseContent: r.rule?.responseContent || '' }, isActive: r.isActive ?? true })
     setShowEditRule(true)
   }
 
@@ -660,17 +663,27 @@ export default function WhatsApp() {
     if (!selectedTemplate) return
     setBroadcastLoading(true)
     try {
-      const recipients = leads.filter(l => l.contact?.phone).map(l => ({
-        _id: l._id,
-        leadId: l._id,
-        phone: l.contact?.phone,
-        firstName: l.contact?.firstName || '',
-        lastName: l.contact?.lastName || '',
-        company: l.contact?.company || '',
-        email: l.contact?.email || '',
-        city: l.address?.city || '',
-        source: l.source || '',
-      }))
+      const recipients = leads.filter(l => l.contact?.phone).map(l => {
+        const payload = {
+          _id: l._id,
+          leadId: l._id,
+          phone: l.contact?.phone,
+          countryCode: l.contact?.countryCode,
+        }
+        
+        // Dynamically append only the fields needed for template variables
+        ;(selectedTemplate.variables || []).forEach(v => {
+          const field = variableMapping[String(v.index)] || v.field
+          if (field === 'firstName') payload.firstName = l.contact?.firstName || ''
+          if (field === 'lastName') payload.lastName = l.contact?.lastName || ''
+          if (field === 'company') payload.company = l.contact?.company || ''
+          if (field === 'email') payload.email = l.contact?.email || ''
+          if (field === 'city') payload.city = l.address?.city || ''
+          if (field === 'source') payload.source = l.source || ''
+        })
+        
+        return payload
+      })
       await sendBroadcast({
         templateId: selectedTemplate._id,
         variableMapping,
@@ -753,6 +766,7 @@ export default function WhatsApp() {
               <EmptyState icon={MessageSquare} title="Select a contact" description="Choose a lead from the list to start chatting" />
             ) : (() => {
               const lead = selectedLeadData?.data || leads.find(l => l._id === selectedLead)
+              const selectedTemplateObj = approvedTemplates.find(t => t._id === selectedTemplate)
               return (
                 <>
                   {/* Chat header */}
@@ -861,12 +875,12 @@ export default function WhatsApp() {
                         <p className="text-xs font-semibold text-[var(--vz-heading)] flex items-center gap-1.5"><FileText size={12} className="text-primary" /> Quick Templates</p>
                         <button onClick={() => setShowTemplatePicker(false)} className="text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)]"><ChevronDown size={14} /></button>
                       </div>
-                      {isTemplatesFetching ? (
+                      {isApprovedFetching ? (
                         <div className="py-8 flex justify-center"><Loader2 size={16} className="animate-spin text-[var(--vz-text-muted)]" /></div>
-                      ) : templates.filter(t => t.status === 'approved').length === 0 ? (
+                      ) : approvedTemplates.length === 0 ? (
                         <p className="text-xs text-[var(--vz-text-muted)] text-center py-4">No approved templates yet — create one in the Templates tab</p>
                       ) : (
-                        templates.filter(t => t.status === 'approved' || t.status === 'draft').map(t => {
+                        approvedTemplates.map(t => {
                           const preview = resolveTemplate(t, lead)
                           return (
                             <button key={t._id} onClick={() => handleSendTemplate(t)}
@@ -968,7 +982,7 @@ export default function WhatsApp() {
                         )}
                       </div>
                     </div>
-                  <p className="text-xs text-[var(--vz-text)] line-clamp-3">{t.body}</p>
+                  <p className="text-xs text-[var(--vz-text)] line-clamp-3">{t.content?.body}</p>
                   {t.variables?.length > 0 && (
                      <div className="flex flex-wrap gap-1 mt-2">
                        {t.variables.map(v => (
@@ -1008,8 +1022,8 @@ export default function WhatsApp() {
               {chatbotRules.map((rule) => (
                 <div key={rule._id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)] hover:border-primary/30 transition-colors group">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[var(--vz-heading)]">{rule.triggerKeyword || '—'}</p>
-                    <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">→ {rule.responseContent || '—'}</p>
+                    <p className="text-sm font-medium text-[var(--vz-heading)]">{rule.rule?.triggerKeyword || '—'}</p>
+                    <p className="text-xs text-[var(--vz-text-muted)] line-clamp-1">{rule.rule?.responseContent || '—'}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge color={(rule.isActive) ? 'success' : 'dark'}>{(rule.isActive) ? 'Active' : 'Inactive'}</Badge>
@@ -1059,18 +1073,18 @@ export default function WhatsApp() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-[var(--vz-heading)] flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-[var(--vz-input-bg)] flex items-center justify-center text-[10px] border border-[var(--vz-border)]">1</span>
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20">STEP 1</span>
                   Select Template
                 </label>
                 <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                  {templates.filter(t => t.status === 'approved').length === 0 ? (
+                  {approvedTemplates.length === 0 ? (
                     <div className="p-8 border border-dashed border-[var(--vz-border)] rounded-lg text-center bg-[var(--vz-input-bg)]/20">
                       <FileText size={24} className="mx-auto text-[var(--vz-text-muted)] mb-3 opacity-20" />
                       <p className="text-sm text-[var(--vz-text-muted)]">No approved templates found.</p>
                       <Button variant="ghost" size="sm" onClick={() => setActiveTab('templates')} className="mt-2 font-medium">Create Template</Button>
                     </div>
                   ) : (
-                    templates.filter(t => t.status === 'approved').map(t => (
+                    approvedTemplates.map(t => (
                       <button 
                         key={t._id}
                         onClick={() => setSelectedTemplate(t)}
@@ -1084,7 +1098,7 @@ export default function WhatsApp() {
                           <p className="text-sm font-bold text-[var(--vz-heading)]">{t.name}</p>
                           {selectedTemplate?._id === t._id && <CheckCircle2 size={14} className="text-primary" />}
                         </div>
-                        <p className="text-xs text-[var(--vz-text-muted)] line-clamp-2 leading-relaxed">{t.body}</p>
+                        <p className="text-xs text-[var(--vz-text-muted)] line-clamp-2 leading-relaxed">{t.content?.body}</p>
                       </button>
                     ))
                   )}
@@ -1095,7 +1109,7 @@ export default function WhatsApp() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-[var(--vz-heading)] flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-[var(--vz-input-bg)] flex items-center justify-center text-[10px] border border-[var(--vz-border)]">2</span>
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20">STEP 2</span>
                   Recipients Preview
                 </label>
                 <div className="p-5 rounded-xl bg-[var(--vz-card-bg)] border border-[var(--vz-border)] shadow-sm flex items-center justify-between">
@@ -1195,7 +1209,7 @@ export default function WhatsApp() {
         <TemplateForm form={templateForm} onChange={setTemplateForm} />
         <Modal.Footer>
           <Button variant="ghost" onClick={() => setShowCreateTemplate(false)}>Cancel</Button>
-          <Button onClick={handleCreateTemplate} disabled={!templateForm.name || !templateForm.body}>Submit for Approval</Button>
+          <Button onClick={handleCreateTemplate} disabled={!templateForm.name || !templateForm.content?.body}>Submit for Approval</Button>
         </Modal.Footer>
       </Modal>
 
@@ -1214,8 +1228,8 @@ export default function WhatsApp() {
       {/* Rule Modals */}
       <Modal isOpen={showCreateRule} onClose={() => setShowCreateRule(false)} title="Add Chatbot Rule" size="md">
         <div className="space-y-3">
-          <Input label="Keyword" value={ruleForm.triggerKeyword} onChange={(e) => setRuleForm({...ruleForm, triggerKeyword: e.target.value})} />
-          <Input label="Response" value={ruleForm.responseContent} onChange={(e) => setRuleForm({...ruleForm, responseContent: e.target.value})} />
+          <Input label="Keyword" value={ruleForm.rule.triggerKeyword} onChange={(e) => setRuleForm({...ruleForm, rule: { ...ruleForm.rule, triggerKeyword: e.target.value }})} />
+          <Input label="Auto-Reply Message" value={ruleForm.rule.responseContent} onChange={(e) => setRuleForm({...ruleForm, rule: { ...ruleForm.rule, responseContent: e.target.value }})} />
         </div>
         <Modal.Footer>
           <Button variant="ghost" onClick={() => setShowCreateRule(false)}>Cancel</Button>
@@ -1226,8 +1240,8 @@ export default function WhatsApp() {
       <Modal isOpen={showEditRule} onClose={() => setShowEditRule(false)} title="Edit Chatbot Rule" size="md">
         {editRuleForm && (
           <div className="space-y-3" key={editRuleForm.id}>
-            <Input label="Keyword" value={editRuleForm.triggerKeyword || ''} onChange={(e) => setEditRuleForm({...editRuleForm, triggerKeyword: e.target.value})} />
-            <Input label="Response" value={editRuleForm.responseContent || ''} onChange={(e) => setEditRuleForm({...editRuleForm, responseContent: e.target.value})} />
+            <Input label="Keyword" value={editRuleForm.rule?.triggerKeyword || ''} onChange={(e) => setEditRuleForm({...editRuleForm, rule: { ...editRuleForm.rule, triggerKeyword: e.target.value }})} />
+            <Input label="Auto-Reply Message" value={editRuleForm.rule?.responseContent || ''} onChange={(e) => setEditRuleForm({...editRuleForm, rule: { ...editRuleForm.rule, responseContent: e.target.value }})} />
             <div className="flex items-center gap-2">
               <input type="checkbox" checked={editRuleForm.isActive ?? true} onChange={(e) => setEditRuleForm({...editRuleForm, isActive: e.target.checked})} id="rule-active" />
               <label htmlFor="rule-active" className="text-sm cursor-pointer">Active</label>

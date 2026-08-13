@@ -160,7 +160,6 @@ const createOrUpdateLeadFromSource = async ({
         sourceDetails,
         assignedTo: resolvedAssignedTo,
         assignedAt: resolvedAssignedTo ? new Date() : null,
-        createdBy: createdBy || leadData.createdBy || null,
         origin,
         firstTouch,
         lastTouch,

@@ -106,7 +106,7 @@ export default function LeadsList() {
   }
 
   const [newLead, setNewLead] = useState({
-    contact: { firstName: '', lastName: '', email: '', phone: '', company: '' },
+    contact: { firstName: '', lastName: '', email: '', phone: '', countryCode: '+91', company: '' },
     pipeline: { stage: 'new' },
     stage: 'new',
     source: 'manual',
@@ -114,9 +114,15 @@ export default function LeadsList() {
   })
 
   const handleCreate = async () => {
+    if (!newLead.contact.firstName?.trim()) return toast('First name is required', 'error')
+    if (!newLead.contact.lastName?.trim()) return toast('Last name is required', 'error')
+    if (!newLead.contact.email?.trim()) return toast('Email is required', 'error')
+    if (!newLead.contact.phone?.trim() || newLead.contact.phone.length !== 10) return toast('Phone number must be exactly 10 digits', 'error')
+
     try {
+      const contactData = { ...newLead.contact };
       const payload = {
-        contact: newLead.contact,
+        contact: contactData,
         pipeline: { stage: newLead.pipeline?.stage || 'new' },
         source: newLead.source || 'manual',
         customFields: newLead.customFields || {}
@@ -124,7 +130,7 @@ export default function LeadsList() {
       await createLead(payload).unwrap()
       toast('Lead created successfully', 'success')
       setShowAdd(false)
-      setNewLead({ contact: { firstName: '', lastName: '', email: '', phone: '', company: '' }, pipeline: { stage: 'new' }, stage: 'new', source: 'manual', customFields: {} })
+      setNewLead({ contact: { firstName: '', lastName: '', email: '', phone: '', countryCode: '+91', company: '' }, pipeline: { stage: 'new' }, stage: 'new', source: 'manual', customFields: {} })
     } catch (err) {
       toast(err.data?.message || 'Failed to create lead', 'error')
     }
@@ -547,8 +553,23 @@ export default function LeadsList() {
           </div>
           <Input label="Email" type="email" placeholder="Email address" icon={MailIcon} value={newLead.contact.email}
             onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, email: e.target.value } })} />
-          <Input label="Phone" placeholder="Phone number" icon={Phone} value={newLead.contact.phone}
-            onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') } })} />
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-[var(--vz-heading)]">Phone</label>
+            <div className="flex rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 transition-all overflow-hidden">
+              <div className="bg-[var(--vz-bg-soft)] text-sm text-[var(--vz-heading)] border-r border-[var(--vz-input-border)] py-2 px-3 flex items-center gap-1.5 select-none">
+                <span>🇮🇳</span>
+                <span>+91</span>
+              </div>
+              <input
+                type="tel"
+                maxLength={10}
+                placeholder="Phone number"
+                className="w-full bg-transparent text-sm text-[var(--vz-heading)] px-3 py-2 outline-none placeholder:text-[var(--vz-text-muted)]"
+                value={newLead.contact.phone}
+                onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, phone: e.target.value.replace(/[^\d]/g, '') } })}
+              />
+            </div>
+          </div>
           <Input label="Company" placeholder="Company name" value={newLead.contact.company}
             onChange={(e) => setNewLead({ ...newLead, contact: { ...newLead.contact, company: e.target.value } })} />
           <div className="grid grid-cols-2 gap-3">

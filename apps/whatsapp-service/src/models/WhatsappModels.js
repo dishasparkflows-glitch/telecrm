@@ -55,7 +55,7 @@ const mediaSchema = new mongoose.Schema({
 const whatsappMessageSchema = new mongoose.Schema(
     {
         tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-        branchId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
+        branchId: { type: mongoose.Schema.Types.ObjectId, index: true },
         leadId: { type: mongoose.Schema.Types.ObjectId, index: true },
         userId: { type: mongoose.Schema.Types.ObjectId, default: null },
         message: {
@@ -66,7 +66,7 @@ const whatsappMessageSchema = new mongoose.Schema(
             content: { type: String, default: '' },
         },
         media: { type: mediaSchema, default: undefined },
-        templateName: { type: String, default: null },
+        templateName: { type: String },
         provider: {
             waMessageId: { type: String, default: null },
             name: { type: String, enum: ['baileys', 'cloud'], default: null },
@@ -85,24 +85,24 @@ const whatsappMessageSchema = new mongoose.Schema(
             processingAt: { type: Date, default: null },
             nextAttemptAt: { type: Date, default: null },
             lastError: { type: String, default: '' },
-            pendingEvents: { type: [mongoose.Schema.Types.Mixed], default: [] },
+            pendingEvents: { type: [mongoose.Schema.Types.Mixed] },
         },
         automation: {
-            automationType: { type: String, default: '' },
-            automationId: { type: String, default: null },
+            automationType: { type: String },
+            automationId: { type: String },
         },
         readState: {
             isRead: { type: Boolean, default: false },
             readAt: { type: Date, default: null },
         },
         eventProcessing: {
-            eventPublishedAt: { type: Date, default: null },
-            eventError: { type: String, default: '' },
+            eventPublishedAt: { type: Date },
+            eventError: { type: String },
         },
-        replyTo: { type: replyToSchema, default: null },
+        replyTo: { type: replyToSchema },
         isForwarded: { type: Boolean, default: false },
-        forwardedFrom: { type: forwardedFromSchema, default: null },
-        reactions: { type: [reactionSchema], default: [] },
+        forwardedFrom: { type: forwardedFromSchema },
+        reactions: { type: [reactionSchema] },
         // Omit this field for normal chat messages. A sparse/partial unique
         // index must never receive explicit null values from non-queued sends.
         idempotencyKey: { type: String, default: undefined },
@@ -145,10 +145,12 @@ const templateSchema = new mongoose.Schema(
         name: { type: String, required: true },
         language: { type: String, default: 'en' },
         category: { type: String, enum: ['marketing', 'utility', 'authentication'], default: 'utility' },
-        body: { type: String, required: true },
-        headerType: { type: String, enum: ['none', 'text', 'image', 'video', 'document'], default: 'none' },
-        headerContent: { type: String, default: '' },
-        footer: { type: String, default: '' },
+        content: {
+            body: { type: String, required: true },
+            headertype: { type: String, enum: ['none', 'text', 'image', 'video', 'document'], default: 'none' },
+            headercontent: { type: String, default: '' },
+            footer: { type: String, default: '' },
+        },
         buttons: [{ type: { type: String }, text: String, url: String, phoneNumber: String }],
         variables: { type: [mongoose.Schema.Types.Mixed], default: [] },
         waTemplateId: { type: String, default: null },
@@ -173,10 +175,12 @@ const chatbotRuleSchema = new mongoose.Schema(
     {
         tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
         branchId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
-        triggerKeyword: { type: String, required: true },
-        matchType: { type: String, enum: ['exact', 'contains', 'startsWith'], default: 'contains' },
-        responseType: { type: String, enum: ['text', 'template', 'menu'], default: 'text' },
-        responseContent: { type: String, required: true },
+        rule: {
+            triggerKeyword: { type: String, required: true },
+            matchType: { type: String, enum: ['exact', 'contains', 'startsWith'], default: 'contains' },
+            responseType: { type: String, enum: ['text', 'template', 'menu'], default: 'text' },
+            responseContent: { type: String, required: true },
+        },
         templateName: { type: String, default: null },
         isActive: { type: Boolean, default: true },
         priority: { type: Number, default: 0 },

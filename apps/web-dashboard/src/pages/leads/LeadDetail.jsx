@@ -118,6 +118,10 @@ export default function LeadDetail() {
 
   const handleUpdateLead = async (e) => {
     e.preventDefault()
+    if (!editForm.contact.firstName?.trim()) return toast('First name is required', 'error')
+    if (!editForm.contact.lastName?.trim()) return toast('Last name is required', 'error')
+    if (!editForm.contact.email?.trim()) return toast('Email is required', 'error')
+    if (!editForm.contact.phone?.trim() || editForm.contact.phone.length !== 10) return toast('Phone number must be exactly 10 digits', 'error')
     try {
       await updateLead({ id, ...editForm }).unwrap()
       toast('Lead updated', 'success')
@@ -194,7 +198,7 @@ export default function LeadDetail() {
               {lead.contact?.phone && (
                 <div className="flex items-center gap-3 text-sm">
                   <Phone size={15} className="text-[var(--vz-text-muted)] shrink-0" />
-                  <span className="text-[var(--vz-text)]">{lead.contact?.phone}</span>
+                  <span className="text-[var(--vz-text)]">{lead.contact?.countryCode ? `${lead.contact.countryCode} ` : ''}{lead.contact?.phone}</span>
                 </div>
               )}
               {lead.contact?.company && (
@@ -496,7 +500,7 @@ export default function LeadDetail() {
             </div>
             <Input label="Email Address" type="email" value={editForm.contact.email} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, email: e.target.value } })} />
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Phone Number" value={editForm.contact.phone} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, phone: e.target.value } })} />
+              <Input label="Phone Number" maxLength={10} value={editForm.contact.phone} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, phone: e.target.value.replace(/[^\d]/g, '') } })} />
               <Input label="Company" value={editForm.contact.company} onChange={(e) => setEditForm({ ...editForm, contact: { ...editForm.contact, company: e.target.value } })} />
             </div>
             <Input label="Expected Deal Value (₹)" type="number" value={editForm.lifecycle?.expectedValue ?? editForm.expectedValue ?? ''} onChange={(e) => {

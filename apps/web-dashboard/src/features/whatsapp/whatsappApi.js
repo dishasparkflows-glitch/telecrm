@@ -114,6 +114,10 @@ export const whatsappApi = baseApi.injectEndpoints({
             query: () => '/whatsapp/templates',
             providesTags: [{ type: 'WhatsApp', id: 'TEMPLATES' }],
         }),
+        getApprovedTemplates: builder.query({
+            query: () => '/whatsapp/templates/approved',
+            providesTags: [{ type: 'WhatsApp', id: 'TEMPLATES' }],
+        }),
         createTemplate: builder.mutation({
             query: (data) => ({
                 url: '/whatsapp/templates',
@@ -257,6 +261,7 @@ export const {
     useGetTeamInboxQuery,
     useBroadcastMutation,
     useGetTemplatesQuery,
+    useGetApprovedTemplatesQuery,
     useCreateTemplateMutation,
     useUpdateTemplateMutation,
     useDeleteTemplateMutation,

@@ -37,11 +37,9 @@ const normalizePhone = (phone) => {
     const input = String(phone).trim();
     if (!/^\+?[\d\s().-]+$/.test(input)) throw new Error('Invalid phone number');
 
-    const hasCountryCode = input.startsWith('+');
     const digits = input.replace(/\D/g, '');
-    const normalized = !hasCountryCode && /^\d{10}$/.test(digits) ? `91${digits}` : digits;
-    if (!/^[1-9]\d{7,14}$/.test(normalized)) throw new Error('Invalid phone number');
-    return normalized;
+    if (!/^[1-9]\d{7,14}$/.test(digits)) throw new Error('Invalid phone number');
+    return digits;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -378,11 +376,12 @@ const submitTemplateToMeta = async (templateData, tenantId) => {
         throw new Error('WhatsApp Business Account ID (wabaId) is not configured.');
     }
 
-    const { name, category = 'UTILITY', language = 'en', body, header, footer, buttons = [] } = templateData;
+    const { name, category = 'UTILITY', language = 'en', content = {}, buttons = [] } = templateData;
+    const { body, headertype, headercontent, footer } = content;
 
     const components = [];
-    if (header?.text) {
-        components.push({ type: 'HEADER', format: 'TEXT', text: header.text });
+    if (headertype === 'text' && headercontent) {
+        components.push({ type: 'HEADER', format: 'TEXT', text: headercontent });
     }
 
     const bodyComponent = { type: 'BODY', text: body };

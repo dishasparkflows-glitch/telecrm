@@ -37,6 +37,7 @@ router.post('/broadcast', requireSuperAdmin, ctrl.broadcast);
 
 // ─── Templates ── (read: all users | write: superadmin only)
 router.get('/templates', ctrl.getTemplates);
+router.get('/templates/approved', ctrl.getApprovedTemplates);
 router.post('/templates', requireSuperAdmin, ctrl.createTemplate);
 router.put('/templates/:id', requireSuperAdmin, ctrl.updateTemplate);
 router.delete('/templates/:id', requireSuperAdmin, ctrl.deleteTemplate);

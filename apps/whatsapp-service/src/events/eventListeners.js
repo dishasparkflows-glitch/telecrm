@@ -96,7 +96,7 @@ const registerEventListeners = async () => {
                         from: 'business',
                         to: phone,
                         type: 'template',
-                        content: template.body,
+                        content: template.content?.body || '',
                     },
                     templateName: template.name,
                     delivery: { status: 'queued' },

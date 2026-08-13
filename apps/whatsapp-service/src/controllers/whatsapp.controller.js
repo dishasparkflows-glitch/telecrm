@@ -166,8 +166,8 @@ const requireActionIdentity = (req) => {
 
 const findActionSource = async (req) => {
     if (!mongoose.isValidObjectId(req.params.id)) throw ApiError.badRequest('Invalid source message ID');
-    const scope = buildScopeFilter(req, { ownerField: 'userId', module: 'whatsapp' });
-    const source = await WhatsappMessage.findOne({ _id: req.params.id, ...scope }).select('+mediaObjectKey');
+    const tenantId = req.headers['x-tenant-id'];
+    const source = await WhatsappMessage.findOne({ _id: req.params.id, tenantId }).select('+mediaObjectKey');
     if (!source) throw ApiError.notFound('Source message not found in your WhatsApp scope');
     return source;
 };
@@ -274,8 +274,11 @@ const replyToMessage = asyncHandler(async (req, res) => {
     const source = await findActionSource(req);
     if (!source.provider?.waMessageId) throw ApiError.badRequest('Source message has no provider message ID and cannot be quoted');
     const expectedTo = whatsappApi.normalizePhone(messagePeerPhone(source));
-    const to = whatsappApi.normalizePhone(req.body.to || expectedTo);
-    if (to !== expectedTo) throw ApiError.badRequest('A reply must target the source message conversation');
+    const toRaw = whatsappApi.normalizePhone(req.body.to || expectedTo);
+    if (toRaw !== expectedTo && !expectedTo.endsWith(toRaw) && !toRaw.endsWith(expectedTo)) {
+        throw ApiError.badRequest('A reply must target the source message conversation');
+    }
+    const to = expectedTo;
     const outbound = await resolveReplyPayload(req.body, identity.tenantId);
 
     let result;
@@ -567,8 +570,9 @@ const broadcast = asyncHandler(async (req, res) => {
     // Process each recipient — throttle at 1 msg / 1.5s to avoid Meta rate limits
     for (const lead of recipients) {
         try {
-            const phone = lead.contact?.phone;
-            if (!phone) throw new Error('Phone number is missing');
+            const rawPhone = lead.countryCode && lead.phone ? `${lead.countryCode}${lead.phone}` : lead.phone;
+            if (!rawPhone) throw new Error('Phone number is missing');
+            const phone = String(rawPhone).replace(/\D/g, '');
 
             // Resolve variable values from lead data using variableMapping
             const parameterValues = (template.variables || [])
@@ -582,7 +586,11 @@ const broadcast = asyncHandler(async (req, res) => {
                         }
                     }
                     
-                    const value = (fieldName && nestedValue !== lead ? nestedValue : lead[fieldName]) || v.example || `[${v.label || v.index}]`;
+                    const value = fieldName && nestedValue !== lead ? nestedValue : lead[fieldName];
+                    if (value === undefined || value === null || value === '') {
+                        throw new Error(`Missing required variable: ${fieldName || v.label || v.index}`);
+                    }
+                    
                     return { type: 'text', text: String(value) };
                 });
 
@@ -590,12 +598,13 @@ const broadcast = asyncHandler(async (req, res) => {
                 ? [{ type: 'body', parameters: parameterValues }]
                 : [];
 
-            await whatsappApi.sendTemplateMessage(
+            const result = await whatsappApi.sendTemplateMessage(
                 phone,
                 template.name,
                 template.language || 'en',
                 components,
-                tenantId
+                tenantId,
+                userId
             );
 
             // Save outbound record
@@ -608,10 +617,11 @@ const broadcast = asyncHandler(async (req, res) => {
                     from: 'business',
                     to: phone,
                     type: 'template',
-                    content: template.body,
+                    content: template.content?.body || '',
                 },
                 templateName: template.name,
-                status: 'sent',
+                delivery: { status: result.status },
+                provider: { waMessageId: result.waMessageId },
             });
 
             results.sent++;
@@ -641,6 +651,18 @@ const getTemplates = asyncHandler(async (req, res) => {
         Template.countDocuments(filter),
     ]);
     ApiResponse.paginated(res, templates, { page: parseInt(page), limit: parseInt(limit), total, totalPages: Math.ceil(total / parseInt(limit)) });
+});
+
+const getApprovedTemplates = asyncHandler(async (req, res) => {
+    const filter = buildScopeFilter(req, { ownerField: null, module: 'whatsapp' });
+    filter.isActive = true;
+    filter.status = 'approved';
+
+    const templates = await Template.find(filter)
+        .select('_id tenantId branchId name category status content language variables')
+        .sort({ 'meta.createdAt': -1 });
+
+    ApiResponse.success(res, templates, 'Approved templates retrieved');
 });
 
 const createTemplate = asyncHandler(async (req, res) => {
@@ -686,7 +708,6 @@ const createTemplate = asyncHandler(async (req, res) => {
 });
 
 // ─── Chatbot Controller ───
-
 const getChatbotRules = asyncHandler(async (req, res) => {
     // Build scope filter for branch isolation
     const filter = buildScopeFilter(req, { ownerField: null, module: 'whatsapp' });
@@ -746,7 +767,6 @@ const syncTemplatesFromMeta = asyncHandler(async (req, res) => {
 });
 
 // ─── Template Update / Delete ───
-
 const updateTemplate = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
 
@@ -777,7 +797,6 @@ const deleteTemplate = asyncHandler(async (req, res) => {
 });
 
 // ─── Chatbot Rule Delete ───
-
 const deleteChatbotRule = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const rule = await ChatbotRule.findOneAndDelete({ _id: req.params.id, tenantId });
@@ -788,6 +807,6 @@ const deleteChatbotRule = asyncHandler(async (req, res) => {
 module.exports = {
     sendMessage, replyToMessage, forwardMessage, reactToMessage,
     getMessageMedia, getChat, getTeamInbox, getInboxChat, markInboxRead, broadcast,
-    getTemplates, createTemplate, updateTemplate, deleteTemplate, syncTemplatesFromMeta,
+    getTemplates, getApprovedTemplates, createTemplate, updateTemplate, deleteTemplate, syncTemplatesFromMeta,
     getChatbotRules, createChatbotRule, updateChatbotRuleFn, deleteChatbotRule,
 };
