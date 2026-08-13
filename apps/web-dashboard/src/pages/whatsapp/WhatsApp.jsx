@@ -97,18 +97,21 @@ function QRConnectPanel() {
 
   // If server already has an active session, reflect that
   useEffect(() => {
-    if (serverStatus === 'connected' && serverPhone) {
-      setWsStatus('connected')
-      setConnectedPhone(serverPhone)
-    } else if (serverStatus === 'qr_pending') {
-      setWsStatus('qr_pending')
-      if (serverQR) setQrImage(serverQR)
-    } else if (serverStatus === 'connecting' || serverStatus === 'reconnecting') {
-      setWsStatus(serverStatus)
-    } else if (serverStatus === 'disconnected') {
-      setWsStatus('idle')
-      setQrImage(null)
-    }
+    if (!serverStatus) return
+    queueMicrotask(() => {
+      if (serverStatus === 'connected' && serverPhone) {
+        setWsStatus('connected')
+        setConnectedPhone(serverPhone)
+      } else if (serverStatus === 'qr_pending') {
+        setWsStatus('qr_pending')
+        if (serverQR) setQrImage(serverQR)
+      } else if (serverStatus === 'connecting' || serverStatus === 'reconnecting') {
+        setWsStatus(serverStatus)
+      } else if (serverStatus === 'disconnected') {
+        setWsStatus('idle')
+        setQrImage(null)
+      }
+    })
   }, [serverStatus, serverPhone, serverQR])
 
   const handleConnect = async () => {
@@ -420,7 +423,7 @@ export default function WhatsApp() {
   const [editTemplateForm, setEditTemplateForm] = useState(null)
   const [showCreateRule, setShowCreateRule] = useState(false)
   const [showEditRule, setShowEditRule] = useState(false)
-  const [ruleForm, setRuleForm] = useState({ keyword: '', response: '', active: true })
+  const [ruleForm, setRuleForm] = useState({ triggerKeyword: '', responseContent: '', isActive: true })
   const [editRuleForm, setEditRuleForm] = useState(null)
   const [syncing, setSyncing] = useState(false)
   
@@ -627,12 +630,12 @@ export default function WhatsApp() {
       await createRule(ruleForm).unwrap()
       toast('Rule created', 'success')
       setShowCreateRule(false)
-      setRuleForm({ keyword: '', response: '', active: true })
+      setRuleForm({ triggerKeyword: '', responseContent: '', isActive: true })
     } catch { toast('Failed to create rule', 'error') }
   }
 
   const handleEditRuleOpen = (r) => {
-    setEditRuleForm({ id: r._id, keyword: r.keyword, response: r.response, active: r.active })
+    setEditRuleForm({ id: r._id, triggerKeyword: r.triggerKeyword || '', responseContent: r.responseContent || '', isActive: r.isActive ?? true })
     setShowEditRule(true)
   }
 
@@ -669,7 +672,7 @@ export default function WhatsApp() {
         source: l.source || '',
       }))
       await sendBroadcast({
-        templateName: selectedTemplate.name,
+        templateId: selectedTemplate._id,
         variableMapping,
         recipients,
       }).unwrap()
@@ -1003,17 +1006,17 @@ export default function WhatsApp() {
           ) : (
             <div className="space-y-2">
               {chatbotRules.map((rule) => (
-                <div key={rule._id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)] group">
-                  <div>
-                    <p className="text-sm font-medium text-[var(--vz-heading)]">{rule.keyword}</p>
-                    <p className="text-xs text-[var(--vz-text-muted)]">→ {rule.response}</p>
+                <div key={rule._id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)] hover:border-primary/30 transition-colors group">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[var(--vz-heading)]">{rule.triggerKeyword || '—'}</p>
+                    <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">→ {rule.responseContent || '—'}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge color={rule.active ? 'success' : 'dark'}>{rule.active ? 'Active' : 'Inactive'}</Badge>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge color={(rule.isActive) ? 'success' : 'dark'}>{(rule.isActive) ? 'Active' : 'Inactive'}</Badge>
                     {isSuperAdmin && (
                       <>
-                        <button onClick={() => handleEditRuleOpen(rule)} className="p-1.5 rounded hover:bg-primary/10 text-primary opacity-0 group-hover:opacity-100 transition-all"><Pencil size={14}/></button>
-                        <button onClick={() => handleDeleteRule(rule._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14}/></button>
+                        <button onClick={() => handleEditRuleOpen(rule)} className="p-1.5 rounded hover:bg-primary/10 text-primary transition-all" title="Edit rule"><Pencil size={14}/></button>
+                        <button onClick={() => handleDeleteRule(rule._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger transition-all" title="Delete rule"><Trash2 size={14}/></button>
                       </>
                     )}
                   </div>
@@ -1211,8 +1214,8 @@ export default function WhatsApp() {
       {/* Rule Modals */}
       <Modal isOpen={showCreateRule} onClose={() => setShowCreateRule(false)} title="Add Chatbot Rule" size="md">
         <div className="space-y-3">
-          <Input label="Keyword" value={ruleForm.keyword} onChange={(e) => setRuleForm({...ruleForm, keyword: e.target.value})} />
-          <Input label="Response" value={ruleForm.response} onChange={(e) => setRuleForm({...ruleForm, response: e.target.value})} />
+          <Input label="Keyword" value={ruleForm.triggerKeyword} onChange={(e) => setRuleForm({...ruleForm, triggerKeyword: e.target.value})} />
+          <Input label="Response" value={ruleForm.responseContent} onChange={(e) => setRuleForm({...ruleForm, responseContent: e.target.value})} />
         </div>
         <Modal.Footer>
           <Button variant="ghost" onClick={() => setShowCreateRule(false)}>Cancel</Button>
@@ -1222,11 +1225,11 @@ export default function WhatsApp() {
 
       <Modal isOpen={showEditRule} onClose={() => setShowEditRule(false)} title="Edit Chatbot Rule" size="md">
         {editRuleForm && (
-          <div className="space-y-3">
-            <Input label="Keyword" value={editRuleForm.keyword} onChange={(e) => setEditRuleForm({...editRuleForm, keyword: e.target.value})} />
-            <Input label="Response" value={editRuleForm.response} onChange={(e) => setEditRuleForm({...editRuleForm, response: e.target.value})} />
+          <div className="space-y-3" key={editRuleForm.id}>
+            <Input label="Keyword" value={editRuleForm.triggerKeyword || ''} onChange={(e) => setEditRuleForm({...editRuleForm, triggerKeyword: e.target.value})} />
+            <Input label="Response" value={editRuleForm.responseContent || ''} onChange={(e) => setEditRuleForm({...editRuleForm, responseContent: e.target.value})} />
             <div className="flex items-center gap-2">
-              <input type="checkbox" checked={editRuleForm.active} onChange={(e) => setEditRuleForm({...editRuleForm, active: e.target.checked})} id="rule-active" />
+              <input type="checkbox" checked={editRuleForm.isActive ?? true} onChange={(e) => setEditRuleForm({...editRuleForm, isActive: e.target.checked})} id="rule-active" />
               <label htmlFor="rule-active" className="text-sm cursor-pointer">Active</label>
             </div>
             <Modal.Footer>

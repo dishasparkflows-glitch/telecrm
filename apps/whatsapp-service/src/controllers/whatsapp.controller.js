@@ -553,13 +553,12 @@ const markInboxRead = asyncHandler(async (req, res) => {
 const broadcast = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const userId   = req.headers['x-user-id'];
-    const { templateName, variableMapping, recipients } = req.body;
-    // variableMapping: { "1": "name", "2": "company", ... } — maps {{N}} → lead field
+    const { templateId, variableMapping, recipients } = req.body;
 
-    if (!templateName || !recipients?.length) throw ApiError.badRequest('Template and recipients required');
+    if (!templateId || !recipients?.length) throw ApiError.badRequest('Template and recipients required');
 
     // Load template to get variable definitions
-    const template = await Template.findOne({ tenantId, name: templateName, isActive: true });
+    const template = await Template.findOne({ tenantId, _id: templateId, isActive: true });
     if (!template) throw ApiError.notFound('Template not found');
     if (template.status !== 'approved') throw ApiError.badRequest('Only approved templates can be broadcast');
 
@@ -568,12 +567,22 @@ const broadcast = asyncHandler(async (req, res) => {
     // Process each recipient — throttle at 1 msg / 1.5s to avoid Meta rate limits
     for (const lead of recipients) {
         try {
+            const phone = lead.contact?.phone;
+            if (!phone) throw new Error('Phone number is missing');
+
             // Resolve variable values from lead data using variableMapping
             const parameterValues = (template.variables || [])
                 .sort((a, b) => a.index - b.index)
                 .map(v => {
                     const fieldName = variableMapping?.[String(v.index)] || v.field || '';
-                    const value = lead[fieldName] || v.example || `[${v.label || v.index}]`;
+                    let nestedValue = lead;
+                    if (fieldName) {
+                        for (const key of fieldName.split('.')) {
+                            if (nestedValue) nestedValue = nestedValue[key];
+                        }
+                    }
+                    
+                    const value = (fieldName && nestedValue !== lead ? nestedValue : lead[fieldName]) || v.example || `[${v.label || v.index}]`;
                     return { type: 'text', text: String(value) };
                 });
 
@@ -582,7 +591,7 @@ const broadcast = asyncHandler(async (req, res) => {
                 : [];
 
             await whatsappApi.sendTemplateMessage(
-                lead.phone,
+                phone,
                 template.name,
                 template.language || 'en',
                 components,
@@ -592,12 +601,12 @@ const broadcast = asyncHandler(async (req, res) => {
             // Save outbound record
             await WhatsappMessage.create({
                 tenantId,
-                leadId: lead._id || lead.leadId,
+                leadId: lead._id,
                 userId,
                 message: {
                     direction: 'outbound',
                     from: 'business',
-                    to: lead.phone,
+                    to: phone,
                     type: 'template',
                     content: template.body,
                 },

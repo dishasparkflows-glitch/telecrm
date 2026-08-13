@@ -14,7 +14,7 @@ export const leadApi = baseApi.injectEndpoints({
         }),
         getActiveLeads: builder.query({
             query: (params) => ({
-                url: '/leads/active/basic',
+                url: '/leads/active',
                 params,
             }),
             serializeQueryArgs: ({ endpointName, queryArgs }) => {

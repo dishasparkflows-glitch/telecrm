@@ -46,7 +46,7 @@ const getCurrentWaVersion = async () => {
 };
 
 const QRCode = require('qrcode');
-const { WhatsappMessage } = require('../models/WhatsappModels');
+const { WhatsappMessage, ChatbotRule } = require('../models/WhatsappModels');
 const mediaStorage = require('./mediaStorage.service');
 const {
     buildBaileysForwardPayload,
@@ -384,6 +384,82 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                 });
                 io.to(room).emit('wa:message', { message: savedMessage.toJSON() });
                 // console.log(`📩 [Baileys] Inbound from ${from} → lead ${leadId || 'unknown'}: ${content.substring(0, 60)}`);
+
+                // ─── Chatbot auto-reply (text messages only) ─────────────────
+                if (messageType === 'text' && content.trim()) {
+                    try {
+                        const incomingText = content.trim().toLowerCase();
+                        const matchedRule = await ChatbotRule.findOne({
+                            tenantId,
+                            isActive: true,
+                            $or: [
+                                {
+                                    matchType: 'exact',
+                                    triggerKeyword: incomingText,
+                                },
+                                {
+                                    matchType: 'contains',
+                                    $expr: {
+                                        $gt: [
+                                            { $indexOfCP: [incomingText, { $toLower: '$triggerKeyword' }] },
+                                            -1,
+                                        ],
+                                    },
+                                },
+                                {
+                                    matchType: 'startsWith',
+                                    $expr: {
+                                        $eq: [
+                                            { $indexOfCP: [incomingText, { $toLower: '$triggerKeyword' }] },
+                                            0,
+                                        ],
+                                    },
+                                },
+                            ],
+                        }).sort({ priority: -1 });
+
+                        if (matchedRule) {
+                            console.log(`🤖 [Baileys] Chatbot matched: "${matchedRule.triggerKeyword}" → sending auto-reply`);
+                            const replyJid = `${String(from).replace(/\D/g, '')}@s.whatsapp.net`;
+                            const replyText = matchedRule.responseContent || '';
+                            const currentSession = sessions.get(key);
+                            if (replyText && currentSession?.sock) {
+                                const replyMessageId = generateMessageIDV2(currentSession.sock.user?.id);
+                                try {
+                                    const sent = await currentSession.sock.sendMessage(replyJid, { text: replyText }, { messageId: replyMessageId });
+                                    const autoReplyMsg = await WhatsappMessage.create({
+                                        tenantId,
+                                        leadId: leadId || undefined,
+                                        userId: userId || undefined,
+                                        message: {
+                                            direction: 'outbound',
+                                            from: sessions.get(key)?.phone || userId,
+                                            to: from,
+                                            type: 'text',
+                                            content: replyText,
+                                        },
+                                        provider: {
+                                            waMessageId: sent?.key?.id || replyMessageId,
+                                            name: 'baileys',
+                                        },
+                                        delivery: { status: 'sent' },
+                                        automation: {
+                                            automationType: 'chatbot',
+                                            automationId: String(matchedRule._id),
+                                        },
+                                    });
+                                    io.to(room).emit('wa:message', { message: autoReplyMsg.toJSON() });
+                                    console.log(`🤖 [Baileys] Chatbot auto-reply sent to ${from}: "${replyText.substring(0, 60)}"`);
+                                } catch (sendErr) {
+                                    console.error(`❌ [Baileys] Chatbot auto-reply send failed:`, sendErr.message);
+                                }
+                            }
+                        }
+                    } catch (chatbotErr) {
+                        // Chatbot errors must never break the inbound flow
+                        console.error('❌ [Baileys] Chatbot auto-reply error:', chatbotErr.message);
+                    }
+                }
             } catch (err) {
                 console.error('❌ [Baileys] Failed to save inbound message:', err.message);
             }

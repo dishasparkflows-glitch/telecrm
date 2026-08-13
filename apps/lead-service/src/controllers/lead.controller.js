@@ -541,8 +541,8 @@ const getLeadByPhone = asyncHandler(async (req, res) => {
 });
 
 const getActiveLeads = asyncHandler(async (req, res) => {
+    const hasPagination = req.query.page !== undefined || req.query.limit !== undefined;
     const { page, limit, skip } = pagination(req.query);
-
     const { search } = req.query;
 
     // Build scope filter based on verified visibility
@@ -559,21 +559,29 @@ const getActiveLeads = asyncHandler(async (req, res) => {
         ];
     }
 
+    let query = Lead.find(filter)
+        .select('_id contact')
+        .sort({ 'lifecycle.lastActivityAt': -1, 'meta.updatedAt': -1 });
+
+    if (hasPagination) {
+        query = query.skip(skip).limit(limit);
+    }
+
     const [leads, total] = await Promise.all([
-        Lead.find(filter)
-            .select('_id contact')
-            .skip(skip)
-            .limit(limit)
-            .lean(),
+        query.lean(),
         Lead.countDocuments(filter),
     ]);
 
-    ApiResponse.paginated(res, leads, {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-    });
+    if (hasPagination) {
+        ApiResponse.paginated(res, leads, {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        });
+    } else {
+        ApiResponse.success(res, leads, 'Success');
+    }
 });
 
 module.exports = {

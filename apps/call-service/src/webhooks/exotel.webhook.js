@@ -2,23 +2,21 @@ const express = require('express');
 const router = express.Router();
 const CallLog = require('../models/CallLog');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
-const { asyncHandler, EXOTEL_STATUS_MAP } = require('@sparkcrm/shared-utils');
+const { asyncHandler, EXOTEL_STATUS_MAP, uploadBufferToR2 } = require('@sparkcrm/shared-utils');
+const axios = require('axios');
 const callingApiService = require('../services/callingApi.service');
 
-// We no longer need raw parsing since signature verification is removed.
-// Use built-in express parsers which robustly handle charsets and arrays.
 router.use(express.urlencoded({ extended: true, limit: '64kb', type: (req) => !req.is('json') }));
 router.use(express.json({ limit: '64kb' }));
 
-const enrichExotelCallAsync = async (callLogId, callSid, attempt = 1) => {
+const enrichExotelCallAsync = async (callLogId, callSid) => {
     try {
-        console.log(`[Exotel] Recording enrichment attempt ${attempt}`);
+        console.log(`[Exotel] Recording enrichment for Call SID: ${callSid}`);
         const callLog = await CallLog.findById(callLogId);
         if (!callLog) return;
         
         const details = await callingApiService.getCallStatus(callLog.tenantId, callSid);
         
-        let needsRetry = false;
         let updated = false;
 
         if (details.duration !== undefined && details.duration > 0 && (!callLog.call.duration || callLog.call.duration < details.duration)) {
@@ -28,15 +26,37 @@ const enrichExotelCallAsync = async (callLogId, callSid, attempt = 1) => {
         }
 
         if (details.recordingUrl && !callLog.recording.url) {
-            console.log('[Exotel] Recording found');
-            callLog.recording.url = details.recordingUrl;
-            callLog.recording.status = 'ready';
-            callLog.recording.fetchedAt = new Date();
+            try {
+                const config = await callingApiService.getConfig(callLog.tenantId);
+                const authOptions = { username: config.apiKey, password: config.apiToken };
+                
+                const response = await axios.get(details.recordingUrl, {
+                    responseType: 'arraybuffer',
+                    auth: authOptions,
+                });
+                
+                const buffer = Buffer.from(response.data);
+                const objectKey = `tenants/${callLog.tenantId}/users/${callLog.userId}/leads/${callLog.leadId}/recordings/${callSid}.mp3`;
+                
+                await uploadBufferToR2(buffer, objectKey, 'audio/mpeg');
+                
+                callLog.recording.url = details.recordingUrl;
+                callLog.recording.objectKey = objectKey;
+                callLog.recording.mimeType = 'audio/mpeg';
+                callLog.recording.status = 'available';
+                callLog.recording.fetchedAt = new Date();
+                updated = true;
+            } catch (uploadError) {
+                console.error(`❌ [Exotel] Failed to download/upload recording for Call SID: ${callSid}`, uploadError.message);
+                callLog.recording.url = details.recordingUrl;
+                callLog.recording.status = 'ready';
+                callLog.recording.fetchedAt = new Date();
+                updated = true;
+            }
+        } else if (details.status === 'completed' && !details.recordingUrl && callLog.recording.status === 'processing') {
+            console.log('[Exotel] Recording unavailable during enrichment fallback');
+            callLog.recording.status = 'unavailable';
             updated = true;
-        }
-
-        if (!details.duration || (details.status === 'completed' && !details.recordingUrl)) {
-            needsRetry = true;
         }
 
         if (updated) {
@@ -66,27 +86,8 @@ const enrichExotelCallAsync = async (callLogId, callSid, attempt = 1) => {
             }
         }
 
-        if (needsRetry) {
-            if (attempt < 5) {
-                const delays = { 1: 10000, 2: 30000, 3: 60000, 4: 120000 };
-                setTimeout(() => {
-                    enrichExotelCallAsync(callLogId, callSid, attempt + 1).catch(console.error);
-                }, delays[attempt]);
-            } else {
-                console.log('[Exotel] Recording unavailable after final attempt');
-                callLog.recording.status = 'unavailable';
-                await callLog.save();
-            }
-        }
-
     } catch (err) {
         console.error('❌ Error during Exotel call enrichment:', err.message);
-        if (attempt < 5) {
-            const delays = { 1: 10000, 2: 30000, 3: 60000, 4: 120000 };
-            setTimeout(() => {
-                enrichExotelCallAsync(callLogId, callSid, attempt + 1).catch(console.error);
-            }, delays[attempt]);
-        }
     }
 };
 
@@ -97,13 +98,7 @@ const enrichExotelCallAsync = async (callLogId, callSid, attempt = 1) => {
 router.post(
     '/exotel',
     asyncHandler(async (req, res) => {
-        const {
-            CallSid, Status, RecordingUrl, CustomField, EventType, StartTime, EndTime, EventTime, ConversationDuration, Legs, From, To
-        } = req.body;
-        
-        console.log('[Exotel] Webhook received');
-        console.log('[Exotel] Webhook payload:', JSON.stringify(req.body));
-        
+        const { CallSid, Status, RecordingUrl, CustomField, EventType, StartTime, EndTime, EventTime, ConversationDuration, Legs } = req.body;
         if (!CallSid) {
             return res.status(400).json({ success: false, message: 'CallSid is required' });
         }
@@ -113,10 +108,6 @@ router.post(
         }
 
         const eventType = EventType || null;
-
-        console.log(`[Exotel] Call SID: ${CallSid}`);
-        console.log(`[Exotel] Call status: ${Status || eventType}`);
-        console.log(`[Exotel] Recording URL: ${RecordingUrl ? 'available' : 'not available'}`);
 
         let callLog = null;
         if (CustomField) {
@@ -194,9 +185,31 @@ router.post(
             }
 
             if (RecordingUrl) {
-                callLog.recording.url = RecordingUrl;
-                callLog.recording.status = 'ready';
-                callLog.recording.fetchedAt = new Date();
+                try {
+                    const config = await callingApiService.getConfig(callLog.tenantId);
+                    const authOptions = { username: config.apiKey, password: config.apiToken };
+                    
+                    const response = await axios.get(RecordingUrl, {
+                        responseType: 'arraybuffer',
+                        auth: authOptions,
+                    });
+                    
+                    const buffer = Buffer.from(response.data);
+                    const objectKey = `tenants/${callLog.tenantId}/users/${callLog.userId}/leads/${callLog.leadId}/recordings/${CallSid}.mp3`;
+                    
+                    await uploadBufferToR2(buffer, objectKey, 'audio/mpeg');
+                    
+                    callLog.recording.url = RecordingUrl;
+                    callLog.recording.objectKey = objectKey;
+                    callLog.recording.mimeType = 'audio/mpeg';
+                    callLog.recording.status = 'available';
+                    callLog.recording.fetchedAt = new Date();
+                } catch (uploadError) {
+                    console.error(`❌ [Webhook] Failed to download/upload recording for Call SID: ${CallSid}`, uploadError.message);
+                    callLog.recording.url = RecordingUrl;
+                    callLog.recording.status = 'ready';
+                    callLog.recording.fetchedAt = new Date();
+                }
             } else {
                 callLog.recording.status = 'processing';
             }
@@ -212,7 +225,6 @@ router.post(
             }
             
             if (callLog.call.endedAt && callLog.call.duration > 0 && !callLog.call.answeredAt && !EventTime) {
-                // Only calculate if EventTime is completely missing
                 callLog.call.answeredAt = new Date(callLog.call.endedAt.getTime() - (callLog.call.duration * 1000));
             }
         }
@@ -262,11 +274,11 @@ router.post(
         }
 
         if (eventType === 'terminal' || (!eventType && Status && isNowTerminal)) {
-            if (callLog.recording.status !== 'ready') {
-                console.log('[Exotel] Starting recording enrichment');
+            if (callLog.recording.status === 'processing') {
+                // Recording URL was not in the webhook — poll Exotel API as fallback
                 setTimeout(() => {
                     enrichExotelCallAsync(callLog._id, CallSid).catch(console.error);
-                }, 0);
+                }, 5000);
             }
         }
 
