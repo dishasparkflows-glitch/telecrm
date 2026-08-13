@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const CallLog = require('../models/CallLog');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
-const { asyncHandler } = require('@sparkcrm/shared-utils');
+const { asyncHandler, uploadBufferToR2 } = require('@sparkcrm/shared-utils');
 const callingApi = require('../services/callingApi.service');
 const twilio = require('twilio');
+const axios = require('axios');
 
 /**
  * Middleware to validate Twilio webhooks dynamically by Call ID
@@ -82,7 +83,7 @@ router.post('/voice', validateTwilioRequest, asyncHandler(async (req, res) => {
 /**
  * Helper to process status and idempotently update CallLog
  */
-const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl, providerDataUpdates) => {
+const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl, providerDataUpdates, twilioConfig) => {
     const STATUS_PRIORITY = {
         initiated: 1,
         ringing: 2,
@@ -101,11 +102,42 @@ const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl,
 
     callLog.call.status = newStatus;
     
-    if (recordingUrl) {
+    if (recordingUrl && callLog.recording.status !== 'available') {
+        try {
+            let downloadUrl = recordingUrl;
+            if (!downloadUrl.endsWith('.mp3') && !downloadUrl.endsWith('.wav')) {
+                downloadUrl += '.mp3';
+            }
+            
+            const authOptions = twilioConfig ? { username: twilioConfig.accountSid, password: twilioConfig.authToken } : null;
+
+            const response = await axios.get(downloadUrl, {
+                responseType: 'arraybuffer',
+                auth: authOptions
+            });
+
+            const buffer = Buffer.from(response.data);
+            const callSid = providerDataUpdates.callSid || providerDataUpdates.parentCallSid || callLog.provider.externalCallId;
+            const objectKey = `tenants/${callLog.tenantId}/users/${callLog.userId}/leads/${callLog.leadId}/recordings/${callSid}.mp3`;
+
+            await uploadBufferToR2(buffer, objectKey, 'audio/mpeg');
+
+            callLog.recording.url = recordingUrl;
+            callLog.recording.objectKey = objectKey;
+            callLog.recording.mimeType = 'audio/mpeg';
+            callLog.recording.status = 'available';
+            callLog.recording.fetchedAt = new Date();
+        } catch (uploadError) {
+            console.error(`❌ [Twilio] Failed to download/upload recording for Call SID: ${providerDataUpdates.callSid || providerDataUpdates.parentCallSid}`, uploadError.message);
+            callLog.recording.url = recordingUrl;
+            callLog.recording.status = 'ready'; // Fallback
+            callLog.recording.fetchedAt = new Date();
+        }
+    } else if (recordingUrl) {
         callLog.recording.url = recordingUrl;
-        callLog.recording.status = 'available';
     }
-    if (duration) callLog.call.duration = parseInt(duration, 10);
+    
+    if (duration && !callLog.call.duration) callLog.call.duration = parseInt(duration, 10);
     
     const isNowTerminal = ['completed', 'missed', 'failed'].includes(newStatus);
     
@@ -150,7 +182,7 @@ const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl,
  * Webhook called after the <Dial> verb (customer leg) finishes.
  */
 router.post('/dial-status', validateTwilioRequest, asyncHandler(async (req, res) => {
-    const { callLog } = req;
+    const { callLog, twilioConfig } = req;
     const { DialCallStatus, DialCallDuration, DialCallSid, CallSid } = req.body;
 
     console.log(`📞 Twilio Dial webhook: ${CallSid} (parent) -> ${DialCallSid} (child) -> ${DialCallStatus}`);
@@ -170,7 +202,7 @@ router.post('/dial-status', validateTwilioRequest, asyncHandler(async (req, res)
         parentCallSid: CallSid,
         customerCallSid: DialCallSid,
         dialCallStatus: DialCallStatus
-    });
+    }, twilioConfig);
 
     res.status(200).send('OK');
 }));
@@ -180,7 +212,7 @@ router.post('/dial-status', validateTwilioRequest, asyncHandler(async (req, res)
  * Twilio sends status callbacks here for the overall call (parent leg).
  */
 router.post('/status', validateTwilioRequest, asyncHandler(async (req, res) => {
-    const { callLog } = req;
+    const { callLog, twilioConfig } = req;
     const { CallSid, CallStatus, RecordingUrl, CallDuration } = req.body;
     
     console.log(`📞 Twilio Parent webhook: ${CallSid} -> ${CallStatus}`);
@@ -205,15 +237,13 @@ router.post('/status', validateTwilioRequest, asyncHandler(async (req, res) => {
         await updateCallStatus(callLog, newStatus, CallDuration, RecordingUrl, {
             lastParentStatus: CallStatus,
             callSid: CallSid
-        });
+        }, twilioConfig);
     } else {
         if (RecordingUrl || CallDuration) {
-            if (RecordingUrl) {
-                callLog.recording.url = RecordingUrl;
-                callLog.recording.status = 'available';
-            }
-            if (CallDuration && !callLog.call.duration) callLog.call.duration = parseInt(CallDuration, 10);
-            await callLog.save();
+            await updateCallStatus(callLog, callLog.call.status, CallDuration, RecordingUrl, {
+                lastParentStatus: CallStatus,
+                callSid: CallSid
+            }, twilioConfig);
         }
     }
 

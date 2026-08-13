@@ -1,5 +1,6 @@
 const User = require('../models/User');
-const { ApiResponse, ApiError, asyncHandler, ROLES, buildScopeFilter, getPresignedDownloadUrl, deleteMedia } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler,ROLES, buildScopeFilter, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
+const { getRolesBulk, getBranchesBulk } = require('../services/serviceClients/tenant.client');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const crypto = require('crypto');
 const axios = require('axios');
@@ -157,9 +158,23 @@ const getUsers = asyncHandler(async (req, res) => {
         User.countDocuments(filter),
     ]);
 
+    const tenantId = req.headers['x-tenant-id'];
+    const roleIds = [...new Set(users.map(u => u.roleId).filter(Boolean).map(String))];
+    const branchIds = [...new Set(users.map(u => u.branchId).filter(Boolean).map(String))];
+
+    const [roles, branches] = await Promise.all([
+        getRolesBulk(tenantId, roleIds),
+        getBranchesBulk(tenantId, branchIds),
+    ]);
+
+    const roleMap = new Map(roles.map(r => [String(r._id), r]));
+    const branchMap = new Map(branches.map(b => [String(b._id), b]));
+
     const usersWithUrls = await Promise.all(
         users.map(async (u) => {
             const userObj = u.toJSON();
+            userObj.roleId = roleMap.get(String(userObj.roleId)) || userObj.roleId;
+            userObj.branchId = branchMap.get(String(userObj.branchId)) || userObj.branchId;
             if (userObj.profile?.avatar) {
                 const avatar = userObj.profile?.avatar;
                 const presigned = await getPresignedDownloadUrl(avatar);
@@ -179,7 +194,7 @@ const getUsers = asyncHandler(async (req, res) => {
 });
 
 /**
- * GET /api/users/all
+ * GET /api/users/compact
  * Get all active users id and name for dropdowns
  */
 const getAllUsersList = asyncHandler(async (req, res) => {

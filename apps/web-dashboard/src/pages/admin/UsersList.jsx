@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Search, Filter, UserPlus, Building2, Trash2, Edit3, X, Users, Shield, Circle, Download, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, Phone } from 'lucide-react'
 import { useListUsersQuery, useInviteUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../features/users/userApi'
-import { useListRolesQuery } from '../../features/roles/roleApi'
+import { useListRolesCompactQuery } from '../../features/roles/roleApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
 import { useSelector } from 'react-redux'
 import Button from '../../components/ui/Button'
@@ -74,7 +74,7 @@ export default function UsersList() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data: rolesResp } = useListRolesQuery()
+  const { data: rolesResp } = useListRolesCompactQuery()
   const roles = rolesResp?.data || []
 
   // Find roles that match the search term
@@ -116,7 +116,8 @@ export default function UsersList() {
     : (usersPagination.totalPages || 1)
 
   const handlePermissions = (user) => {
-    if (user.roleId) navigate(`/admin/roles/${user.roleId}`)
+    const rId = typeof user.roleId === 'object' ? user.roleId?._id : user.roleId
+    if (rId) navigate(`/admin/roles/${rId}`)
     else toast('This user has no role assigned', 'warning')
   }
 
@@ -146,8 +147,8 @@ export default function UsersList() {
       email: user.contact?.email || '',
       phone: user.contact?.phone || '',
       role: user.role,
-      roleId: user.roleId,
-      branchId: user.branchId,
+      roleId: typeof user.roleId === 'object' ? user.roleId?._id : user.roleId,
+      branchId: typeof user.branchId === 'object' ? user.branchId?._id : user.branchId,
       isActive: user.isActive,
       avatar: user.contact?.avatar || '',
       password: ''
@@ -186,18 +187,22 @@ export default function UsersList() {
     catch (err) { toast(err.data?.message || 'Failed to remove user', 'error') }
   }
 
-  const getBranchName = (branchId) => branches.find(b => b._id === branchId)?.name || '—'
-  const getRoleName = (roleId) => roles.find(r => r._id === roleId)?.name || null
+  const getBranchName = (branch) => {
+    if (!branch) return '—'
+    if (typeof branch === 'object' && branch.name) return branch.name
+    const id = typeof branch === 'object' ? branch._id : branch
+    return branches.find(b => b._id === id)?.name || '—'
+  }
+  
+  const getRoleName = (role) => {
+    if (!role) return null
+    if (typeof role === 'object' && role.name) return role.name
+    const id = typeof role === 'object' ? role._id : role
+    return roles.find(r => r._id === id)?.name || null
+  }
 
   const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1
   const endItem = Math.min(page * pageSize, totalItems)
-
-  const clearFilters = () => {
-    setRoleFilter('')
-    setBranchFilter('')
-    setStatusFilter('')
-    setPage(1)
-  }
 
   const hasActiveFilters = roleFilter || branchFilter || statusFilter !== ''
 

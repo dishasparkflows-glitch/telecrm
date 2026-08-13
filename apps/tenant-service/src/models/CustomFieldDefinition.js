@@ -31,7 +31,11 @@ const customFieldDefinitionSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'custom_field_definitions'
+    }
 );
 
 // Ensure unique field names per entity within a tenant

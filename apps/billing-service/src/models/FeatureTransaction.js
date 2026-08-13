@@ -65,7 +65,10 @@ const featureTransactionSchema = new mongoose.Schema(
         },
     },
     {
-        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'feature_transactions'
+    }
 );
 
 featureTransactionSchema.index({ tenantId: 1, featureSlug: 1 });

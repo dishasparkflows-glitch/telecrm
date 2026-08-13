@@ -41,8 +41,11 @@ const paymentConfigSchema = new mongoose.Schema({
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false,
-    toJSON: { flattenMaps: true }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        toJSON: { flattenMaps: true },
+        collection: 'payment_configs'
 });
 
 module.exports = mongoose.model('PaymentConfig', paymentConfigSchema);

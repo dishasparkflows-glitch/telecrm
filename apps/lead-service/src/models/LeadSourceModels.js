@@ -32,7 +32,11 @@ const leadSourceConnectionSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'lead_source_connections'
+    }
 );
 
 const leadSourceMappingSchema = new mongoose.Schema(
@@ -69,7 +73,11 @@ const leadSourceMappingSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'lead_source_mappings'
+    }
 );
 
 const metaOAuthStateSchema = new mongoose.Schema(
@@ -89,7 +97,11 @@ const metaOAuthStateSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'meta_oauth_states'
+    }
 );
 
 const inboundLeadEventSchema = new mongoose.Schema(
@@ -126,7 +138,11 @@ const inboundLeadEventSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'inbound_lead_events'
+    }
 );
 
 leadSourceConnectionSchema.index({ tenantId: 1, provider: 1, externalAccountId: 1 });

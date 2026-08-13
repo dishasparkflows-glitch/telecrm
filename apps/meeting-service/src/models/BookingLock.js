@@ -14,7 +14,11 @@ const bookingLockSchema = new mongoose.Schema({
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false });
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'booking_locks'
+    });
 bookingLockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const BookingLock = mongoose.model('BookingLock', bookingLockSchema);
 

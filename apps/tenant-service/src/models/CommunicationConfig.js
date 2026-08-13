@@ -76,7 +76,11 @@ const communicationConfigSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    {
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' },
+        versionKey: false,
+        collection: 'communication_configs'
+    }
 );
 
 const CommunicationConfig = mongoose.model('CommunicationConfig', communicationConfigSchema);

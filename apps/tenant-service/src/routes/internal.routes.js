@@ -102,6 +102,40 @@ router.post(
 );
 
 /**
+ * GET /internal/roles/bulk
+ * Internal endpoint to fetch roles by IDs for a tenant
+ */
+router.get(
+    '/roles/bulk',
+    asyncHandler(async (req, res) => {
+        const tenantId = req.query.tenantId || req.headers['x-tenant-id'];
+        const { ids } = req.query;
+
+        if (!tenantId) {
+            return res.status(400).json({ success: false, message: 'tenantId required' });
+        }
+        if (!ids) {
+            return res.status(400).json({ success: false, message: 'ids required' });
+        }
+
+        const idsArray = ids.split(',').map(id => id.trim()).filter(Boolean);
+        if (idsArray.length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+        if (idsArray.length > 200) {
+            return res.status(400).json({ success: false, message: 'Maximum 200 IDs allowed' });
+        }
+
+        const roles = await Role.find({
+            tenantId,
+            _id: { $in: idsArray }
+        }).select('_id name slug isDefault isActive').lean();
+
+        res.json({ success: true, data: roles });
+    })
+);
+
+/**
  * GET /internal/roles/:roleId
  * Internal endpoint for API Gateway to fetch a user's role permissions
  * Used by the new permission-based RBAC middleware
@@ -148,6 +182,42 @@ router.get(
         modules = filterModulesForTenantPlan(modules, tenant);
 
         res.json({ success: true, data: modules });
+    })
+);
+
+
+
+/**
+ * GET /internal/branches/bulk
+ * Internal endpoint to fetch branches by IDs for a tenant
+ */
+router.get(
+    '/branches/bulk',
+    asyncHandler(async (req, res) => {
+        const tenantId = req.query.tenantId || req.headers['x-tenant-id'];
+        const { ids } = req.query;
+
+        if (!tenantId) {
+            return res.status(400).json({ success: false, message: 'tenantId required' });
+        }
+        if (!ids) {
+            return res.status(400).json({ success: false, message: 'ids required' });
+        }
+
+        const idsArray = ids.split(',').map(id => id.trim()).filter(Boolean);
+        if (idsArray.length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+        if (idsArray.length > 200) {
+            return res.status(400).json({ success: false, message: 'Maximum 200 IDs allowed' });
+        }
+
+        const branches = await Branch.find({
+            tenantId,
+            _id: { $in: idsArray }
+        }).select('_id name code address phone email isActive').lean();
+
+        res.json({ success: true, data: branches });
     })
 );
 

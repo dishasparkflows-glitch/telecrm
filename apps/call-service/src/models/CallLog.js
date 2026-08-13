@@ -30,10 +30,10 @@ const callLogSchema = new mongoose.Schema(
             fetchedAt: { type: Date, default: null }
         },
         disposition: {
-            code: { type: String, enum: Object.values(CALL_DISPOSITION), default: null },
-            notes: { type: String, default: '' },
-            updatedAt: { type: Date, default: null },
-            updatedBy: { type: mongoose.Schema.Types.ObjectId, default: null }
+            code: { type: String, enum: Object.values(CALL_DISPOSITION) },
+            notes: { type: String },
+            updatedAt: { type: Date },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId }
         },
         mobile: {
             deviceId: { type: String, default: '', index: true },
@@ -46,9 +46,9 @@ const callLogSchema = new mongoose.Schema(
             pending: { type: [mongoose.Schema.Types.Mixed], default: [] },
             processed: { type: [String], default: [] }
         },
-        isSyncing: { type: Boolean, default: false },
-        notes: { type: String, default: '' },
-        callbackAt: { type: Date, default: null },
+        // isSyncing: { type: Boolean, default: false },
+        notes: { type: String },
+        callbackAt: { type: Date },
         audit: {
             createdBy: { type: mongoose.Schema.Types.ObjectId },
             updatedBy: { type: mongoose.Schema.Types.ObjectId },
@@ -58,7 +58,11 @@ const callLogSchema = new mongoose.Schema(
             deletedAt: { type: Date }
         }
     },
-    { timestamps: { createdAt: 'audit.createdAt', updatedAt: 'audit.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'audit.createdAt', updatedAt: 'audit.updatedAt' }, 
+        versionKey: false,
+        collection: 'call_logs'
+    }
 );
 
 callLogSchema.index({ tenantId: 1, userId: 1, 'audit.createdAt': -1 });

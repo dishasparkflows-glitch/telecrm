@@ -18,7 +18,11 @@ const paymentEventSchema = new mongoose.Schema({
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false });
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'payment_events'
+    });
 
 paymentEventSchema.index({ provider: 1, eventId: 1 }, { unique: true });
 paymentEventSchema.index({ status: 1, updatedAt: 1 });

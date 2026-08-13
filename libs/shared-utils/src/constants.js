@@ -89,6 +89,8 @@ const CALL_DISPOSITION = {
     NO_ANSWER: 'no_answer',
     WRONG_NUMBER: 'wrong_number',
     DO_NOT_CALL: 'do_not_call',
+    VOICEMAIL: 'voicemail',
+    CONVERTED: 'converted',
 };
 
 const BILLING_TYPE = {

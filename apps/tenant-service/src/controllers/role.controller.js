@@ -48,6 +48,21 @@ const listRoles = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/roles/compact
+ * List lightweight roles for dropdowns
+ */
+const getCompactRoles = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+
+    const roles = await Role.find({ tenantId, isActive: true })
+        .select('_id tenantId name slug isDefault')
+        .sort({ isSystem: -1, name: 1 })
+        .lean();
+
+    ApiResponse.success(res, roles, 'Compact roles fetched');
+});
+
+/**
  * GET /api/roles/:id
  * Get a single role with full permissions
  */
@@ -141,6 +156,7 @@ const getAvailableModules = asyncHandler(async (req, res) => {
 module.exports = {
     createRole,
     listRoles,
+    getCompactRoles,
     getRole,
     updateRole,
     updatePermissions,

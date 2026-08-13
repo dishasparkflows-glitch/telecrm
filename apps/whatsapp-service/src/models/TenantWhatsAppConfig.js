@@ -64,7 +64,10 @@ const tenantWhatsAppConfigSchema = new mongoose.Schema(
         },
     },
     {
-        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'tenant_whatsapp_configs'
+    }
 );
 
 // ── Encrypt / Decrypt helpers ─────────────────────────────────────────────────

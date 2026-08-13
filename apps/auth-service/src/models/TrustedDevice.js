@@ -50,6 +50,7 @@ const trustedDeviceSchema = new mongoose.Schema(
     {
         timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' },
         versionKey: false,
+        collection: 'trusted_devices'
     }
 );
 

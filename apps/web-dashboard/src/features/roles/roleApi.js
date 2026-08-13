@@ -6,6 +6,10 @@ export const roleApi = baseApi.injectEndpoints({
             query: () => '/roles',
             providesTags: ['Roles'],
         }),
+        listRolesCompact: builder.query({
+            query: () => '/roles/compact',
+            providesTags: ['Roles'],
+        }),
         getRole: builder.query({
             query: (id) => `/roles/${id}`,
             providesTags: (result, error, id) => [{ type: 'Roles', id }],
@@ -50,6 +54,7 @@ export const roleApi = baseApi.injectEndpoints({
 
 export const {
     useListRolesQuery,
+    useListRolesCompactQuery,
     useGetRoleQuery,
     useGetAvailableModulesQuery,
     useCreateRoleMutation,

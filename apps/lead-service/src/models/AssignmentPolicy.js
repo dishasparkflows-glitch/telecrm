@@ -31,7 +31,11 @@ const assignmentPolicySchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'assignment_policies'
+    }
 );
 
 assignmentPolicySchema.index(

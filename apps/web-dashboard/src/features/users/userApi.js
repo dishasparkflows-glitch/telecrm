@@ -11,7 +11,7 @@ export const userApi = baseApi.injectEndpoints({
             providesTags: ['Users'],
         }),
         getAllUsersList: builder.query({
-            query: () => '/users/all',
+            query: () => '/users/compact',
             providesTags: ['Users'],
         }),
         getUser: builder.query({

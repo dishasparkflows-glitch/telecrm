@@ -95,7 +95,11 @@ const bookingLinkSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'booking_links'
+    }
 );
 
 const Meeting = mongoose.model('Meeting', meetingSchema);

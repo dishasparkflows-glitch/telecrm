@@ -20,7 +20,11 @@ const deviceTokenSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'device_tokens'
+    }
 );
 
 deviceTokenSchema.index({ tenantId: 1, userId: 1, deviceId: 1 }, { unique: true });

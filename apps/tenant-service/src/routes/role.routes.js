@@ -8,10 +8,14 @@ const {
     updatePermissions,
     deleteRole,
     getAvailableModules,
+    getCompactRoles,
 } = require('../controllers/role.controller');
 
 // GET  /api/roles                    — List all roles
 router.get('/', listRoles);
+
+// GET  /api/roles/compact            — Get lightweight roles for dropdowns
+router.get('/compact', getCompactRoles);
 
 // GET  /api/roles/available-modules  — Get module keys for permission matrix
 router.get('/available-modules', getAvailableModules);

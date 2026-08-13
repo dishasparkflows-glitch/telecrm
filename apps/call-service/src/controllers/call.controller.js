@@ -3,6 +3,8 @@ const { ApiResponse, ApiError, asyncHandler, CALL_STATUS, buildScopeFilter, getP
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const callingApi = require('../services/callingApi.service');
 const { findLeadByPhone } = require('../services/leadLookup.service');
+const { getEnrichedCallLogs } = require('../services/callQuery.service');
+const { normalizeMobileCallEntry } = require('../utils/mobileCallParser');
 
 /**
  * POST /api/calls/initiate
@@ -110,31 +112,6 @@ const initiateCall = asyncHandler(async (req, res) => {
     ApiResponse.created(res, callLog, 'Call initiated — your phone will ring shortly');
 });
 
-const MOBILE_CALL_TYPES = {
-    incoming: { direction: 'inbound', status: CALL_STATUS.COMPLETED },
-    outgoing: { direction: 'outbound', status: CALL_STATUS.COMPLETED },
-    missed: { direction: 'inbound', status: CALL_STATUS.MISSED },
-    rejected: { direction: 'inbound', status: CALL_STATUS.MISSED },
-    blocked: { direction: 'inbound', status: CALL_STATUS.FAILED },
-};
-
-const normalizeMobileCallEntry = (entry = {}) => {
-    const externalCallId = String(entry.deviceCallId || '').trim();
-    const remoteNumber = String(entry.phone || entry.remoteNumber || '').trim();
-    const type = MOBILE_CALL_TYPES[String(entry.type || '').toLowerCase()];
-    if (!externalCallId || !remoteNumber || !type) throw new Error('deviceCallId, phone, and a valid call type are required');
-
-    const startedAt = new Date(entry.startedAt || entry.timestamp);
-    if (Number.isNaN(startedAt.getTime())) throw new Error('A valid startedAt timestamp is required');
-
-    return {
-        externalCallId,
-        remoteNumber,
-        type,
-        startedAt,
-        duration: Math.max(0, Number(entry.duration) || 0),
-    };
-};
 
 const syncMobileCalls = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
@@ -244,6 +221,7 @@ const getCallRecording = asyncHandler(async (req, res) => {
  */
 const getCallLogs = asyncHandler(async (req, res) => {
     const { page = 1, limit = 25, leadId, status, direction } = req.query;
+    const tenantId = req.headers['x-tenant-id'];
 
     const filter = buildScopeFilter(req, { ownerField: 'userId', module: 'calls' });
     if (leadId) filter.leadId = leadId;
@@ -253,44 +231,8 @@ const getCallLogs = asyncHandler(async (req, res) => {
     const safeLimit = Math.min(Math.max(parseInt(limit) || 25, 1), 100);
     const safePage = Math.max(parseInt(page) || 1, 1);
     const skip = (safePage - 1) * safeLimit;
-    const [dbLogs, total] = await Promise.all([
-        CallLog.find(filter)
-            .sort({ 'audit.createdAt': -1 })
-            .skip(skip)
-            .limit(safeLimit),
-        CallLog.countDocuments(filter),
-    ]);
-
-    // Generate signed playback URLs in parallel for logs that have an R2 objectKey
-    const logs = await Promise.all(
-        dbLogs.map(async log => {
-            const obj = log.toObject();
-            let playbackUrl = obj.recording?.url || null;
-            if (obj.recording?.objectKey) {
-                try {
-                    playbackUrl = await getPresignedDownloadUrl(obj.recording.objectKey);
-                } catch {
-                    playbackUrl = obj.recording?.url || null;
-                }
-            }
-            return {
-                _id: obj._id,
-                tenantId: obj.tenantId,
-                branchId: obj.branchId,
-                userId: obj.userId,
-                leadId: obj.leadId,
-                call: obj.call,
-                recording: {
-                    status: obj.recording?.status,
-                    mimeType: obj.recording?.mimeType,
-                    duration: obj.recording?.duration,
-                    playbackUrl,
-                },
-                disposition: obj.disposition,
-                audit: { createdAt: obj.audit?.createdAt },
-            };
-        })
-    );
+    
+    const { logs, total } = await getEnrichedCallLogs(filter, skip, safeLimit, tenantId);
 
     ApiResponse.paginated(res, logs, {
         page: safePage, limit: safeLimit, total,
@@ -317,7 +259,7 @@ const updateDisposition = asyncHandler(async (req, res) => {
     if (callbackAt) callLog.callbackAt = callbackAt;
     await callLog.save();
 
-    ApiResponse.success(res, callLog, 'Disposition updated');
+    ApiResponse.success(res, null, 'Disposition updated');
 });
 
 /**

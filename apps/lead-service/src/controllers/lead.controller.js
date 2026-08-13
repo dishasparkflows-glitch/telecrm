@@ -8,6 +8,7 @@ const { pickLeadCreateInput, pickLeadUpdateInput, applyAssignedToFilter } = requ
 const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { auditLogger } = require('@sparkcrm/shared-middleware');
+const { getUsersBulk } = require('../services/serviceClients/user.client');
 
 const LEAD_SORT_FIELDS = new Set(['createdAt', 'updatedAt', 'firstName', 'lastName', 'stage', 'priority', 'score', 'scoring.score', 'expectedValue', 'followUpAt']);
 
@@ -92,10 +93,21 @@ const getLeads = asyncHandler(async (req, res) => {
     else if (['priority', 'expectedValue', 'followUpAt'].includes(sortBy)) dbSortBy = `lifecycle.${sortBy}`;
     const sort = { [dbSortBy]: sortOrder === 'asc' ? 1 : -1 };
 
-    const [leads, total] = await Promise.all([
+    const [dbLeads, total] = await Promise.all([
         Lead.find(filter).sort(sort).skip(skip).limit(limit),
         Lead.countDocuments(filter),
     ]);
+
+    const tenantId = req.headers['x-tenant-id'];
+    const userIds = [...new Set(dbLeads.map(l => l.assignedTo).filter(Boolean).map(String))];
+    const users = await getUsersBulk(tenantId, userIds);
+    const userMap = new Map(users.map(u => [String(u._id), u]));
+
+    const leads = dbLeads.map(lead => {
+        const obj = lead.toObject();
+        obj.assignedTo = userMap.get(String(obj.assignedTo)) || null;
+        return obj;
+    });
 
     ApiResponse.paginated(res, leads, {
         page,
@@ -118,7 +130,16 @@ const getLead = asyncHandler(async (req, res) => {
     if (!canAccessRecord(req, lead, { ownerField: 'assignedTo', module: 'leads' })) {
         throw ApiError.forbidden('You do not have access to this lead');
     }
-    ApiResponse.success(res, lead);
+    
+    const obj = lead.toObject();
+    if (obj.assignedTo) {
+        const users = await getUsersBulk(tenantId, [String(obj.assignedTo)]);
+        if (users && users.length > 0) {
+            obj.assignedTo = users[0];
+        }
+    }
+
+    ApiResponse.success(res, obj);
 });
 
 /**
@@ -298,7 +319,7 @@ const addNote = asyncHandler(async (req, res) => {
         description: text,
     });
 
-    ApiResponse.success(res, lead.notes, 'Note added');
+    ApiResponse.success(res, null, 'Note added');
 });
 
 /**
@@ -345,7 +366,7 @@ const assignLead = asyncHandler(async (req, res) => {
         metadata: { assignedTo },
     });
 
-    ApiResponse.success(res, lead, assignedTo ? 'Lead assigned' : 'Lead unassigned');
+    ApiResponse.success(res, null, assignedTo ? 'Lead assigned' : 'Lead unassigned');
 });
 
 /**
@@ -584,6 +605,30 @@ const getActiveLeads = asyncHandler(async (req, res) => {
     }
 });
 
+const getLeadsBulk = asyncHandler(async (req, res) => {
+    const tenantId = req.query.tenantId || req.headers['x-tenant-id'];
+    const { ids } = req.query;
+
+    if (!tenantId) throw ApiError.badRequest('tenantId required');
+    if (!ids) throw ApiError.badRequest('ids required');
+
+    const idsArray = ids.split(',').map(id => id.trim()).filter(Boolean);
+    if (idsArray.length === 0) {
+        return ApiResponse.success(res, [], 'No leads found');
+    }
+    if (idsArray.length > 200) {
+        throw ApiError.badRequest('Maximum 200 IDs allowed');
+    }
+
+    const leads = await Lead.find({
+        tenantId,
+        _id: { $in: idsArray },
+        isActive: { $ne: false },
+    }).select('_id contact.firstName contact.lastName contact.phone').lean();
+
+    ApiResponse.success(res, leads, 'Leads fetched successfully');
+});
+
 module.exports = {
     createLead,
     getLeads,
@@ -597,4 +642,5 @@ module.exports = {
     getStats,
     getLeadTimeline,
     getLeadByPhone,
+    getLeadsBulk,
 };

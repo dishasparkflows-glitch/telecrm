@@ -51,6 +51,7 @@ app.use('/api/leads', requireProtectedLeadRequest, leadRoutes);
 const Lead = require('./models/Lead');
 const mongoose = require('mongoose');
 app.get('/internal/leads/by-phone/:phone', requireInternalCaller, leadController.getLeadByPhone);
+app.get('/internal/leads/bulk', requireInternalCaller, leadController.getLeadsBulk);
 app.get('/internal/leads/count', requireInternalCaller, async (req, res) => {
   try {
     const { tenantId } = req.query;

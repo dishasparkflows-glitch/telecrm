@@ -28,7 +28,11 @@ const leadActivitySchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'lead_activities'
+    }
 );
 
 leadActivitySchema.index({ tenantId: 1, leadId: 1, createdAt: -1 });

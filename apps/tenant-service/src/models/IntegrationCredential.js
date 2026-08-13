@@ -106,7 +106,11 @@ const integrationCredentialSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'integration_credentials'
+    }
 );
 
 integrationCredentialSchema.index({ tenantId: 1, provider: 1 }, { unique: true });

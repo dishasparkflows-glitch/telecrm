@@ -58,6 +58,34 @@ app.get('/internal/users/count', requireInternalCaller, async (req, res) => {
   }
 });
 
+app.get('/internal/users/bulk', requireInternalCaller, async (req, res) => {
+  try {
+    const tenantId = req.query.tenantId || req.headers['x-tenant-id'];
+    const { ids } = req.query;
+
+    if (!tenantId) return res.status(400).json({ success: false, message: 'tenantId required' });
+    if (!ids) return res.status(400).json({ success: false, message: 'ids required' });
+
+    const idsArray = ids.split(',').map(id => id.trim()).filter(Boolean);
+    if (idsArray.length === 0) {
+        return res.json({ success: true, data: [] });
+    }
+    if (idsArray.length > 200) {
+        return res.status(400).json({ success: false, message: 'Maximum 200 IDs allowed' });
+    }
+
+    const users = await User.find({
+        tenantId,
+        _id: { $in: idsArray },
+        isActive: { $ne: false },
+    }).select('_id contact.name contact.email contact.avatar contact.phone').lean();
+
+    res.json({ success: true, data: users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.use(errorHandler);
 
 module.exports = app;

@@ -224,10 +224,12 @@ export default function CallLogs() {
                 <tbody>
                   {logs.map((log) => (
                     <tr key={log._id} className="border-t border-[var(--vz-border)] hover:bg-[var(--vz-table-hover-bg)] transition-colors">
-                      <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{log.leadId?.contact?.firstName || 'Unknown'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.numbers?.to || log.phone || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.userId?.name || log.userId?.firstName || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.call?.duration || '—'}</td>
+                      <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">
+                        {`${log.leadId.contact.firstName} ${log.leadId.contact.lastName || ''}`.trim()}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.leadId?.contact?.phone || log.numbers?.to || log.phone || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.userId?.contact?.name || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">{log.call?.duration != null ? `${log.call.duration}s` : '—'}</td>
                       <td className="px-4 py-3">
                         <Badge color={statusColors[log.call?.status || 'initiated'] || 'primary'}>{log.call?.status || 'initiated'}</Badge>
                         {log.call?.status === 'failed' && log.provider?.data?.error?.code === 'EXOTEL_KYC_REQUIRED' && (
@@ -244,7 +246,7 @@ export default function CallLogs() {
                           <span className="text-xs text-[var(--vz-text-muted)] italic">No recording available</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-[var(--vz-text)] text-xs">{new Date(log.audit?.createdAt || log.meta?.createdAt || new Date()).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text)] text-xs">{new Date(log.audit?.createdAt || new Date()).toLocaleString()}</td>
                       <td className="px-4 py-3">
                         <Button variant="ghost" size="sm" onClick={() => { setShowDisp(log._id); setDisposition(log.disposition?.code || '') }}>
                           Edit

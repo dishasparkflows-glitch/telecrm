@@ -35,7 +35,11 @@ const automationRuleSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'automation_rules'
+    }
 );
 
 automationRuleSchema.index({ tenantId: 1, isActive: 1, 'trigger.event': 1 });
@@ -67,7 +71,11 @@ const automationLogSchema = new mongoose.Schema(
             deletedAt: { type: Date },
         },
     },
-    { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+    { 
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'automation_logs'
+    }
 );
 
 automationLogSchema.index({ tenantId: 1, createdAt: -1 });

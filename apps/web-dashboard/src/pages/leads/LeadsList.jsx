@@ -100,9 +100,13 @@ export default function LeadsList() {
   }, [profileData])
   const stageLabelMap = useMemo(() => Object.fromEntries(stageOptions.map((s) => [s.slug, s.name])), [stageOptions])
   const getAssignedName = (assignedTo) => {
+    if (!assignedTo) return 'Unassigned'
+    if (typeof assignedTo === 'object' && (assignedTo.contact?.name)) {
+      return assignedTo.contact?.name
+    }
     const id = typeof assignedTo === 'object' ? assignedTo?._id : assignedTo
     const user = users.find((u) => u._id === id)
-    return user ? `${user.name || ''}` : 'Unassigned'
+    return user ? (user.contact?.name || '') : 'Unassigned'
   }
 
   const [newLead, setNewLead] = useState({

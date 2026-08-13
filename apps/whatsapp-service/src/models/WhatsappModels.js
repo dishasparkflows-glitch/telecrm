@@ -116,7 +116,9 @@ const whatsappMessageSchema = new mongoose.Schema(
         },
     },
     {
-        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false,
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'whatsapp_messages',
         toJSON: { transform: removePrivateMediaKey },
         toObject: { transform: removePrivateMediaKey },
     }
@@ -194,7 +196,10 @@ const chatbotRuleSchema = new mongoose.Schema(
         },
     },
     {
-        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
+        timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, 
+        versionKey: false,
+        collection: 'chatbot_rules'
+    }
 );
 
 chatbotRuleSchema.index({ tenantId: 1, isActive: 1, priority: -1 });
