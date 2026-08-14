@@ -71,11 +71,11 @@ export default function Notifications() {
 
   const allNotifications = data?.data || []
   const navigate = useNavigate()
-  const unreadCount = allNotifications.filter((n) => !n.isRead).length
+  const unreadCount = allNotifications.filter((n) => !(n.readState?.isRead)).length
   const userId = user?._id || user?.id
 
   const filteredNotifications = useMemo(() => {
-    if (activeTab === 'unread') return allNotifications.filter((n) => !n.isRead)
+    if (activeTab === 'unread') return allNotifications.filter((n) => !(n.readState?.isRead))
     return allNotifications
   }, [allNotifications, activeTab])
 
@@ -90,8 +90,9 @@ export default function Notifications() {
   }
 
   const handleNotificationClick = async (notif) => {
-    if (!notif.isRead) await handleMarkRead(notif._id)
-    if (notif.actionUrl) navigate(notif.actionUrl)
+    if (!(notif.readState?.isRead)) await handleMarkRead(notif._id)
+    const actionUrl = notif.action?.actionUrl
+    if (actionUrl) navigate(actionUrl)
   }
 
   const handleMarkAll = async () => {
@@ -256,8 +257,9 @@ export default function Notifications() {
         ) : (
           <div>
             {paginatedNotifications.map((notif) => {
-              const Icon = typeIcons[notif.type] || typeIcons.default
-              const style = typeStyles[notif.type] || typeStyles.default
+              const type = notif.notification?.type;
+              const Icon = typeIcons[type] || typeIcons.default
+              const style = typeStyles[type] || typeStyles.default
               const isSelected = selectedIds.includes(notif._id)
               const { time, date } = formatNotificationTime(notif.sentAt)
 
@@ -269,7 +271,7 @@ export default function Notifications() {
                     group flex items-center gap-4 px-6 py-5 cursor-pointer transition-colors border-b border-[var(--vz-border)] last:border-b-0
                     ${isSelected
                       ? 'bg-primary/[0.06]'
-                      : notif.isRead
+                      : (notif.readState?.isRead)
                         ? 'bg-[var(--vz-card-bg)] hover:bg-[var(--vz-body-bg)]/40'
                         : 'hover:bg-primary/[0.04]'
                     }
@@ -289,18 +291,18 @@ export default function Notifications() {
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${style.bg}`}>
                       <Icon size={20} className={style.text} />
                     </div>
-                    {!notif.isRead && (
+                    {!(notif.readState?.isRead) && (
                       <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-[var(--vz-card-bg)]" />
                     )}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm leading-snug ${notif.isRead ? 'font-semibold text-[var(--vz-heading)]' : 'font-bold text-[var(--vz-heading)]'}`}>
-                      {notif.title}
+                    <p className={`text-sm leading-snug ${(notif.readState?.isRead) ? 'font-semibold text-[var(--vz-heading)]' : 'font-bold text-[var(--vz-heading)]'}`}>
+                      {notif.notification?.title}
                     </p>
                     <p className="text-sm text-[var(--vz-text-muted)] mt-0.5">
-                      {notif.message || notif.body}
+                      {notif.notification?.message}
                     </p>
                   </div>
 

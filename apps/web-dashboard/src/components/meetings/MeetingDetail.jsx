@@ -1,20 +1,26 @@
 import { useState } from 'react'
 import { X, Send, Paperclip, Clock, Video, User, Download, MessageSquare } from 'lucide-react'
-import { useAddCommentMutation, useAddAttachmentMutation } from '../../features/meetings/meetingApi'
+import { useAddCommentMutation, useAddAttachmentMutation, useGetMeetingQuery } from '../../features/meetings/meetingApi'
+import { useGetUploadUrlMutation } from '../../features/uploads/uploadApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
+import { useGetAllUsersListQuery } from '../../features/users/userApi'
 import { useToast } from '../ui/Toast'
 import { useSelector } from 'react-redux'
 
 import Badge from '../ui/Badge'
 import Modal from '../ui/Modal'
 
-export default function MeetingDetail({ meeting, isOpen, onClose }) {
+export default function MeetingDetail({ meeting: initialMeeting, isOpen, onClose }) {
   const toast = useToast()
   const { user } = useSelector(state => state.auth)
   const [commentText, setCommentText] = useState('')
   const { data: fieldsResp } = useGetCustomFieldsQuery()
+  const { data: usersData } = useGetAllUsersListQuery()
+  const { data: meetingResp } = useGetMeetingQuery(initialMeeting?._id, { skip: !initialMeeting?._id })
   const [addComment, { isLoading: addingComment }] = useAddCommentMutation()
+  const [getUploadUrl] = useGetUploadUrlMutation()
   const [addAttachment, { isLoading: addingFile }] = useAddAttachmentMutation()
+  const meeting = meetingResp?.data || initialMeeting
 
   if (!meeting) return null
 
@@ -33,16 +39,41 @@ export default function MeetingDetail({ meeting, isOpen, onClose }) {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    const formData = new FormData()
-    formData.append('file', file)
+
     try {
-      await addAttachment({ id: meeting._id, formData }).unwrap()
+      // 1. Get presigned URL
+      const { data: uploadData } = await getUploadUrl({
+        uploadType: 'attachments',
+        meetingId: meeting._id,
+        fileType: file.type,
+        fileSize: file.size
+      }).unwrap()
+
+      const { uploadUrl } = uploadData
+
+      // 2. Upload to Cloudflare/S3
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type }
+      })
+
+      // 3. Save attachment metadata to meeting
+      await addAttachment({
+        id: meeting._id,
+        name: file.name,
+        media: uploadData.key,
+        fileType: file.type
+      }).unwrap()
+
       toast('File attached', 'success')
-    } catch { toast('Failed to attach file', 'error') }
+    } catch (err) { 
+      toast(err?.data?.message || 'Failed to attach file', 'error') 
+    }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={meeting.title} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={meeting.meeting?.title} size="lg">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: Info */}
         <div className="md:col-span-1 space-y-6">
@@ -51,20 +82,20 @@ export default function MeetingDetail({ meeting, isOpen, onClose }) {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-[var(--vz-text-muted)]">
                 <Clock size={16} className="text-primary" />
-                <span>{new Date(meeting.dateTime).toLocaleString()}</span>
+                <span>{new Date(meeting.meeting?.scheduledAt).toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-[var(--vz-text-muted)]">
                 <Video size={16} className="text-primary" />
-                <span>{meeting.duration} Minutes</span>
+                <span>{meeting.meeting?.duration} Minutes</span>
               </div>
-              {meeting.meetingUrl && (
+              {meeting.meeting?.link && (
                 <div className="flex items-center gap-2 text-sm text-primary font-medium hover:underline">
                   <Video size={16} />
-                  <a href={meeting.meetingUrl} target="_blank" rel="noreferrer">Join Meeting</a>
+                  <a href={meeting.meeting?.link} target="_blank" rel="noreferrer">Join Meeting</a>
                 </div>
               )}
               <div className="pt-2">
-                <Badge color={meeting.status === 'confirmed' ? 'success' : 'warning'}>{meeting.status || 'scheduled'}</Badge>
+                <Badge color={meeting.meeting?.status === 'confirmed' ? 'success' : 'warning'}>{meeting.meeting?.status || 'scheduled'}</Badge>
               </div>
             </div>
           </div>
@@ -74,14 +105,17 @@ export default function MeetingDetail({ meeting, isOpen, onClose }) {
             <div className="space-y-2">
               <div className="flex items-center gap-2 p-2 rounded bg-primary/5">
                 <User size={14} className="text-primary" />
-                <span className="text-xs font-medium text-[var(--vz-heading)]">{meeting.hostId?.name || 'Host'} (Host)</span>
+                <span className="text-xs font-medium text-[var(--vz-heading)]">{meeting.hostId?.contact?.name || 'Host'} (Host)</span>
               </div>
-              {meeting.attendees?.map((a, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded hover:bg-[var(--vz-body-bg)]">
-                  <User size={14} className="text-[var(--vz-text-muted)]" />
-                  <span className="text-xs text-[var(--vz-heading)]">{a.name}</span>
-                </div>
-              ))}
+              {meeting.attendees?.map((a, i) => {
+                const userName = a.userId?.contact?.name || usersData?.data?.find(u => u._id === (a.userId?._id || a.userId))?.contact?.name || 'Unknown User'
+                return (
+                  <div key={i} className="flex items-center gap-2 p-2 rounded hover:bg-[var(--vz-body-bg)]">
+                    <User size={14} className="text-[var(--vz-text-muted)]" />
+                    <span className="text-xs text-[var(--vz-heading)]">{userName}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -118,7 +152,7 @@ export default function MeetingDetail({ meeting, isOpen, onClose }) {
                         {c.text}
                     </div>
                     <span className="text-[10px] text-[var(--vz-text-muted)] mt-1 px-1">
-                      {c.userName} • {new Date(c.meta?.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {c.userId?.contact?.name || 'Unknown'} • {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 ))

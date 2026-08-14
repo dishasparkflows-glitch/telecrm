@@ -13,13 +13,13 @@ const getNotifications = asyncHandler(async (req, res) => {
     if (branchId) {
         filter.$or = [{ branchId }, { branchId: null }];
     }
-    if (isRead !== undefined) filter.isRead = isRead === 'true';
+    if (isRead !== undefined) filter['readState.isRead'] = isRead === 'true';
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [notifications, total, unreadCount] = await Promise.all([
         Notification.find(filter).sort({ sentAt: -1 }).skip(skip).limit(parseInt(limit)),
         Notification.countDocuments(filter),
-        Notification.countDocuments({ ...filter, isRead: false }),
+        Notification.countDocuments({ ...filter, 'readState.isRead': false }),
     ]);
 
     ApiResponse.paginated(res, notifications, {
@@ -34,7 +34,7 @@ const markAsRead = asyncHandler(async (req, res) => {
     const { ids } = req.body; // Array of notification IDs
 
     if (ids?.length) {
-        await Notification.updateMany({ _id: { $in: ids }, userId }, { isRead: true, readAt: new Date() });
+        await Notification.updateMany({ _id: { $in: ids }, userId }, { $set: { 'readState.isRead': true, 'readState.readAt': new Date() } });
     }
 
     ApiResponse.success(res, null, 'Notifications marked as read');
@@ -45,10 +45,10 @@ const markAllRead = asyncHandler(async (req, res) => {
     const userId = req.body.userId || req.headers['x-user-id'];
     const branchId = req.headers['x-branch-id'] || req.headers['x-user-branch-id'];
 
-    const filter = { tenantId, userId, isRead: false };
+    const filter = { tenantId, userId, 'readState.isRead': false };
     if (branchId) filter.branchId = branchId;
 
-    await Notification.updateMany(filter, { isRead: true, readAt: new Date() });
+    await Notification.updateMany(filter, { $set: { 'readState.isRead': true, 'readState.readAt': new Date() } });
     ApiResponse.success(res, null, 'All notifications marked as read');
 });
 

@@ -197,6 +197,16 @@ const initiateTwilioCall = async (config, { fromNumber, toNumber, callId }) => {
     params.append('StatusCallbackEvent', 'answered');
     params.append('StatusCallbackEvent', 'completed');
 
+    // Set up recording status callback
+    const recordingUrl = new URL(voiceWebhook);
+    recordingUrl.pathname = recordingUrl.pathname.replace('/voice', '/recording');
+    recordingUrl.search = '';
+    if (callId) recordingUrl.searchParams.append('callId', String(callId));
+    
+    params.append('RecordingStatusCallback', recordingUrl.toString());
+    params.append('RecordingStatusCallbackMethod', 'POST');
+    params.append('RecordingStatusCallbackEvent', 'completed');
+
     let res;
     try {
         res = await axios.post(url, params.toString(), {

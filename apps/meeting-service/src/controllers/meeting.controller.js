@@ -8,8 +8,9 @@ const {
     requireObjectId,
     pagination,
 } = require('../utils/meetingDto');
-const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
+const { getUsersBulk } = require('../services/serviceClients/user.client');
 
 const zonedSlot = (date, timezone) => {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -69,6 +70,7 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
 const getMeetings = asyncHandler(async (req, res) => {
     const { status, from, to } = req.query;
     const { page, limit, skip } = pagination(req.query);
+    const tenantId = req.headers['x-tenant-id'];
     const filter = buildScopeFilter(req, { ownerField: 'hostId', module: 'meetings' });
 
     if (filter.hostId) {
@@ -80,26 +82,80 @@ const getMeetings = asyncHandler(async (req, res) => {
         ];
     }
 
-    if (status) filter.status = status;
+    if (status) filter['meeting.status'] = status;
     if (from || to) {
-        filter.scheduledAt = {};
+        filter['meeting.scheduledAt'] = {};
         if (from) {
             const fromDate = new Date(from);
             if (Number.isNaN(fromDate.getTime())) throw ApiError.badRequest('from must be a valid date');
-            filter.scheduledAt.$gte = fromDate;
+            filter['meeting.scheduledAt'].$gte = fromDate;
         }
         if (to) {
             const toDate = new Date(to);
             if (Number.isNaN(toDate.getTime())) throw ApiError.badRequest('to must be a valid date');
-            filter.scheduledAt.$lte = toDate;
+            filter['meeting.scheduledAt'].$lte = toDate;
         }
     }
     const [meetings, total] = await Promise.all([
-        Meeting.find(filter).sort({ scheduledAt: 1 }).skip(skip).limit(limit).populate('hostId', 'name email avatar'),
+        Meeting.find(filter).sort({ 'meeting.scheduledAt': 1 }).skip(skip).limit(limit).lean(),
         Meeting.countDocuments(filter),
     ]);
 
     ApiResponse.paginated(res, meetings, { page, limit, total, totalPages: Math.ceil(total / limit) });
+});
+
+const getMeeting = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const meetingId = requireObjectId(req.params.id, 'meeting ID');
+    
+    let meeting = await Meeting.findOne({ _id: meetingId, tenantId }).lean();
+    if (!meeting) throw ApiError.notFound('Meeting not found');
+    if (!canAccessMeeting(req, meeting, { allowAttendee: true })) {
+        throw ApiError.forbidden('You do not have access to this meeting');
+    }
+    
+    // Extract unique user IDs
+    const userIds = new Set();
+    if (meeting.hostId) userIds.add(String(meeting.hostId));
+    meeting.comments?.forEach(c => c.userId && userIds.add(String(c.userId)));
+    meeting.attendees?.forEach(a => a.userId && userIds.add(String(a.userId)));
+    meeting.attachments?.forEach(a => a.uploadedBy && userIds.add(String(a.uploadedBy)));
+    
+    // Fetch users in bulk
+    const users = await getUsersBulk(tenantId, Array.from(userIds));
+    const userMap = new Map(users.map(u => [String(u._id), u]));
+    
+    // Attach user objects
+    if (meeting.hostId) {
+        meeting.hostId = userMap.get(String(meeting.hostId)) || meeting.hostId;
+    }
+    if (meeting.comments) {
+        meeting.comments = meeting.comments.map(c => ({
+            ...c,
+            userId: userMap.get(String(c.userId)) || c.userId
+        }));
+    }
+    if (meeting.attendees) {
+        meeting.attendees = meeting.attendees.map(a => ({
+            ...a,
+            userId: userMap.get(String(a.userId)) || a.userId
+        }));
+    }
+    if (meeting.attachments) {
+        meeting.attachments = await Promise.all(meeting.attachments.map(async a => {
+            let playbackUrl = null;
+            if (a.media) {
+                try { playbackUrl = await getPresignedDownloadUrl(a.media); } catch {}
+            }
+            return {
+                ...a,
+                url: playbackUrl,
+                uploadedBy: userMap.get(String(a.uploadedBy)) || a.uploadedBy
+            };
+        }));
+    }
+
+    ApiResponse.success(res, meeting);
 });
 
 const addMeetingComment = asyncHandler(async (req, res) => {
@@ -125,9 +181,9 @@ const addMeetingAttachment = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const userId = req.headers['x-user-id'];
     const meetingId = requireObjectId(req.params.id, 'meeting ID');
-    const { name, url, fileType } = req.body || {};
-    if (![name, url, fileType].every((value) => typeof value === 'string' && value.trim())) {
-        throw ApiError.badRequest('Attachment name, url, and fileType are required');
+    const { name, media, fileType } = req.body || {};
+    if (![name, media, fileType].every((value) => typeof value === 'string' && value.trim())) {
+        throw ApiError.badRequest('Attachment name, media, and fileType are required');
     }
 
     const meeting = await Meeting.findOne({ _id: meetingId, tenantId });
@@ -138,13 +194,25 @@ const addMeetingAttachment = asyncHandler(async (req, res) => {
 
     meeting.attachments.push({
         name: name.trim(),
-        url: url.trim(),
+        media: media.trim(),
         fileType: fileType.trim(),
         uploadedBy: userId,
         uploadedAt: new Date(),
     });
     await meeting.save();
-    ApiResponse.success(res, meeting, 'Attachment added');
+    
+    const obj = meeting.toObject();
+    if (obj.attachments) {
+        obj.attachments = await Promise.all(obj.attachments.map(async a => {
+            let playbackUrl = null;
+            if (a.media) {
+                try { playbackUrl = await getPresignedDownloadUrl(a.media); } catch {}
+            }
+            return { ...a, url: playbackUrl };
+        }));
+    }
+
+    ApiResponse.success(res, obj, 'Attachment added');
 });
 
 const updateMeeting = asyncHandler(async (req, res) => {
@@ -181,24 +249,25 @@ const bookMeeting = asyncHandler(async (req, res) => {
     if (!link) throw ApiError.notFound('Booking link not found or inactive');
 
     const booking = pickPublicBookingInput(req.body);
-    const scheduledAt = new Date(booking.scheduledAt);
-    if (!link.durationOptions.includes(booking.duration)) {
+    const scheduledAt = new Date(booking.meeting?.scheduledAt);
+    const duration = booking.meeting?.duration;
+    if (!link.durationOptions.includes(duration)) {
         throw ApiError.badRequest('Selected duration is not available for this booking link');
     }
-    if (!isWithinAvailability(scheduledAt, booking.duration, link.availability)) {
+    if (!isWithinAvailability(scheduledAt, duration, link.availability)) {
         throw ApiError.badRequest('Selected time is outside booking availability');
     }
 
     const lock = await withBookingLock(`meeting-host:${link.userId}`, async () => {
-        const requestedEnd = new Date(scheduledAt.getTime() + booking.duration * 60 * 1000);
+        const requestedEnd = new Date(scheduledAt.getTime() + duration * 60 * 1000);
         const candidates = await Meeting.find({
             tenantId: link.tenantId,
             hostId: link.userId,
-            status: { $in: ['scheduled', 'confirmed'] },
-            scheduledAt: { $lt: requestedEnd },
-        }).select('scheduledAt duration');
+            'meeting.status': { $in: ['scheduled', 'confirmed'] },
+            'meeting.scheduledAt': { $lt: requestedEnd },
+        }).select('meeting.scheduledAt meeting.duration');
         const overlaps = candidates.some((candidate) => (
-            new Date(candidate.scheduledAt).getTime() + candidate.duration * 60 * 1000 > scheduledAt.getTime()
+            new Date(candidate.meeting.scheduledAt).getTime() + candidate.meeting.duration * 60 * 1000 > scheduledAt.getTime()
         ));
         if (overlaps) throw ApiError.conflict('The selected time is no longer available');
 
@@ -206,13 +275,17 @@ const bookMeeting = asyncHandler(async (req, res) => {
             tenantId: link.tenantId,
             branchId: link.branchId || null,
             hostId: link.userId,
-            title: booking.title || link.title,
-            guestName: booking.guestName || '',
-            guestEmail: booking.guestEmail || '',
-            guestPhone: booking.guestPhone || '',
-            scheduledAt,
-            duration: booking.duration,
-            status: 'scheduled',
+            meeting: {
+                title: booking.meeting?.title,
+                scheduledAt,
+                duration,
+                status: 'scheduled',
+            },
+            guest: {
+                name: booking.guest?.name,
+                email: booking.guest?.email,
+                phone: booking.guest?.phone,
+            }
         });
     });
     if (!lock.acquired) throw ApiError.conflict('Another booking is being processed; please retry');
@@ -223,6 +296,16 @@ const getBookingLinks = asyncHandler(async (req, res) => {
     const filter = buildScopeFilter(req, { ownerField: 'userId', module: 'meetings' });
     const links = await BookingLink.find(filter).sort({ 'meta.createdAt': -1 });
     ApiResponse.success(res, links);
+});
+
+const getBookingLinkBySlug = asyncHandler(async (req, res) => {
+    const { slug } = req.params;
+    const link = await BookingLink.findOne({ slug, isActive: true })
+        .select('title description durationOptions availability userId')
+        .lean();
+        
+    if (!link) throw ApiError.notFound('Booking link not found or inactive');
+    ApiResponse.success(res, link);
 });
 
 const createBookingLink = asyncHandler(async (req, res) => {
@@ -255,11 +338,13 @@ const deleteBookingLink = asyncHandler(async (req, res) => {
 module.exports = {
     scheduleMeeting,
     getMeetings,
+    getMeeting,
     updateMeeting,
     deleteMeeting,
     bookMeeting,
     createBookingLink,
     getBookingLinks,
+    getBookingLinkBySlug,
     deleteBookingLink,
     addMeetingComment,
     addMeetingAttachment,

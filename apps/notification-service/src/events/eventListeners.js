@@ -13,12 +13,13 @@ const registerEventListeners = async () => {
     // ─── Generic send notification ───
     await subscribeToEvents(EVENTS.SEND_NOTIFICATION, async (_channel, data) => {
         try {
-            const { tenantId, userId, title, message, type, actionUrl, branchId, channel } = data;
+            const { tenantId, userId, title, message, type, actionUrl, actionType, branchId, channel } = data;
             await sendInApp(tenantId, userId, {
                 title,
                 message,
                 type: type || 'info',
                 actionUrl: actionUrl || '',
+                actionType: actionType || '',
                 branchId,
             });
             console.log(`🔔 Notification created for user ${userId}: ${title}`);
@@ -131,6 +132,7 @@ const registerEventListeners = async () => {
                 message: `A new lead has been assigned to you`,
                 type: 'action',
                 actionUrl: `/leads/${leadId}`,
+                actionType: 'lead',
                 branchId: data.branchId,
             });
             await sendPushToUser({
@@ -154,7 +156,9 @@ const registerEventListeners = async () => {
                 title: 'New Meeting Booked',
                 message: 'Someone has scheduled a meeting with you',
                 type: 'info',
-                actionUrl: `/meetings`,
+                actionUrl: `/meetings/${meetingId}`,
+                actionType: 'meeting',
+                data: { meetingId },
                 branchId: data.branchId,
             });
             await sendPushToUser({
@@ -177,6 +181,7 @@ const registerEventListeners = async () => {
                 title: 'Payment Successful',
                 message: `Payment of ₹${amount} for ${type} received`,
                 type: 'success',
+                actionType: 'payment',
                 branchId: data.branchId,
             });
         } catch (err) {
@@ -193,6 +198,7 @@ const registerEventListeners = async () => {
                 message: `You missed a call${leadId ? ` from lead` : ''}`,
                 type: 'warning',
                 actionUrl: leadId ? `/leads/${leadId}` : '/calls',
+                actionType: leadId ? 'lead' : 'call',
                 branchId: data.branchId,
             });
             if (userId) {

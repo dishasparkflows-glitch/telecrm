@@ -9,6 +9,10 @@ export const meetingApi = baseApi.injectEndpoints({
             }),
             providesTags: [{ type: 'Meeting', id: 'LIST' }],
         }),
+        getMeeting: builder.query({
+            query: (id) => `/meetings/${id}`,
+            providesTags: (result, error, id) => [{ type: 'Meeting', id }],
+        }),
         scheduleMeeting: builder.mutation({
             query: (data) => ({
                 url: '/meetings/schedule',
@@ -57,7 +61,7 @@ export const meetingApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: data,
             }),
-            invalidatesTags: (_result, _error, { id: _id }) => [{ type: 'Meeting', id: 'LIST' }],
+            invalidatesTags: (_result, _error, { id: _id }) => [{ type: 'Meeting', id: 'LIST' }, { type: 'Meeting', id: _id }],
         }),
         addAttachment: builder.mutation({
             query: ({ id, ...data }) => ({
@@ -65,13 +69,24 @@ export const meetingApi = baseApi.injectEndpoints({
                 method: 'POST',
                 body: data,
             }),
-            invalidatesTags: (_result, _error, { id: _id }) => [{ type: 'Meeting', id: 'LIST' }],
+            invalidatesTags: (_result, _error, { id: _id }) => [{ type: 'Meeting', id: 'LIST' }, { type: 'Meeting', id: _id }],
+        }),
+        getPublicBookingLink: builder.query({
+            query: (slug) => `/meetings/book/${slug}`,
+        }),
+        bookPublicMeeting: builder.mutation({
+            query: ({ slug, ...data }) => ({
+                url: `/meetings/book/${slug}`,
+                method: 'POST',
+                body: data,
+            }),
         }),
     }),
 })
 
 export const {
     useGetMeetingsQuery,
+    useGetMeetingQuery,
     useScheduleMeetingMutation,
     useUpdateMeetingMutation,
     useDeleteMeetingMutation,
@@ -80,4 +95,6 @@ export const {
     useDeleteBookingLinkMutation,
     useAddCommentMutation,
     useAddAttachmentMutation,
+    useGetPublicBookingLinkQuery,
+    useBookPublicMeetingMutation,
 } = meetingApi

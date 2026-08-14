@@ -22,7 +22,12 @@ export default function Dialer() {
   useEffect(() => {
     if (!socket) return
     const handleCallCompleted = () => {
-      dispatch(closeDialer())
+      setStatus('ended')
+      setTimeout(() => {
+        setStatus('idle')
+        setDuration(0)
+        dispatch(closeDialer())
+      }, 2000)
     }
     socket.on('call_completed', handleCallCompleted)
     return () => socket.off('call_completed', handleCallCompleted)
@@ -70,6 +75,7 @@ export default function Dialer() {
       setStatus('idle')
       setDuration(0)
       if (!dialerNumber) setNumber('')
+      dispatch(closeDialer())
     }, 2000)
   }
 

@@ -54,7 +54,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', c
 
 Modal.Footer = function ModalFooter({ children, className = '' }) {
   return (
-    <div className={`flex items-center justify-end gap-2 px-5 py-3 border-t border-[var(--vz-border)] ${className}`}>
+    <div className={`flex items-center justify-end gap-2 px-5 py-3 border-t border-[var(--vz-border)] bg-[var(--vz-card-bg)] -mx-5 -mb-4 mt-5 ${className}`}>
       {children}
     </div>
   )

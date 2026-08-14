@@ -27,7 +27,11 @@ export default function Meetings() {
   const [meetingData, setMeetingData] = useState({ title: '', leadId: '', dateTime: '', duration: 30, attendees: [], meetingUrl: '', customFields: {} })
   const [editMeetingForm, setEditMeetingForm] = useState(null)
   const [selectedAttendee, setSelectedAttendee] = useState('')
-  const [linkData, setLinkData] = useState({ title: '', duration: 30 })
+  const [linkData, setLinkData] = useState({ 
+    title: '', 
+    duration: 30,
+    availability: { days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], startTime: '09:00', endTime: '18:00' }
+  })
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 25
 
@@ -96,7 +100,11 @@ export default function Meetings() {
 
   const handleCreateLink = async () => {
     try {
-      await createLink({ title: linkData.title, durationOptions: [linkData.duration] }).unwrap()
+      await createLink({ 
+        title: linkData.title, 
+        durationOptions: [linkData.duration],
+        availability: linkData.availability
+      }).unwrap()
       toast('Booking link created', 'success')
       setShowCreateLink(false)
     } catch { toast('Failed to create link', 'error') }
@@ -138,19 +146,19 @@ export default function Meetings() {
               {meetings.map((m) => (
                 <div key={m._id} className="flex items-start gap-4 p-3 rounded-lg border border-[var(--vz-border)] hover:border-primary/30 transition-colors">
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-primary">{new Date(m.scheduledAt).toLocaleDateString('en', { month: 'short' })}</span>
-                    <span className="text-lg font-bold text-primary leading-none">{new Date(m.scheduledAt).getDate()}</span>
+                    <span className="text-xs font-bold text-primary">{new Date(m.meeting?.scheduledAt).toLocaleDateString('en', { month: 'short' })}</span>
+                    <span className="text-lg font-bold text-primary leading-none">{new Date(m.meeting?.scheduledAt).getDate()}</span>
                   </div>
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedMeeting(m); setShowDetail(true); }}>
-                    <p className="text-sm font-semibold text-[var(--vz-heading)] hover:text-primary transition-colors">{m.title}</p>
+                    <p className="text-sm font-semibold text-[var(--vz-heading)] hover:text-primary transition-colors">{m.meeting?.title}</p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-[var(--vz-text-muted)]">
-                      <span className="flex items-center gap-1"><Clock size={11} /> {new Date(m.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      <span className="flex items-center gap-1"><Video size={11} /> {m.duration}min</span>
+                      <span className="flex items-center gap-1"><Clock size={11} /> {new Date(m.meeting?.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="flex items-center gap-1"><Video size={11} /> {m.meeting?.duration}min</span>
                       {m.attendees?.length > 0 && <span className="flex items-center gap-1"><Plus size={11} /> {m.attendees.length} Attendees</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Badge color={m.status === 'confirmed' ? 'success' : m.status === 'cancelled' ? 'danger' : 'warning'}>{m.status || 'pending'}</Badge>
+                    <Badge color={m.meeting?.status === 'confirmed' ? 'success' : m.meeting?.status === 'cancelled' ? 'danger' : 'warning'}>{m.meeting?.status || 'pending'}</Badge>
                     <button onClick={() => handleEditOpen(m)} className="p-1.5 rounded hover:bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:text-primary transition-colors" title="Edit">
                       <Pencil size={14} />
                     </button>
@@ -266,9 +274,38 @@ export default function Meetings() {
 
       {/* Create Link Modal */}
       <Modal isOpen={showCreateLink} onClose={() => setShowCreateLink(false)} title="Create Booking Link" size="sm">
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Input label="Link Title" placeholder="e.g. 30-min Demo Call" value={linkData.title} onChange={(e) => setLinkData({ ...linkData, title: e.target.value })} />
           <Input label="Duration (min)" type="number" value={linkData.duration} onChange={(e) => setLinkData({ ...linkData, duration: +e.target.value })} />
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--vz-heading)]">Availability Days</label>
+            <div className="flex flex-wrap gap-2">
+              {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
+                <button
+                  key={day}
+                  onClick={() => {
+                    const days = linkData.availability?.days?.includes(day)
+                      ? linkData.availability.days.filter(d => d !== day)
+                      : [...(linkData.availability?.days || []), day];
+                    setLinkData({ ...linkData, availability: { ...linkData.availability, days } })
+                  }}
+                  className={`px-3 py-1.5 text-xs font-medium rounded transition-colors border ${
+                    linkData.availability?.days?.includes(day)
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-transparent border-[var(--vz-border)] text-[var(--vz-text-muted)] hover:border-primary/50 hover:text-primary'
+                  }`}
+                >
+                  {day.charAt(0).toUpperCase() + day.slice(1, 3)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Start Time" type="time" value={linkData.availability?.startTime || ''} onChange={(e) => setLinkData({ ...linkData, availability: { ...linkData.availability, startTime: e.target.value } })} />
+            <Input label="End Time" type="time" value={linkData.availability?.endTime || ''} onChange={(e) => setLinkData({ ...linkData, availability: { ...linkData.availability, endTime: e.target.value } })} />
+          </div>
         </div>
         <Modal.Footer>
           <Button variant="ghost" size="sm" onClick={() => setShowCreateLink(false)}>Cancel</Button>

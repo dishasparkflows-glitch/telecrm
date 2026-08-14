@@ -261,7 +261,7 @@ function NotificationBell({ notifRef, notifOpen, setNotifOpen, navigate }) {
   const [markAsRead] = useMarkAsReadMutation()
   const { data } = useGetNotificationsQuery({ limit: 50, userId: user?._id || user?.id }, { skip: isOwner || !(user?._id || user?.id) })
   const notifications = data?.data || []
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  const unreadCount = notifications.filter((n) => !(n.readState?.isRead)).length
   const location = useLocation()
   
   const hideCount = notifOpen || location.pathname === '/notifications'
@@ -298,20 +298,21 @@ function NotificationBell({ notifRef, notifOpen, setNotifOpen, navigate }) {
                   key={n._id} 
                   onClick={async () => {
                     setNotifOpen(false);
-                    if (!n.isRead) {
+                    if (!(n.readState?.isRead)) {
                       try { await markAsRead({ ids: [n._id], userId: user?._id || user?.id }).unwrap(); } catch {}
                     }
-                    if (n.actionUrl) {
-                      navigate(n.actionUrl);
+                    const actionUrl = n.action?.actionUrl;
+                    if (actionUrl) {
+                      navigate(actionUrl);
                     }
                   }}
-                  className={`px-4 py-2.5 border-b border-[var(--vz-border)] last:border-0 cursor-pointer hover:bg-[var(--vz-input-bg)] ${!n.isRead ? 'bg-primary/5' : ''}`}
+                  className={`px-4 py-2.5 border-b border-[var(--vz-border)] last:border-0 cursor-pointer hover:bg-[var(--vz-input-bg)] ${!(n.readState?.isRead) ? 'bg-primary/5' : ''}`}
                 >
-                  <p className={`text-xs ${n.isRead ? 'text-[var(--vz-text)]' : 'text-[var(--vz-heading)] font-medium'}`}>
-                    {n.title || n.message}
+                  <p className={`text-xs ${(n.readState?.isRead) ? 'text-[var(--vz-text)]' : 'text-[var(--vz-heading)] font-medium'}`}>
+                    {n.notification?.title || n.notification?.message}
                   </p>
                   <p className="text-[10px] text-[var(--vz-text-muted)] mt-0.5">
-                    {new Date(n.meta?.createdAt).toLocaleString()}
+                    {new Date(n.sentAt).toLocaleString()}
                   </p>
                 </div>
               ))

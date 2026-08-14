@@ -19,6 +19,7 @@ const WhatsApp = lazy(() => import('../pages/whatsapp/WhatsApp'))
 const TeamInbox = lazy(() => import('../pages/whatsapp/TeamInbox'))
 const SmartForms = lazy(() => import('../pages/forms/SmartForms'))
 const Meetings = lazy(() => import('../pages/meetings/Meetings'))
+const BookMeeting = lazy(() => import('../pages/meetings/BookMeeting'))
 const Automations = lazy(() => import('../pages/automations/Automations'))
 const Analytics = lazy(() => import('../pages/analytics/Analytics'))
 const Settings = lazy(() => import('../pages/settings/Settings'))
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/book/:slug" element={<BookMeeting />} />
 
         {/* Owner Login (public) */}
         <Route path="/owner/login" element={<OwnerLogin />} />

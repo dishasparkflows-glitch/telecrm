@@ -2,18 +2,17 @@ const mongoose = require('mongoose');
 const { ApiError } = require('@sparkcrm/shared-utils');
 
 const MEETING_CREATE_FIELDS = Object.freeze([
-    'leadId', 'title', 'description', 'guestName', 'guestEmail', 'guestPhone',
-    'scheduledAt', 'duration', 'attendees', 'meetingUrl', 'customFields',
-    'location', 'meetingLink', 'notes',
+    'leadId', 'meeting', 'guest', 'attendees', 'customFields',
+    'location',
 ]);
 const MEETING_UPDATE_FIELDS = Object.freeze([...MEETING_CREATE_FIELDS, 'status']);
-const ATTENDEE_FIELDS = Object.freeze(['userId', 'name', 'email', 'role', 'status']);
+const ATTENDEE_FIELDS = Object.freeze(['userId', 'role', 'status']);
 const BOOKING_LINK_FIELDS = Object.freeze([
     'slug', 'title', 'description', 'durationOptions', 'availability', 'isActive',
 ]);
 const AVAILABILITY_FIELDS = Object.freeze(['days', 'startTime', 'endTime', 'timezone']);
 const PUBLIC_BOOKING_FIELDS = Object.freeze([
-    'title', 'guestName', 'guestEmail', 'guestPhone', 'scheduledAt', 'duration',
+    'meeting', 'guest',
 ]);
 
 function isPlainObject(value) {
@@ -49,11 +48,19 @@ function sanitizeMeeting(input, allowedFields) {
     if (meeting.leadId !== undefined && meeting.leadId !== null && meeting.leadId !== '') {
         meeting.leadId = requireObjectId(meeting.leadId, 'leadId');
     }
-    if (meeting.scheduledAt !== undefined && Number.isNaN(new Date(meeting.scheduledAt).getTime())) {
-        throw ApiError.badRequest('scheduledAt must be a valid date');
+    if (meeting.meeting !== undefined) {
+        if (!isPlainObject(meeting.meeting)) throw ApiError.badRequest('meeting must be an object');
+        meeting.meeting = pickStrictObject(meeting.meeting, ['title', 'description', 'scheduledAt', 'duration', 'status', 'notes', 'link'], 'meeting');
+        if (meeting.meeting.scheduledAt !== undefined && Number.isNaN(new Date(meeting.meeting.scheduledAt).getTime())) {
+            throw ApiError.badRequest('meeting.scheduledAt must be a valid date');
+        }
+        if (meeting.meeting.duration !== undefined && (!Number.isInteger(meeting.meeting.duration) || meeting.meeting.duration < 5 || meeting.meeting.duration > 480)) {
+            throw ApiError.badRequest('meeting.duration must be whole minutes between 5 and 480');
+        }
     }
-    if (meeting.duration !== undefined && (!Number.isInteger(meeting.duration) || meeting.duration < 5 || meeting.duration > 480)) {
-        throw ApiError.badRequest('duration must be whole minutes between 5 and 480');
+    if (meeting.guest !== undefined) {
+        if (!isPlainObject(meeting.guest)) throw ApiError.badRequest('guest must be an object');
+        meeting.guest = pickStrictObject(meeting.guest, ['name', 'email', 'phone'], 'guest');
     }
     return meeting;
 }
@@ -103,12 +110,19 @@ function pickBookingLinkInput(input) {
 
 function pickPublicBookingInput(input) {
     const booking = pickStrictObject(input, PUBLIC_BOOKING_FIELDS, 'booking');
-    if (Number.isNaN(new Date(booking.scheduledAt).getTime())) {
-        throw ApiError.badRequest('scheduledAt must be a valid date');
+    if (booking.meeting !== undefined) {
+        if (!isPlainObject(booking.meeting)) throw ApiError.badRequest('meeting must be an object');
+        booking.meeting = pickStrictObject(booking.meeting, ['title', 'scheduledAt', 'duration'], 'meeting');
+        if (booking.meeting.scheduledAt !== undefined && Number.isNaN(new Date(booking.meeting.scheduledAt).getTime())) {
+            throw ApiError.badRequest('meeting.scheduledAt must be a valid date');
+        }
+        if (booking.meeting.duration !== undefined && (!Number.isInteger(booking.meeting.duration) || booking.meeting.duration < 5 || booking.meeting.duration > 480)) {
+            throw ApiError.badRequest('meeting.duration must be whole minutes between 5 and 480');
+        }
     }
-    if (booking.duration === undefined) booking.duration = 30;
-    if (!Number.isInteger(booking.duration) || booking.duration < 5 || booking.duration > 480) {
-        throw ApiError.badRequest('duration must be whole minutes between 5 and 480');
+    if (booking.guest !== undefined) {
+        if (!isPlainObject(booking.guest)) throw ApiError.badRequest('guest must be an object');
+        booking.guest = pickStrictObject(booking.guest, ['name', 'email', 'phone'], 'guest');
     }
     return booking;
 }

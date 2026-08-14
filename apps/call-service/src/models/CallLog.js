@@ -36,17 +36,16 @@ const callLogSchema = new mongoose.Schema(
             updatedBy: { type: mongoose.Schema.Types.ObjectId }
         },
         mobile: {
-            deviceId: { type: String, default: '', index: true },
-            simSlot: { type: Number, default: null },
-            simLabel: { type: String, default: '' },
-            phoneNumber: { type: String, default: '' },
-            syncedAt: { type: Date, default: null }
+            deviceId: { type: String, index: true },
+            simSlot: { type: Number},
+            simLabel: { type: String },
+            phoneNumber: { type: String },
+            syncedAt: { type: Date }
         },
         events: {
-            pending: { type: [mongoose.Schema.Types.Mixed], default: [] },
-            processed: { type: [String], default: [] }
+            pending: { type: [mongoose.Schema.Types.Mixed] },
+            processed: { type: [String] }
         },
-        // isSyncing: { type: Boolean, default: false },
         notes: { type: String },
         callbackAt: { type: Date },
         audit: {

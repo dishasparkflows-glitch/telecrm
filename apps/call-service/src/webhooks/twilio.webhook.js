@@ -103,38 +103,10 @@ const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl,
     callLog.call.status = newStatus;
     
     if (recordingUrl && callLog.recording.status !== 'available') {
-        try {
-            let downloadUrl = recordingUrl;
-            if (!downloadUrl.endsWith('.mp3') && !downloadUrl.endsWith('.wav')) {
-                downloadUrl += '.mp3';
-            }
-            
-            const authOptions = twilioConfig ? { username: twilioConfig.accountSid, password: twilioConfig.authToken } : null;
-
-            const response = await axios.get(downloadUrl, {
-                responseType: 'arraybuffer',
-                auth: authOptions
-            });
-
-            const buffer = Buffer.from(response.data);
-            const callSid = providerDataUpdates.callSid || providerDataUpdates.parentCallSid || callLog.provider.externalCallId;
-            const objectKey = `tenants/${callLog.tenantId}/users/${callLog.userId}/leads/${callLog.leadId}/recordings/${callSid}.mp3`;
-
-            await uploadBufferToR2(buffer, objectKey, 'audio/mpeg');
-
-            callLog.recording.url = recordingUrl;
-            callLog.recording.objectKey = objectKey;
-            callLog.recording.mimeType = 'audio/mpeg';
-            callLog.recording.status = 'available';
-            callLog.recording.fetchedAt = new Date();
-        } catch (uploadError) {
-            console.error(`❌ [Twilio] Failed to download/upload recording for Call SID: ${providerDataUpdates.callSid || providerDataUpdates.parentCallSid}`, uploadError.message);
-            callLog.recording.url = recordingUrl;
-            callLog.recording.status = 'ready'; // Fallback
-            callLog.recording.fetchedAt = new Date();
-        }
-    } else if (recordingUrl) {
         callLog.recording.url = recordingUrl;
+        if (callLog.recording.status === 'none' || callLog.recording.status === 'ready') {
+            callLog.recording.status = 'pending';
+        }
     }
     
     if (duration && !callLog.call.duration) callLog.call.duration = parseInt(duration, 10);
@@ -244,6 +216,57 @@ router.post('/status', validateTwilioRequest, asyncHandler(async (req, res) => {
                 lastParentStatus: CallStatus,
                 callSid: CallSid
             }, twilioConfig);
+        }
+    }
+
+    res.status(200).send('OK');
+}));
+
+/**
+ * POST /webhooks/twilio/recording
+ * Twilio sends status callbacks here when the recording is ready.
+ */
+router.post('/recording', validateTwilioRequest, asyncHandler(async (req, res) => {
+    const { callLog, twilioConfig } = req;
+    const { RecordingUrl, RecordingStatus, RecordingDuration } = req.body;
+    
+    console.log(`📞 Twilio Recording webhook: ${callLog._id} -> ${RecordingStatus}`);
+
+    if (RecordingStatus === 'completed' && RecordingUrl) {
+        try {
+            let downloadUrl = RecordingUrl;
+            if (!downloadUrl.endsWith('.mp3') && !downloadUrl.endsWith('.wav')) {
+                downloadUrl += '.mp3';
+            }
+            
+            const authOptions = twilioConfig ? { username: twilioConfig.accountSid, password: twilioConfig.authToken } : null;
+            const response = await axios.get(downloadUrl, {
+                responseType: 'arraybuffer',
+                auth: authOptions
+            });
+
+            const buffer = Buffer.from(response.data);
+            const callSid = callLog.provider.externalCallId;
+            const objectKey = `tenants/${callLog.tenantId}/users/${callLog.userId}/leads/${callLog.leadId}/recordings/${callSid}.mp3`;
+
+            await uploadBufferToR2(buffer, objectKey, 'audio/mpeg');
+            console.log(`[Twilio Webhook] R2 Upload successful. ObjectKey: ${objectKey}`);
+
+            callLog.recording.url = RecordingUrl;
+            callLog.recording.objectKey = objectKey;
+            callLog.recording.mimeType = 'audio/mpeg';
+            callLog.recording.status = 'available';
+            callLog.recording.duration = parseInt(RecordingDuration, 10) || callLog.recording.duration || 0;
+            callLog.recording.fetchedAt = new Date();
+            
+            await callLog.save();
+        } catch (uploadError) {
+            console.error(`❌ [Twilio] Failed to download/upload recording for Call SID: ${callLog.provider.externalCallId}`);
+            console.error(uploadError.response ? `Response Error: ${uploadError.response.status} - ${uploadError.response.statusText}` : `Error: ${uploadError.message}`);
+            callLog.recording.url = RecordingUrl;
+            callLog.recording.status = 'failed'; 
+            callLog.recording.fetchedAt = new Date();
+            await callLog.save();
         }
     }
 

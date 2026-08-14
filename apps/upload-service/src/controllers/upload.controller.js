@@ -50,6 +50,7 @@ const getUploadUrl = asyncHandler(async (req, res) => {
     const timestamp = Date.now();
 
     const leadId = req.body.leadId;
+    const meetingId = req.body.meetingId;
 
     // 🔧 Base path for this CRM project
     let keyPath = `tenants/${tenantId}`;
@@ -60,6 +61,10 @@ const getUploadUrl = asyncHandler(async (req, res) => {
 
     if (leadId) {
         keyPath += `/leads/${leadId}`;
+    }
+
+    if (meetingId) {
+        keyPath += `/meetings/${meetingId}`;
     }
 
     keyPath += `/${uploadType}`;
