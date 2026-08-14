@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { useGetPublicBookingLinkQuery, useBookPublicMeetingMutation } from '../../features/meetings/meetingApi'
+import { useGetPublicBookingLinkQuery, useBookPublicMeetingMutation, useGetPublicBookingAvailabilityQuery } from '../../features/meetings/meetingApi'
 import { Calendar, Clock, Video, User, Mail, Phone, CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -18,6 +18,11 @@ export default function BookMeeting() {
   const [selectedTime, setSelectedTime] = useState(null)
   const [selectedDuration, setSelectedDuration] = useState(null)
   
+  const { data: availabilityData, isFetching: isFetchingAvailability } = useGetPublicBookingAvailabilityQuery(
+    { slug, date: selectedDate, duration: selectedDuration },
+    { skip: !selectedDate || !selectedDuration }
+  )
+  
   const [guestForm, setGuestForm] = useState({ name: '', email: '', phone: '' })
 
   const link = data?.data
@@ -34,16 +39,37 @@ export default function BookMeeting() {
       return []
     }
 
+    let existingMeetings = availabilityData?.data?.existingMeetings || []
+    let googleBusySlots = availabilityData?.data?.googleBusySlots || []
+
     const slots = []
     let current = new Date(`${selectedDate}T${startTime}:00`)
     const end = new Date(`${selectedDate}T${endTime}:00`)
 
     while (current < end) {
-      slots.push(current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }))
+      const slotEnd = new Date(current.getTime() + selectedDuration * 60000)
+      
+      // check internal overlaps
+      const internalOverlap = existingMeetings.some(m => {
+        const mStart = new Date(m.scheduledAt)
+        const mEnd = new Date(mStart.getTime() + m.duration * 60000)
+        return current < mEnd && slotEnd > mStart
+      })
+
+      // check google overlaps
+      const googleOverlap = googleBusySlots.some(busy => {
+        const busyStart = new Date(busy.start)
+        const busyEnd = new Date(busy.end)
+        return current < busyEnd && slotEnd > busyStart
+      })
+
+      if (!internalOverlap && !googleOverlap) {
+        slots.push(current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }))
+      }
       current = new Date(current.getTime() + selectedDuration * 60000)
     }
     return slots
-  }, [selectedDate, selectedDuration, link])
+  }, [selectedDate, selectedDuration, link, availabilityData])
 
   if (isLoading) {
     return (
@@ -175,7 +201,9 @@ export default function BookMeeting() {
 
                 {selectedDate && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Time Slots</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Time Slots {isFetchingAvailability && <span className="text-xs text-primary font-normal">(Loading...)</span>}
+                    </label>
                     <div className="grid grid-cols-2 gap-2 h-64 overflow-y-auto pr-2 custom-scrollbar">
                       {timeSlots.map(time => (
                         <button
@@ -190,7 +218,7 @@ export default function BookMeeting() {
                           {time}
                         </button>
                       ))}
-                      {timeSlots.length === 0 && (
+                      {timeSlots.length === 0 && !isFetchingAvailability && (
                         <div className="col-span-2 text-center text-slate-500 py-8">
                           No slots available.
                         </div>

@@ -1,5 +1,7 @@
 const { Meeting, BookingLink } = require('../models/Meeting');
 const { withBookingLock } = require('../models/BookingLock');
+const { IntegrationCredential, encrypt, decrypt } = require('../../../tenant-service/src/models/IntegrationCredential');
+const googleCalendarService = require('../services/googleCalendar.service');
 const {
     pickMeetingCreateInput,
     pickMeetingUpdateInput,
@@ -57,8 +59,63 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
     const userId = req.headers['x-user-id'];
     const scope = buildScopeFilter(req, { ownerField: 'hostId', module: 'meetings' });
     const meetingData = pickMeetingCreateInput(req.body);
+    
+    let conference = undefined;
+    let calendar = undefined;
+    
+    if (meetingData.provider === 'google_meet') {
+        const tokens = await getGoogleTokens(scope.tenantId, userId);
+        if (tokens && tokens.refresh_token) {
+            const userIds = (meetingData.attendees || []).map(a => String(a.userId));
+            const users = userIds.length > 0 ? await getUsersBulk(scope.tenantId, userIds) : [];
+            const userMap = new Map(users.map(u => [String(u._id), u.email]));
+            
+            const gAttendees = (meetingData.attendees || [])
+                .filter(a => userMap.get(String(a.userId)))
+                .map(a => ({ email: userMap.get(String(a.userId)) }));
+                
+            if (meetingData.guest?.email) {
+                gAttendees.push({ email: meetingData.guest.email });
+            }
+
+            const scheduledAt = new Date(meetingData.meeting?.scheduledAt || new Date());
+            const duration = meetingData.meeting?.duration || 30;
+            const requestedEnd = new Date(scheduledAt.getTime() + duration * 60 * 1000);
+            
+            try {
+                const gEvent = await googleCalendarService.createCalendarEvent(tokens, tokens.calendarId, {
+                    summary: meetingData.meeting?.title || 'Scheduled Meeting',
+                    description: meetingData.meeting?.description || '',
+                    start: { dateTime: scheduledAt.toISOString(), timeZone: 'UTC' },
+                    end: { dateTime: requestedEnd.toISOString(), timeZone: 'UTC' },
+                    attendees: gAttendees,
+                    requestId: `manual-${new Date().getTime()}-${Math.random().toString(36).substring(7)}`
+                });
+                
+                conference = {
+                    provider: 'google_meet',
+                    meetingUrl: gEvent.hangoutLink
+                };
+                calendar = {
+                    provider: 'google_calendar',
+                    eventId: gEvent.id
+                };
+                
+                if (!meetingData.meeting) meetingData.meeting = {};
+                meetingData.meeting.link = gEvent.hangoutLink;
+            } catch (err) {
+                console.error('Failed to create google calendar event:', err);
+                throw ApiError.internal('Failed to schedule meeting on Google Calendar');
+            }
+        } else {
+            throw ApiError.badRequest('You must connect your Google Calendar in Settings first');
+        }
+    }
+
     const meeting = await Meeting.create({
         ...meetingData,
+        conference,
+        calendar,
         tenantId: scope.tenantId,
         branchId: scope.branchId || null,
         hostId: userId,
@@ -239,6 +296,17 @@ const deleteMeeting = asyncHandler(async (req, res) => {
         throw ApiError.forbidden('You do not have access to this meeting');
     }
 
+    if (meeting.calendar?.provider === 'google_calendar' && meeting.calendar?.eventId) {
+        try {
+            const tokens = await getGoogleTokens(tenantId, meeting.hostId);
+            if (tokens && tokens.refresh_token) {
+                await googleCalendarService.cancelCalendarEvent(tokens, tokens.calendarId, meeting.calendar.eventId);
+            }
+        } catch (err) {
+            console.error('Failed to delete Google Calendar event:', err.message);
+        }
+    }
+
     await meeting.deleteOne();
     ApiResponse.success(res, null, 'Meeting deleted');
 });
@@ -271,10 +339,26 @@ const bookMeeting = asyncHandler(async (req, res) => {
         ));
         if (overlaps) throw ApiError.conflict('The selected time is no longer available');
 
-        return Meeting.create({
+        const tokens = await getGoogleTokens(link.tenantId, link.userId);
+        if (link.provider === 'google_meet' && tokens && tokens.refresh_token) {
+            try {
+                const busySlots = await googleCalendarService.getFreeBusy(tokens, tokens.calendarId, scheduledAt, requestedEnd, link.availability.timezone);
+                if (busySlots.length > 0) {
+                    throw ApiError.conflict('The selected time is no longer available on the host\'s Google Calendar');
+                }
+            } catch (err) {
+                console.error('Google FreeBusy error:', err);
+                throw ApiError.internal('Failed to verify calendar availability');
+            }
+        }
+
+        const meetingDoc = await Meeting.create({
             tenantId: link.tenantId,
             branchId: link.branchId || null,
             hostId: link.userId,
+            meetingType: link.meetingType || 'online',
+            provider: link.provider,
+            source: 'booking_link',
             meeting: {
                 title: booking.meeting?.title,
                 scheduledAt,
@@ -287,6 +371,47 @@ const bookMeeting = asyncHandler(async (req, res) => {
                 phone: booking.guest?.phone,
             }
         });
+
+        if (link.provider === 'google_meet' && tokens && tokens.refresh_token) {
+            try {
+                const eventDetails = {
+                    summary: meetingDoc.meeting.title,
+                    description: `SparkCRM Meeting\n\nCustomer:\n${meetingDoc.guest.name}\n\nEmail:\n${meetingDoc.guest.email}\n\nPhone:\n${meetingDoc.guest.phone || 'N/A'}\n\nBooked via:\n${link.title}\n\nSparkCRM Meeting ID:\n${meetingDoc._id}`,
+                    start: { dateTime: scheduledAt.toISOString(), timeZone: link.availability.timezone },
+                    end: { dateTime: requestedEnd.toISOString(), timeZone: link.availability.timezone },
+                    attendees: [{ email: meetingDoc.guest.email }],
+                    requestId: String(meetingDoc._id)
+                };
+                const gEvent = await googleCalendarService.createCalendarEvent(tokens, tokens.calendarId, eventDetails);
+                
+                let meetingUrl = null;
+                let conferenceId = null;
+                if (gEvent.conferenceData && gEvent.conferenceData.entryPoints) {
+                    const entryPoint = gEvent.conferenceData.entryPoints.find(e => e.entryPointType === 'video');
+                    if (entryPoint) meetingUrl = entryPoint.uri;
+                    conferenceId = gEvent.conferenceData.conferenceId;
+                }
+
+                meetingDoc.calendar = {
+                    provider: 'google',
+                    calendarId: tokens.calendarId,
+                    eventId: gEvent.id,
+                    eventHtmlLink: gEvent.htmlLink
+                };
+                meetingDoc.conference = {
+                    provider: 'google_meet',
+                    meetingUrl,
+                    conferenceId,
+                    status: 'success'
+                };
+                meetingDoc.meeting.link = meetingUrl;
+                await meetingDoc.save();
+            } catch (err) {
+                console.error('Failed to create google event', err);
+            }
+        }
+
+        return meetingDoc;
     });
     if (!lock.acquired) throw ApiError.conflict('Another booking is being processed; please retry');
     ApiResponse.created(res, lock.result, 'Meeting booked successfully');
@@ -335,6 +460,147 @@ const deleteBookingLink = asyncHandler(async (req, res) => {
     ApiResponse.success(res, null, 'Booking link deleted');
 });
 
+const googleAuthUrl = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const userId = req.headers['x-user-id'];
+    const url = googleCalendarService.getAuthorizationUrl(tenantId, userId);
+    ApiResponse.success(res, { url });
+});
+
+const googleAuthCallback = asyncHandler(async (req, res) => {
+    const { code, state } = req.query;
+    if (!code || !state) throw ApiError.badRequest('Missing code or state');
+
+    const stateStr = Buffer.from(state, 'base64').toString('utf8');
+    const { tenantId, userId } = JSON.parse(stateStr);
+
+    const tokens = await googleCalendarService.getTokensFromCode(code);
+    if (!tokens.refresh_token) {
+        // We need an offline token. If not provided, the user might need to revoke access and reconnect.
+        // For phase 1, we will store what we get and handle appropriately. 
+        // If they already authorized, Google only sends access_token unless prompt=consent is used.
+    }
+
+    const calendars = await googleCalendarService.getCalendars(tokens);
+    const primaryCal = calendars.find(c => c.primary) || calendars[0];
+    const calendarId = primaryCal ? primaryCal.id : 'primary';
+    const email = primaryCal ? primaryCal.id : 'unknown'; // primary id is usually email
+
+    const credentialData = {
+        refresh_token: tokens.refresh_token,
+        calendarId,
+        email,
+        connected: 'true'
+    };
+    
+    // Convert to map of encrypted strings
+    const encryptedCredentials = {};
+    for (const [key, value] of Object.entries(credentialData)) {
+        if (value) encryptedCredentials[key] = encrypt(String(value));
+    }
+
+    await IntegrationCredential.findOneAndUpdate(
+        { tenantId, userId, provider: 'google_calendar' },
+        {
+            $set: {
+                credentials: encryptedCredentials,
+                isActive: true,
+                configuredBy: userId,
+            }
+        },
+        { upsert: true, new: true }
+    );
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    res.redirect(`${frontendUrl}/settings`);
+});
+
+const getGoogleTokens = async (tenantId, userId) => {
+    const cred = await IntegrationCredential.findOne({ tenantId, userId, provider: 'google_calendar', isActive: true });
+    if (!cred || !cred.credentials) return null;
+    const tokens = {};
+    for (const [key, value] of cred.credentials.entries()) {
+        tokens[key] = decrypt(value);
+    }
+    return tokens;
+};
+
+const googleAuthStatus = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const userId = req.headers['x-user-id'];
+    const tokens = await getGoogleTokens(tenantId, userId);
+    
+    if (tokens && tokens.connected === 'true') {
+        ApiResponse.success(res, {
+            connected: true,
+            email: tokens.email,
+            calendarId: tokens.calendarId
+        });
+    } else {
+        ApiResponse.success(res, { connected: false });
+    }
+});
+
+const googleDisconnect = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const userId = req.headers['x-user-id'];
+    await IntegrationCredential.findOneAndDelete({ tenantId, userId, provider: 'google_calendar' });
+    ApiResponse.success(res, null, 'Google Calendar disconnected');
+});
+
+const googleGetCalendars = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const userId = req.headers['x-user-id'];
+    const tokens = await getGoogleTokens(tenantId, userId);
+    if (!tokens || !tokens.refresh_token) throw ApiError.unauthorized('Google Calendar not connected');
+    
+    const calendars = await googleCalendarService.getCalendars({ refresh_token: tokens.refresh_token });
+    ApiResponse.success(res, calendars);
+});
+
+const getBookingAvailability = asyncHandler(async (req, res) => {
+    const { slug } = req.params;
+    const { date, duration } = req.query; // date format YYYY-MM-DD
+    
+    if (!date) throw ApiError.badRequest('date query parameter is required');
+
+    const link = await BookingLink.findOne({ slug, isActive: true }).lean();
+    if (!link) throw ApiError.notFound('Booking link not found or inactive');
+
+    const durationNum = parseInt(duration) || link.durationOptions[0];
+    const targetDate = new Date(`${date}T00:00:00.000Z`); // parse date in UTC
+
+    // 1. Get existing SparkCRM meetings for that day
+    const startOfDay = new Date(targetDate);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    const existingMeetings = await Meeting.find({
+        tenantId: link.tenantId,
+        hostId: link.userId,
+        'meeting.status': { $in: ['scheduled', 'confirmed'] },
+        'meeting.scheduledAt': { $gte: startOfDay, $lt: endOfDay },
+    }).select('meeting.scheduledAt meeting.duration').lean();
+
+    let googleBusySlots = [];
+    const tokens = await getGoogleTokens(link.tenantId, link.userId);
+    if (link.provider === 'google_meet' && tokens && tokens.refresh_token) {
+        try {
+            googleBusySlots = await googleCalendarService.getFreeBusy(tokens, tokens.calendarId, startOfDay, endOfDay, link.availability.timezone);
+        } catch (err) {
+            console.error('Failed to fetch google freebusy', err);
+        }
+    }
+
+    ApiResponse.success(res, {
+        existingMeetings: existingMeetings.map(m => ({
+            scheduledAt: m.meeting.scheduledAt,
+            duration: m.meeting.duration
+        })),
+        googleBusySlots
+    });
+});
+
 module.exports = {
     scheduleMeeting,
     getMeetings,
@@ -349,5 +615,11 @@ module.exports = {
     addMeetingComment,
     addMeetingAttachment,
     zonedSlot,
-    isWithinAvailability
+    isWithinAvailability,
+    googleAuthUrl,
+    googleAuthCallback,
+    googleAuthStatus,
+    googleDisconnect,
+    googleGetCalendars,
+    getBookingAvailability
 };

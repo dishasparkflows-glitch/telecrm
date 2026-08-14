@@ -201,11 +201,12 @@ const getAllUsersList = asyncHandler(async (req, res) => {
     const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
     filter.isActive = true;
 
-    const users = await User.find(filter).select('_id contact.name').sort({ 'contact.name': 1 });
+    const users = await User.find(filter).select('_id contact.name contact.email').sort({ 'contact.name': 1 });
 
     const formattedUsers = users.map((u) => ({
         _id: u._id,
         name: u.contact?.name || '',
+        email: u.contact?.email || '',
     }));
 
     ApiResponse.success(res, formattedUsers);

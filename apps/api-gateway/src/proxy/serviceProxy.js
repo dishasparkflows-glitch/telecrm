@@ -110,6 +110,7 @@ const SERVICE_ROUTES = {
         feature: 'meeting_scheduler',
         publicPaths: [
             { method: 'POST', pattern: /^\/api\/meetings\/book\/[^/]+\/?$/ },
+            { method: 'GET', pattern: /^\/api\/meetings\/google\/callback\/?$/ },
         ],
     },
     '/api/referral': {

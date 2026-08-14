@@ -24,12 +24,13 @@ export default function Meetings() {
   const [showEdit, setShowEdit] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [selectedMeeting, setSelectedMeeting] = useState(null)
-  const [meetingData, setMeetingData] = useState({ title: '', leadId: '', dateTime: '', duration: 30, attendees: [], meetingUrl: '', customFields: {} })
+  const [meetingData, setMeetingData] = useState({ title: '', leadId: '', dateTime: '', duration: 30, attendees: [], meetingUrl: '', provider: 'sparkcrm', meetingType: 'online', location: '', customFields: {} })
   const [editMeetingForm, setEditMeetingForm] = useState(null)
   const [selectedAttendee, setSelectedAttendee] = useState('')
   const [linkData, setLinkData] = useState({ 
     title: '', 
     duration: 30,
+    provider: 'sparkcrm',
     availability: { days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], startTime: '09:00', endTime: '18:00' }
   })
   const [page, setPage] = useState(1)
@@ -52,14 +53,20 @@ export default function Meetings() {
 
   const handleSchedule = async () => {
     try {
-      // Map frontend 'dateTime' to backend 'scheduledAt'
-      const { dateTime, leadId, ...rest } = meetingData
-      const payload = { ...rest, scheduledAt: dateTime }
+      const { dateTime, leadId, title, duration, meetingUrl, attendees, provider, meetingType, location, customFields } = meetingData
+      const payload = { 
+        provider: meetingType === 'online' ? provider : null,
+        meetingType,
+        location: meetingType === 'offline' ? location : null,
+        meeting: { title, scheduledAt: dateTime, duration, link: meetingType === 'online' ? meetingUrl : null },
+        attendees,
+        customFields 
+      }
       if (leadId) payload.leadId = leadId
       await scheduleMeeting(payload).unwrap()
       toast('Meeting scheduled', 'success')
       setShowSchedule(false)
-      setMeetingData({ title: '', leadId: '', dateTime: '', duration: 30, attendees: [], meetingUrl: '', customFields: {} })
+      setMeetingData({ title: '', leadId: '', dateTime: '', duration: 30, attendees: [], meetingUrl: '', provider: 'sparkcrm', meetingType: 'online', location: '', customFields: {} })
     } catch { toast('Failed to schedule', 'error') }
   }
 
@@ -103,7 +110,8 @@ export default function Meetings() {
       await createLink({ 
         title: linkData.title, 
         durationOptions: [linkData.duration],
-        availability: linkData.availability
+        availability: linkData.availability,
+        provider: linkData.provider
       }).unwrap()
       toast('Booking link created', 'success')
       setShowCreateLink(false)
@@ -154,6 +162,9 @@ export default function Meetings() {
                     <div className="flex items-center gap-3 mt-1 text-xs text-[var(--vz-text-muted)]">
                       <span className="flex items-center gap-1"><Clock size={11} /> {new Date(m.meeting?.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       <span className="flex items-center gap-1"><Video size={11} /> {m.meeting?.duration}min</span>
+                      {m.conference?.provider === 'google_meet' && (
+                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Google Meet</span>
+                      )}
                       {(m.attendees?.length > 0 || m.guest) && (
                         <span className="flex items-center gap-1">
                           <Plus size={11} /> 
@@ -161,6 +172,13 @@ export default function Meetings() {
                         </span>
                       )}
                     </div>
+                    {m.meeting?.link && (
+                      <div className="mt-2">
+                        <a href={m.meeting.link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                          Join Meeting
+                        </a>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <Badge color={m.meeting?.status === 'confirmed' ? 'success' : m.meeting?.status === 'cancelled' ? 'danger' : 'warning'}>{m.meeting?.status || 'pending'}</Badge>
@@ -224,7 +242,28 @@ export default function Meetings() {
           <Input label="Title" placeholder="Meeting title" value={meetingData.title} onChange={(e) => setMeetingData({ ...meetingData, title: e.target.value })} />
           <Input label="Date & Time" type="datetime-local" value={meetingData.dateTime} onChange={(e) => setMeetingData({ ...meetingData, dateTime: e.target.value })} />
           <Input label="Duration (min)" type="number" value={meetingData.duration} onChange={(e) => setMeetingData({ ...meetingData, duration: +e.target.value })} />
-          <Input label="Meeting URL" placeholder="Zoom/Google Meet link" value={meetingData.meetingUrl} onChange={(e) => setMeetingData({ ...meetingData, meetingUrl: e.target.value })} />
+          <Select 
+            label="Meeting Type" 
+            value={meetingData.meetingType} 
+            onChange={(val) => setMeetingData({ ...meetingData, meetingType: val })} 
+            options={[ { value: 'online', label: 'Online' }, { value: 'offline', label: 'Offline / In-person' }, { value: 'phone', label: 'Phone Call' } ]} 
+          />
+          {meetingData.meetingType === 'online' && (
+            <>
+              <Select 
+                label="Meeting Provider" 
+                value={meetingData.provider} 
+                onChange={(val) => setMeetingData({ ...meetingData, provider: val })} 
+                options={[ { value: 'sparkcrm', label: 'Default / Custom' }, { value: 'google_meet', label: 'Google Meet (Auto-generate)' } ]} 
+              />
+              {meetingData.provider !== 'google_meet' && (
+                <Input label="Custom Meeting URL" placeholder="Zoom/Google Meet link" value={meetingData.meetingUrl} onChange={(e) => setMeetingData({ ...meetingData, meetingUrl: e.target.value })} />
+              )}
+            </>
+          )}
+          {meetingData.meetingType === 'offline' && (
+            <Input label="Meeting Location / Address" placeholder="e.g. 123 Main St, New York, NY" value={meetingData.location} onChange={(e) => setMeetingData({ ...meetingData, location: e.target.value })} />
+          )}
           
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-[var(--vz-heading)]">Internal Attendees</label>
@@ -235,7 +274,7 @@ export default function Meetings() {
                 className="flex-1"
                 options={[
                   { value: '', label: isFetchingUsers ? 'Loading users...' : 'Select User' },
-                  ...(usersData?.data || []).map(u => ({ value: u._id, label: `${u.name} (${u.role})` }))
+                  ...(usersData?.data || []).map(u => ({ value: u._id, label: u.email ? `${u.name} (${u.email})` : u.name }))
                 ]}
               />
               <Button size="sm" variant="ghost" onClick={() => {
@@ -290,7 +329,20 @@ export default function Meetings() {
       <Modal isOpen={showCreateLink} onClose={() => setShowCreateLink(false)} title="Create Booking Link" size="sm">
         <div className="space-y-4">
           <Input label="Link Title" placeholder="e.g. 30-min Demo Call" value={linkData.title} onChange={(e) => setLinkData({ ...linkData, title: e.target.value })} />
-          <Input label="Duration (min)" type="number" value={linkData.duration} onChange={(e) => setLinkData({ ...linkData, duration: +e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Duration (min)" type="number" value={linkData.duration} onChange={(e) => setLinkData({ ...linkData, duration: +e.target.value })} />
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Meeting Provider</label>
+              <Select
+                value={linkData.provider}
+                onChange={(val) => setLinkData({ ...linkData, provider: val })}
+                options={[
+                  { value: 'sparkcrm', label: 'Default' },
+                  { value: 'google_meet', label: 'Google Meet' }
+                ]}
+              />
+            </div>
+          </div>
           
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--vz-heading)]">Availability Days</label>

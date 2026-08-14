@@ -54,6 +54,23 @@ const meetingSchema = new mongoose.Schema(
         },
         location: { type: String }, // 'phone', 'video', address
         reminderSent: { type: Boolean, default: false },
+
+        // ─── Integration ───
+        meetingType: { type: String, enum: ['online', 'offline', 'phone'], default: 'online' },
+        provider: { type: String, enum: ['google_meet', null], default: null },
+        source: { type: String, enum: ['booking_link', 'manual'], default: 'manual' },
+        calendar: {
+            provider: { type: String, enum: ['google', null], default: null },
+            calendarId: { type: String, default: null },
+            eventId: { type: String, default: null },
+            eventHtmlLink: { type: String, default: null },
+        },
+        conference: {
+            provider: { type: String, enum: ['google_meet', null], default: null },
+            meetingUrl: { type: String, default: null },
+            conferenceId: { type: String, default: null },
+            status: { type: String, enum: ['pending', 'success', 'failed', null], default: null },
+        },
         meta: {
             createdBy: { type: mongoose.Schema.Types.ObjectId },
             updatedBy: { type: mongoose.Schema.Types.ObjectId },
@@ -85,6 +102,22 @@ const bookingLinkSchema = new mongoose.Schema(
             timezone: { type: String, default: 'Asia/Kolkata' },
         },
         isActive: { type: Boolean, default: true },
+        
+        meetingType: { type: String, enum: ['online', 'offline', 'phone'], default: 'online' },
+        provider: { type: String, enum: ['google_meet', null], default: 'google_meet' },
+        bookingRules: {
+            bufferBefore: { type: Number, default: 0 },
+            bufferAfter: { type: Number, default: 0 },
+            minNotice: { type: Number, default: 0 },
+            maxWindow: { type: Number, default: 30 },
+        },
+        customerFields: [
+            {
+                name: { type: String, required: true },
+                required: { type: Boolean, default: false },
+                type: { type: String, default: 'text' },
+            }
+        ],
     
         meta: {
             createdBy: { type: mongoose.Schema.Types.ObjectId },

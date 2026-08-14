@@ -6,8 +6,18 @@ const { requireVerifiedUser } = require('../middleware/security');
 const requireGatewayUser = requireVerifiedUser('meeting-service');
 
 router.get('/book/:slug', ctrl.getBookingLinkBySlug); // Public
+router.get('/book/:slug/availability', ctrl.getBookingAvailability); // Public
 router.post('/book/:slug', ctrl.bookMeeting); // Public
+router.get('/google/callback', ctrl.googleAuthCallback); // Public for Google redirect
+
 router.use(requireGatewayUser);
+
+// Google Integration Routes
+router.get('/google/auth', ctrl.googleAuthUrl);
+router.get('/google/status', ctrl.googleAuthStatus);
+router.post('/google/disconnect', ctrl.googleDisconnect);
+router.get('/google/calendars', ctrl.googleGetCalendars);
+
 router.get('/', ctrl.getMeetings);
 router.post('/schedule', ctrl.scheduleMeeting);
 router.get('/booking-links', ctrl.getBookingLinks);

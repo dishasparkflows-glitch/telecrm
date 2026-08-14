@@ -3,12 +3,12 @@ const { ApiError } = require('@sparkcrm/shared-utils');
 
 const MEETING_CREATE_FIELDS = Object.freeze([
     'leadId', 'meeting', 'guest', 'attendees', 'customFields',
-    'location',
+    'location', 'provider', 'meetingType'
 ]);
 const MEETING_UPDATE_FIELDS = Object.freeze([...MEETING_CREATE_FIELDS, 'status']);
 const ATTENDEE_FIELDS = Object.freeze(['userId', 'role', 'status']);
 const BOOKING_LINK_FIELDS = Object.freeze([
-    'slug', 'title', 'description', 'durationOptions', 'availability', 'isActive',
+    'slug', 'title', 'description', 'durationOptions', 'availability', 'isActive', 'provider', 'meetingType'
 ]);
 const AVAILABILITY_FIELDS = Object.freeze(['days', 'startTime', 'endTime', 'timezone']);
 const PUBLIC_BOOKING_FIELDS = Object.freeze([

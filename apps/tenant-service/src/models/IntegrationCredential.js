@@ -53,6 +53,11 @@ const integrationCredentialSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null,
+            index: true,
+        },
         provider: {
             type: String,
             required: true,
@@ -68,6 +73,7 @@ const integrationCredentialSchema = new mongoose.Schema(
                 'zoom',         // Meeting integration
                 'zapier',       // Webhook/integration
                 'custom_api',   // Custom API
+                'google_calendar', // User-level Google Calendar
             ],
         },
         label: {
@@ -113,7 +119,7 @@ const integrationCredentialSchema = new mongoose.Schema(
     }
 );
 
-integrationCredentialSchema.index({ tenantId: 1, provider: 1 }, { unique: true });
+integrationCredentialSchema.index({ tenantId: 1, userId: 1, provider: 1 }, { unique: true });
 
 const IntegrationCredential = mongoose.model('IntegrationCredential', integrationCredentialSchema);
 

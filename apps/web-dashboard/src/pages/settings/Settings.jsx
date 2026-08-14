@@ -61,6 +61,7 @@ import {
   useRevokeTrustedDeviceMutation,
   useRevokeAllTrustedDevicesMutation
 } from '../../features/auth/authApi'
+import { meetingApi } from '../../features/meetings/meetingApi'
 import TwoFactorSetupModal from './TwoFactorSetupModal'
 
 import Card from '../../components/ui/Card'
@@ -114,7 +115,8 @@ import {
   Shuffle,
   Megaphone,
   X,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from 'lucide-react'
 
 // Tab Item Component for Vertical Sidebar
@@ -196,6 +198,13 @@ export default function Settings() {
   const [subscribeMetaPage, { isLoading: subscribingMetaPage }] = useSubscribeMetaPageMutation()
   const [replayLeadSourceEvent, { isLoading: replayingLeadSourceEvent }] = useReplayLeadSourceEventMutation()
   const [saveLeadSourceMapping, { isLoading: savingLeadSourceMapping }] = useSaveLeadSourceMappingMutation()
+
+  // Google Integration
+  const { data: googleStatusResp } = meetingApi.endpoints.getGoogleAuthStatus.useQuery(undefined, { skip: activeTab !== 'integrations' })
+  const [getGoogleAuthUrl] = meetingApi.endpoints.getGoogleAuthUrl.useLazyQuery()
+  const [disconnectGoogle, { isLoading: disconnectingGoogle }] = meetingApi.endpoints.disconnectGoogle.useMutation()
+  
+  const googleStatus = googleStatusResp?.data || { connected: false }
 
   const profile = profileData?.data || {}
   const users = allUsers
@@ -494,6 +503,38 @@ export default function Settings() {
     }
   }
 
+  const handleConnectGoogle = async () => {
+    try {
+      const response = await getGoogleAuthUrl().unwrap();
+      if (response?.data?.url) {
+        window.open(response.data.url, '_blank', 'width=600,height=700');
+      }
+    } catch (err) {
+      toast('Failed to get Google authorization URL', 'error');
+    }
+  }
+
+  const handleDisconnectGoogle = async () => {
+    if (!confirm('Are you sure you want to disconnect Google Calendar?')) return;
+    try {
+      await disconnectGoogle().unwrap();
+      toast('Google Calendar disconnected', 'success');
+    } catch (err) {
+      toast('Failed to disconnect Google Calendar', 'error');
+    }
+  }
+
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data === 'google-auth-success') {
+        toast('Google Calendar connected successfully', 'success');
+        meetingApi.util.invalidateTags(['GoogleAuth']);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [toast]);
+
   const handleSaveCompany = async () => {
     try {
       await updateSettings({
@@ -730,6 +771,7 @@ export default function Settings() {
                 <TabItem icon={Megaphone} label="Lead Sources" active={activeTab === 'lead_sources'} onClick={() => setActiveTab('lead_sources')} count={leadSourceMappingsResp?.data?.length} />
                 <TabItem icon={Shuffle} label="Lead Assignment" active={activeTab === 'assignment'} onClick={() => setActiveTab('assignment')} />
                 <TabItem icon={Database} label="Custom Fields" active={activeTab === 'fields'} onClick={() => setActiveTab('fields')} count={customFieldsResp?.data?.length} />
+                <TabItem icon={Plug} label="Integrations" active={activeTab === 'integrations'} onClick={() => setActiveTab('integrations')} />
                 <TabItem icon={Lock} label="Security" active={activeTab === 'security'} onClick={() => setActiveTab('security')} />
                 {currentUser?.role === ROLES.SUPER_ADMIN && (
                   <TabItem icon={MessageCircle} label="WhatsApp Setup" active={activeTab === 'whatsapp'} onClick={() => setActiveTab('whatsapp')} />
@@ -790,6 +832,61 @@ export default function Settings() {
                   </div>
                 </div>
               </Card>
+            )}
+
+            {/* Integrations */}
+            {activeTab === 'integrations' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--vz-heading)]">Integrations</h3>
+                  <p className="text-sm text-[var(--vz-text-muted)]">Connect external apps to SparkCRM</p>
+                </div>
+                
+                <Card>
+                  <Card.Header>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded bg-white shadow-sm flex items-center justify-center border border-[var(--vz-border)]">
+                        <Calendar size={20} className="text-blue-500" />
+                      </div>
+                      <div>
+                        <Card.Title>Google Calendar</Card.Title>
+                        <p className="text-xs text-[var(--vz-text-muted)]">Check calendar availability and create meetings</p>
+                      </div>
+                    </div>
+                  </Card.Header>
+                  <div className="p-4 border-t border-[var(--vz-border)] bg-[var(--vz-card-bg)]">
+                    {googleStatus.connected ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 size={18} className="text-green-500" />
+                          <div>
+                            <p className="text-sm font-medium text-[var(--vz-heading)]">Connected</p>
+                            <p className="text-xs text-[var(--vz-text-muted)]">{googleStatus.email}</p>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={handleDisconnectGoogle} disabled={disconnectingGoogle}>
+                          {disconnectingGoogle ? 'Disconnecting...' : 'Disconnect'}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-[var(--vz-text-muted)]">Google Calendar is not connected.</p>
+                          <ul className="text-xs text-[var(--vz-text-muted)] mt-2 space-y-1 list-disc list-inside">
+                            <li>Check calendar availability</li>
+                            <li>Prevent double booking</li>
+                            <li>Automatically create calendar events</li>
+                            <li>Generate Google Meet links</li>
+                          </ul>
+                        </div>
+                        <Button variant="primary" onClick={handleConnectGoogle}>
+                          Connect Google Calendar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
             )}
 
             {/* 3. Pipeline Stages */}

@@ -81,6 +81,29 @@ export const meetingApi = baseApi.injectEndpoints({
                 body: data,
             }),
         }),
+        getPublicBookingAvailability: builder.query({
+            query: ({ slug, date, duration }) => ({
+                url: `/meetings/book/${slug}/availability`,
+                params: { date, duration }
+            }),
+        }),
+        getGoogleAuthUrl: builder.query({
+            query: () => '/meetings/google/auth',
+        }),
+        getGoogleAuthStatus: builder.query({
+            query: () => '/meetings/google/status',
+            providesTags: ['GoogleAuth'],
+        }),
+        disconnectGoogle: builder.mutation({
+            query: () => ({
+                url: '/meetings/google/disconnect',
+                method: 'POST',
+            }),
+            invalidatesTags: ['GoogleAuth'],
+        }),
+        getGoogleCalendars: builder.query({
+            query: () => '/meetings/google/calendars',
+        }),
     }),
 })
 
@@ -97,4 +120,9 @@ export const {
     useAddAttachmentMutation,
     useGetPublicBookingLinkQuery,
     useBookPublicMeetingMutation,
+    useGetPublicBookingAvailabilityQuery,
+    useLazyGetGoogleAuthUrlQuery,
+    useGetGoogleAuthStatusQuery,
+    useDisconnectGoogleMutation,
+    useGetGoogleCalendarsQuery,
 } = meetingApi
