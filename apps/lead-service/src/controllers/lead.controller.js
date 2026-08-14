@@ -638,7 +638,189 @@ const getLeadsBulk = asyncHandler(async (req, res) => {
     ApiResponse.success(res, leads, 'Leads fetched successfully');
 });
 
+
+/**
+ * PATCH /api/leads/bulk
+ * Bulk update multiple leads
+ */
+const bulkUpdateLeads = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const actorId = req.headers['x-user-id'];
+    const { leadIds, updates } = req.body;
+
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+        throw ApiError.badRequest('leadIds array is required and must not be empty');
+    }
+    if (leadIds.length > 500) {
+        throw ApiError.badRequest('Maximum 500 leads can be updated at once');
+    }
+    if (!updates || Object.keys(updates).length === 0) {
+        throw ApiError.badRequest('updates object is required');
+    }
+
+    const changes = pickLeadUpdateInput(updates);
+    if (Object.keys(changes).length === 0) {
+        throw ApiError.badRequest('No valid fields provided for bulk update');
+    }
+
+    if (changes.customFields) {
+        await validateCustomFields(tenantId, 'Lead', changes.customFields);
+    }
+    
+    // Normalize target values for lifecycle/contact mapping
+    const targetStage = changes.pipeline?.stage;
+    let targetFollowUpAt = undefined;
+    if (changes.expectedValue !== undefined) {
+        if (!changes.lifecycle) changes.lifecycle = {};
+        changes.lifecycle.expectedValue = Number(changes.expectedValue);
+        delete changes.expectedValue;
+    }
+    if (changes.followUpAt !== undefined) {
+        if (!changes.lifecycle) changes.lifecycle = {};
+        changes.lifecycle.followUpAt = changes.followUpAt ? new Date(changes.followUpAt) : null;
+        targetFollowUpAt = changes.lifecycle.followUpAt;
+        delete changes.followUpAt;
+    }
+    if (changes.priority !== undefined) {
+        if (!changes.lifecycle) changes.lifecycle = {};
+        changes.lifecycle.priority = changes.priority;
+        delete changes.priority;
+    }
+    if (changes.contact) {
+        if (changes.contact.email !== undefined) changes.contact.emailNormalized = normalizeEmail(changes.contact.email);
+        if (changes.contact.phone !== undefined) changes.contact.phoneNormalized = normalizePhone(changes.contact.phone);
+    }
+
+    // Fetch leads
+    const leads = await Lead.find({ _id: { $in: leadIds }, tenantId });
+    if (leads.length === 0) {
+        throw ApiError.notFound('No matching leads found');
+    }
+
+    let modifiedCount = 0;
+    let failedCount = 0;
+    const failures = [];
+
+    // Process leads iteratively to preserve business logic
+    for (const lead of leads) {
+        try {
+            if (!canAccessRecord(req, lead, { ownerField: 'assignedTo', module: 'leads' })) {
+                failedCount++;
+                failures.push({ leadId: lead._id, reason: 'Permission denied' });
+                continue;
+            }
+
+            const oldStage = lead.pipeline?.stage || lead.stage;
+            const oldFollowUpAt = lead.lifecycle?.followUpAt ? new Date(lead.lifecycle?.followUpAt).getTime() : null;
+
+            // Apply updates
+            if (changes.contact) {
+                lead.contact = { ...(lead.contact || {}), ...changes.contact };
+            }
+            if (changes.pipeline) {
+                lead.pipeline = { ...(lead.pipeline || {}), ...changes.pipeline };
+            }
+            if (changes.lifecycle) {
+                lead.lifecycle = { ...(lead.lifecycle || {}), ...changes.lifecycle };
+            }
+            // Copy top-level properties
+            const topLevelKeys = Object.keys(changes).filter(k => !['contact', 'pipeline', 'lifecycle'].includes(k));
+            for (const k of topLevelKeys) {
+                lead[k] = changes[k];
+            }
+
+            // Track stage changes
+            if (targetStage && targetStage !== oldStage) {
+                if (!lead.pipeline) lead.pipeline = {};
+                lead.pipeline.stage = targetStage;
+                lead.pipeline.previousStage = oldStage;
+                lead.pipeline.stageChangedAt = new Date();
+                if (!lead.lifecycle) lead.lifecycle = {};
+                lead.lifecycle.lastActivityAt = new Date();
+
+                await publishEvent(EVENTS.LEAD_STAGE_CHANGED, {
+                    tenantId,
+                    branchId: lead.branchId,
+                    leadId: lead._id,
+                    oldStage,
+                    newStage: targetStage,
+                });
+
+                await recordLeadActivity({
+                    tenantId,
+                    branchId: lead.branchId,
+                    leadId: lead._id,
+                    actorId,
+                    actorType: 'user',
+                    type: ACTIVITY_TYPES.LEAD_STAGE_CHANGED,
+                    title: 'Stage changed',
+                    description: `${oldStage || 'Unknown'} → ${targetStage}`,
+                    metadata: { oldStage, newStage: targetStage },
+                });
+            }
+
+            // Recalculate score
+            const { score, breakdown } = calculateLeadScore(lead);
+            lead.scoring = {
+                score,
+                scoreBreakdown: breakdown,
+                lastScoredAt: new Date(),
+            };
+
+            await lead.save();
+            modifiedCount++;
+
+            // Handle followup events
+            if (targetFollowUpAt !== undefined) {
+                const newFollowUpAt = lead.lifecycle?.followUpAt ? new Date(lead.lifecycle?.followUpAt).getTime() : null;
+                if (newFollowUpAt !== oldFollowUpAt) {
+                    await publishEvent(EVENTS.LEAD_FOLLOWUP_SCHEDULED, {
+                        tenantId,
+                        branchId: lead.branchId,
+                        leadId: lead._id,
+                        assignedTo: lead.assignedTo,
+                        followUpAt: lead.lifecycle?.followUpAt,
+                        leadName: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim(),
+                    });
+                }
+            }
+
+            // Individual activity record for the bulk update
+            await recordLeadActivity({
+                tenantId,
+                branchId: lead.branchId,
+                leadId: lead._id,
+                actorId,
+                actorType: 'user',
+                type: ACTIVITY_TYPES.LEAD_UPDATED,
+                title: 'Lead updated (Bulk)',
+                description: `Bulk updated fields: ${Object.keys(changes).join(', ')}`,
+            });
+        } catch (err) {
+            failedCount++;
+            failures.push({ leadId: lead._id, reason: err.message });
+        }
+    }
+
+    // Macro-level audit log
+    await auditLogger.log({
+        req,
+        action: 'BULK_UPDATE',
+        module: 'leads',
+        recordType: 'Lead',
+        details: { matchedCount: leads.length, modifiedCount, failedCount, fieldsUpdated: Object.keys(changes) }
+    });
+
+    ApiResponse.success(res, {
+        matchedCount: leads.length,
+        modifiedCount,
+        failedCount,
+        failures
+    }, 'Bulk update completed');
+});
+
 module.exports = {
+    bulkUpdateLeads,
     createLead,
     getLeads,
     getActiveLeads,

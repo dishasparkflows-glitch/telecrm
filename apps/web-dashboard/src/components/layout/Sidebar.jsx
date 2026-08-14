@@ -4,7 +4,7 @@ import { closeMobileSidebar} from '../../slices/uiSlice'
 import {
   LayoutDashboard, Users, Phone, MessageCircle, FileText,
   Calendar, Zap, BarChart3, Settings, CreditCard,
-  ChevronDown, X, ClipboardList, Bell, Shield, UserCog, LayoutList, Box, Megaphone,
+  ChevronDown, X, ClipboardList, Bell, Shield, UserCog, LayoutList, Box, Megaphone, CalendarDays
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { ROLES } from '../../utils/constants'
@@ -14,7 +14,7 @@ import { useListModulesQuery } from '../../features/modules/moduleApi'
 const ICON_MAP = {
   LayoutDashboard, Users, Phone, MessageCircle, FileText,
   Calendar, Zap, BarChart3, Settings, CreditCard,
-  ClipboardList, Bell, Shield, UserCog, LayoutList, Box, Megaphone,
+  ClipboardList, Bell, Shield, UserCog, LayoutList, Box, Megaphone, CalendarDays
 }
 
 /* Fallback static menu (used when modules not yet loaded from API) */

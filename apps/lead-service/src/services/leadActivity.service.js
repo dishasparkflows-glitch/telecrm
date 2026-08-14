@@ -13,6 +13,10 @@ const ACTIVITY_TYPES = {
     WHATSAPP_RECEIVED: 'whatsapp.received',
     FORM_SUBMITTED: 'form.submitted',
     INTEGRATION_RECEIVED: 'integration.received',
+    FOLLOWUP_SCHEDULED: 'followup.scheduled',
+    FOLLOWUP_COMPLETED: 'followup.completed',
+    FOLLOWUP_RESCHEDULED: 'followup.rescheduled',
+    FOLLOWUP_CANCELLED: 'followup.cancelled',
 };
 
 const recordLeadActivity = async ({

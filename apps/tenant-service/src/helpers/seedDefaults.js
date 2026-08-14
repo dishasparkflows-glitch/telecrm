@@ -10,6 +10,7 @@ const DEFAULT_MODULES = [
     // ─── MENU section ───
     { key: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard', section: 'MENU', order: 0, isSystem: true, requiredFeature: null },
     { key: 'leads', label: 'Leads', icon: 'Users', path: '/leads', section: 'MENU', order: 1, isSystem: true, requiredFeature: 'lead_management' },
+    { key: 'followups', label: 'Follow-ups', icon: 'CalendarDays', path: '/follow-ups', section: 'MENU', order: 1.5, isSystem: true, requiredFeature: 'lead_management' },
     { key: 'calls', label: 'Calls', icon: 'Phone', path: '/calls', section: 'MENU', order: 2, isSystem: true, requiredFeature: 'calling_basic' },
     { key: 'whatsapp', label: 'WhatsApp', icon: 'MessageCircle', path: '/whatsapp', section: 'MENU', order: 3, isSystem: true, requiredFeature: 'whatsapp_session' },
     { key: 'whatsapp_inbox', label: 'Team Inbox', icon: 'MessageCircle', path: '/whatsapp/inbox', parentKey: 'whatsapp', section: 'MENU', order: 4, isSystem: true, requiredFeature: 'whatsapp_session' },

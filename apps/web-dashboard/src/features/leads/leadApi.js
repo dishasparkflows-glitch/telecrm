@@ -168,6 +168,14 @@ export const leadApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: (result, error, { id }) => [{ type: 'Lead', id }, { type: 'Lead', id: `${id}-TIMELINE` }, { type: 'Lead', id: 'LIST' }],
         }),
+        bulkUpdateLeads: builder.mutation({
+            query: (data) => ({
+                url: '/leads/bulk',
+                method: 'PATCH',
+                body: data,
+            }),
+            invalidatesTags: [{ type: 'Lead', id: 'LIST' }, { type: 'Lead', id: 'STATS' }],
+        }),
         addNote: builder.mutation({
             query: ({ id, ...data }) => ({
                 url: `/leads/${id}/notes`,
@@ -220,6 +228,7 @@ export const {
     useCreateLeadMutation,
     useImportLeadsMutation,
     useUpdateLeadMutation,
+    useBulkUpdateLeadsMutation,
     useAddNoteMutation,
     useAssignLeadMutation,
     useArchiveLeadMutation,

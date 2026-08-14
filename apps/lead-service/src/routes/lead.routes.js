@@ -34,6 +34,7 @@ router.get('/:id/timeline', leadCtrl.getLeadTimeline);
 router.get('/:id', leadCtrl.getLead);
 router.post('/', leadCtrl.createLead);
 router.post('/import', leadCtrl.importLeads);
+router.patch('/bulk', leadCtrl.bulkUpdateLeads);
 router.put('/:id', leadCtrl.updateLead);
 router.post('/:id/notes', leadCtrl.addNote);
 router.put('/:id/assign', leadCtrl.assignLead);

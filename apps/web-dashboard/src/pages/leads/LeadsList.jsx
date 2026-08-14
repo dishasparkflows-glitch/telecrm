@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { openDialer } from '../../slices/uiSlice'
-import { useGetLeadsQuery, useCreateLeadMutation, useImportLeadsMutation, useArchiveLeadMutation } from '../../features/leads/leadApi'
-import { useGetUsersQuery } from '../../features/users/userApi'
+import { useGetLeadsQuery, useCreateLeadMutation, useImportLeadsMutation, useArchiveLeadMutation, useBulkUpdateLeadsMutation } from '../../features/leads/leadApi'
+import { useGetAllUsersListQuery } from '../../features/users/userApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
 import { useGetProfileQuery } from '../../features/tenant/tenantApi'
 import { useDebounce } from '../../hooks/useDebounce'
@@ -15,7 +15,6 @@ import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
 import ConfirmModal from '../../components/ui/ConfirmModal'
 import Select from '../../components/ui/Select'
-import Pagination from '../../components/ui/Pagination'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import {
@@ -60,6 +59,7 @@ export default function LeadsList() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const toast = useToast()
+  const activeBranchId = useSelector((s) => s.auth.activeBranchId)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
@@ -72,6 +72,12 @@ export default function LeadsList() {
   const [importRows, setImportRows] = useState([])
   const [importMapping, setImportMapping] = useState({})
   const [leadToArchive, setLeadToArchive] = useState(null)
+  const [selectedLeads, setSelectedLeads] = useState([])
+  const [showBulkEdit, setShowBulkEdit] = useState(false)
+  const [bulkEditForm, setBulkEditForm] = useState({
+    enabledFields: {},
+    updates: { stage: '', assignedTo: '', priority: '', followUpAt: '' }
+  })
   const fileInputRef = useRef(null)
 
   const debouncedSearch = useDebounce(search)
@@ -83,12 +89,13 @@ export default function LeadsList() {
     ...(sourceFilter && { source: sourceFilter }),
   })
 
-  const { data: usersData } = useGetUsersQuery()
+  const { data: usersData } = useGetAllUsersListQuery({ branchId: activeBranchId === 'all' ? undefined : activeBranchId })
   const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Lead' }, { skip: !showAdd })
   const { data: profileData } = useGetProfileQuery()
   const [createLead, { isLoading: creating }] = useCreateLeadMutation()
   const [importLeads, { isLoading: importing }] = useImportLeadsMutation()
   const [archiveLead, { isLoading: isArchiving }] = useArchiveLeadMutation()
+  const [bulkUpdateLeads, { isLoading: isBulkUpdating }] = useBulkUpdateLeadsMutation()
 
   const leads = data?.data || []
   const pagination = data?.pagination || {}
@@ -101,12 +108,12 @@ export default function LeadsList() {
   const stageLabelMap = useMemo(() => Object.fromEntries(stageOptions.map((s) => [s.slug, s.name])), [stageOptions])
   const getAssignedName = (assignedTo) => {
     if (!assignedTo) return 'Unassigned'
-    if (typeof assignedTo === 'object' && (assignedTo.contact?.name)) {
-      return assignedTo.contact?.name
+    if (typeof assignedTo === 'object' && (assignedTo.name)) {
+      return assignedTo.name
     }
     const id = typeof assignedTo === 'object' ? assignedTo?._id : assignedTo
     const user = users.find((u) => u._id === id)
-    return user ? (user.contact?.name || '') : 'Unassigned'
+    return user ? (user.name || '') : 'Unassigned'
   }
 
   const [newLead, setNewLead] = useState({
@@ -243,6 +250,41 @@ export default function LeadsList() {
     }
   }
 
+  const handleBulkUpdate = async () => {
+    if (selectedLeads.length === 0) return toast('No leads selected', 'warning')
+    const activeUpdates = {}
+    for (const [field, enabled] of Object.entries(bulkEditForm.enabledFields)) {
+      if (enabled) {
+        if (field === 'stage') activeUpdates.pipeline = { stage: bulkEditForm.updates.stage }
+        else if (field === 'priority' || field === 'followUpAt') {
+          activeUpdates.lifecycle = { ...activeUpdates.lifecycle, [field]: bulkEditForm.updates[field] }
+        }
+        else activeUpdates[field] = bulkEditForm.updates[field]
+      }
+    }
+    
+    if (Object.keys(activeUpdates).length === 0) {
+      return toast('Please select at least one field to update', 'warning')
+    }
+
+    try {
+      const res = await bulkUpdateLeads({
+        leadIds: selectedLeads,
+        updates: activeUpdates
+      }).unwrap()
+      
+      toast(`Successfully updated ${res.data.modifiedCount} leads`, 'success')
+      if (res.data.failedCount > 0) {
+        toast(`Failed to update ${res.data.failedCount} leads`, 'error')
+      }
+      setShowBulkEdit(false)
+      setSelectedLeads([])
+      setBulkEditForm({ enabledFields: {}, updates: { stage: '', assignedTo: '', priority: '', followUpAt: '' } })
+    } catch (err) {
+      toast(err.data?.message || 'Failed to update leads', 'error')
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -324,6 +366,23 @@ export default function LeadsList() {
         )}
       </Card>
 
+      {/* Bulk Actions Toolbar */}
+      {selectedLeads.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-[#1a1b1e] border border-[var(--vz-border)] shadow-xl rounded-full px-6 py-3 flex items-center gap-6 z-40">
+          <span className="text-sm font-medium text-[var(--vz-text)] bg-primary/10 text-primary px-3 py-1 rounded-full">
+            {selectedLeads.length} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setShowBulkEdit(true)}>
+              Bulk Edit
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedLeads([])}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Leads Table */}
       <Card noPadding>
         {isLoading ? (
@@ -341,6 +400,22 @@ export default function LeadsList() {
               <table className="w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr className="bg-[var(--vz-table-header-bg)]">
+                    <th className="px-4 py-3 text-left w-10">
+                      <input 
+                        type="checkbox" 
+                        checked={leads.length > 0 && selectedLeads.length === leads.length}
+                        ref={input => {
+                          if (input) {
+                            input.indeterminate = selectedLeads.length > 0 && selectedLeads.length < leads.length;
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedLeads(leads.map(l => l._id))
+                          else setSelectedLeads([])
+                        }}
+                        className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                      />
+                    </th>
                     {['Name', 'Contact', 'Company', 'Stage', 'Source', 'Score', 'Assigned To', 'Actions'].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">{h}</th>
                     ))}
@@ -353,6 +428,17 @@ export default function LeadsList() {
                       onClick={() => navigate(`/leads/${lead._id}`)}
                       className="border-t border-[var(--vz-border)] hover:bg-[var(--vz-table-hover-bg)] cursor-pointer transition-colors"
                     >
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.includes(lead._id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedLeads([...selectedLeads, lead._id])
+                            else setSelectedLeads(selectedLeads.filter(id => id !== lead._id))
+                          }}
+                          className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary shrink-0">
@@ -652,6 +738,204 @@ export default function LeadsList() {
         onConfirm={confirmArchive}
         onCancel={() => setLeadToArchive(null)}
       />
+
+      {/* TeleCRM Style Bulk Edit Modal */}
+      <Modal isOpen={showBulkEdit} onClose={() => setShowBulkEdit(false)} title="Bulk Edit Leads" size="4xl">
+        <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-[var(--vz-border)] bg-[var(--vz-card-bg)] rounded-lg -m-4">
+          
+          {/* Column 1: Selected Leads */}
+          <div className="p-4 flex flex-col h-[600px]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-[var(--vz-heading)]">Selected Leads ({selectedLeads.length})</h3>
+              <button onClick={() => setSelectedLeads([])} className="text-xs text-primary hover:underline">Clear All</button>
+            </div>
+            <div className="relative mb-3">
+              <Search size={14} className="absolute left-2.5 top-2.5 text-[var(--vz-text-muted)]" />
+              <input type="text" placeholder="Search selected leads..." className="w-full pl-8 pr-3 py-1.5 text-xs border border-[var(--vz-input-border)] rounded bg-[var(--vz-input-bg)] text-[var(--vz-heading)] focus:border-primary outline-none" />
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {leads.filter(l => selectedLeads.includes(l._id)).map(lead => (
+                <div key={lead._id} className="flex items-start gap-2.5 p-2 rounded hover:bg-[var(--vz-bg-soft)] group">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">
+                    {(lead.contact?.firstName?.[0] || '')}{(lead.contact?.lastName?.[0] || '')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-[var(--vz-heading)] truncate">
+                      {lead.contact?.firstName} {lead.contact?.lastName}
+                    </p>
+                    <p className="text-[10px] text-[var(--vz-text-muted)] truncate">{lead.contact?.email}</p>
+                    <p className="text-[10px] text-[var(--vz-text-muted)] truncate">{lead.contact?.phone}</p>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedLeads(prev => prev.filter(id => id !== lead._id))}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-[var(--vz-text-muted)] hover:text-danger hover:bg-danger/10 rounded transition-all"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Column 2: Update Fields */}
+          <div className="p-4 flex flex-col h-[600px]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-[var(--vz-heading)]">Update Fields</h3>
+              <button 
+                onClick={() => setBulkEditForm({ enabledFields: {}, updates: { stage: '', assignedTo: '', priority: '', followUpAt: '' } })}
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                 Reset All
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar">
+              
+              {/* Stage */}
+              <div className="border border-[var(--vz-border)] rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                    checked={!!bulkEditForm.enabledFields.stage}
+                    onChange={(e) => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, stage: e.target.checked } }))}
+                  />
+                  <div className="flex-1 grid grid-cols-3 items-center gap-2">
+                    <label className="text-xs font-medium text-[var(--vz-heading)] cursor-pointer" onClick={() => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, stage: !prev.enabledFields.stage } }))}>Lead Stage</label>
+                    <div className="col-span-2">
+                      <Select
+                        value={bulkEditForm.updates.stage}
+                        onChange={(val) => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, stage: true }, updates: { ...prev.updates, stage: val } }))}
+                        options={stageOptions.map(s => ({ value: s.slug, label: s.name }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Assigned User */}
+              <div className="border border-[var(--vz-border)] rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                    checked={!!bulkEditForm.enabledFields.assignedTo}
+                    onChange={(e) => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, assignedTo: e.target.checked } }))}
+                  />
+                  <div className="flex-1 grid grid-cols-3 items-center gap-2">
+                    <label className="text-xs font-medium text-[var(--vz-heading)] cursor-pointer" onClick={() => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, assignedTo: !prev.enabledFields.assignedTo } }))}>Assigned User</label>
+                    <div className="col-span-2">
+                      <Select
+                        value={bulkEditForm.updates.assignedTo}
+                        onChange={(val) => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, assignedTo: true }, updates: { ...prev.updates, assignedTo: val } }))}
+                        options={[
+                          { value: 'unassigned', label: 'Unassigned' },
+                          ...users.map(u => ({ value: u._id, label: u.name || 'Unknown User' }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Priority */}
+              <div className="border border-[var(--vz-border)] rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                    checked={!!bulkEditForm.enabledFields.priority}
+                    onChange={(e) => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, priority: e.target.checked } }))}
+                  />
+                  <div className="flex-1 grid grid-cols-3 items-center gap-2">
+                    <label className="text-xs font-medium text-[var(--vz-heading)] cursor-pointer" onClick={() => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, priority: !prev.enabledFields.priority } }))}>Priority</label>
+                    <div className="col-span-2">
+                      <Select
+                        value={bulkEditForm.updates.priority}
+                        onChange={(val) => setBulkEditForm(prev => ({ ...prev, enabledFields: { ...prev.enabledFields, priority: true }, updates: { ...prev.updates, priority: val } }))}
+                        options={[
+                          { value: 'high', label: 'High' },
+                          { value: 'medium', label: 'Medium' },
+                          { value: 'low', label: 'Low' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+
+          {/* Column 3: Preview */}
+          <div className="p-4 flex flex-col h-[600px] bg-primary/5">
+            <h3 className="text-sm font-bold text-primary flex items-center gap-2 mb-4">
+               Preview Changes
+            </h3>
+            
+            {Object.values(bulkEditForm.enabledFields).some(Boolean) ? (
+              <div className="space-y-4 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                <p className="text-xs text-[var(--vz-text)] mb-4">
+                  The following changes will be applied to <strong>{selectedLeads.length}</strong> selected leads:
+                </p>
+                
+                {bulkEditForm.enabledFields.stage && (
+                  <div className="bg-white dark:bg-[var(--vz-card-bg)] p-3 rounded border border-[var(--vz-border)]">
+                    <p className="text-xs font-semibold text-[var(--vz-heading)] mb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success"></span> Lead Stage
+                    </p>
+                    <p className="text-[11px] text-[var(--vz-text-muted)] ml-3">
+                      Current values → <span className="font-semibold text-[var(--vz-text)]">{stageLabelMap[bulkEditForm.updates.stage] || bulkEditForm.updates.stage}</span>
+                    </p>
+                  </div>
+                )}
+
+                {bulkEditForm.enabledFields.assignedTo && (
+                  <div className="bg-white dark:bg-[var(--vz-card-bg)] p-3 rounded border border-[var(--vz-border)]">
+                    <p className="text-xs font-semibold text-[var(--vz-heading)] mb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success"></span> Assigned User
+                    </p>
+                    <p className="text-[11px] text-[var(--vz-text-muted)] ml-3">
+                      Current values → <span className="font-semibold text-[var(--vz-text)]">
+                        {bulkEditForm.updates.assignedTo === 'unassigned' ? 'Unassigned' : (users.find(u => u._id === bulkEditForm.updates.assignedTo)?.name || 'Unknown User')}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
+                {bulkEditForm.enabledFields.priority && (
+                  <div className="bg-white dark:bg-[var(--vz-card-bg)] p-3 rounded border border-[var(--vz-border)]">
+                    <p className="text-xs font-semibold text-[var(--vz-heading)] mb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success"></span> Priority
+                    </p>
+                    <p className="text-[11px] text-[var(--vz-text-muted)] ml-3">
+                      Current values → <span className="font-semibold text-[var(--vz-text)] capitalize">{bulkEditForm.updates.priority}</span>
+                    </p>
+                  </div>
+                )}
+
+
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+                <div className="w-12 h-12 rounded-full bg-[var(--vz-bg-soft)] flex items-center justify-center mb-3">
+                  <Eye className="text-[var(--vz-text-muted)]" size={20} />
+                </div>
+                <p className="text-sm font-medium text-[var(--vz-heading)]">No fields selected</p>
+                <p className="text-xs text-[var(--vz-text-muted)] mt-1">Select fields in the middle column to preview your updates here.</p>
+              </div>
+            )}
+            
+            <div className="pt-4 border-t border-[var(--vz-border)] mt-auto flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowBulkEdit(false)}>Cancel</Button>
+              <Button size="sm" onClick={handleBulkUpdate} disabled={isBulkUpdating || !Object.values(bulkEditForm.enabledFields).some(Boolean)}>
+                {isBulkUpdating ? 'Updating...' : `Update ${selectedLeads.length} Leads`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </>
   )
 }

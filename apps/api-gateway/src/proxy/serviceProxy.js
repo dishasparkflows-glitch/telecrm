@@ -55,6 +55,11 @@ const SERVICE_ROUTES = {
             { method: 'GET', pattern: /^\/api\/leads\/oauth\/meta\/callback\/?$/ },
         ],
     },
+    '/api/follow-ups': {
+        target: env.SERVICES.LEAD,
+        module: 'followups',
+        feature: 'lead_management',
+    },
     '/api/calls': {
         target: env.SERVICES.CALL,
         module: 'calls',

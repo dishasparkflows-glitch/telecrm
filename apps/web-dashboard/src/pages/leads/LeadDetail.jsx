@@ -18,6 +18,7 @@ import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
+import FollowUpCard from './components/FollowUpCard'
 import {
   Phone, MessageSquare, Mail, MapPin, Building2, Calendar, Star,
   Edit3, Send, Clock, StickyNote, Activity, Megaphone
@@ -238,6 +239,8 @@ export default function LeadDetail() {
               </Button>
             </div>
           </Card>
+
+          <FollowUpCard lead={lead} />
 
           {/* Stage Pipeline */}
           <Card>
@@ -516,10 +519,7 @@ export default function LeadDetail() {
               const val = Number(e.target.value);
               setEditForm({ ...editForm, expectedValue: val, lifecycle: { ...(editForm.lifecycle || {}), expectedValue: val } });
             }} />
-            <Input label="Follow-up Reminder" type="datetime-local" value={editForm.lifecycle?.followUpAt ?? editForm.followUpAt ?? ''} onChange={(e) => {
-              const val = e.target.value;
-              setEditForm({ ...editForm, followUpAt: val, lifecycle: { ...(editForm.lifecycle || {}), followUpAt: val } });
-            }} />
+
             
             {/* Dynamic Custom Fields in Edit */}
             {fieldsData?.data?.length > 0 && (

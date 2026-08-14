@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = require('@sparkcrm/shared-middleware');
 
 const leadRoutes = require('./routes/lead.routes');
+const followupRoutes = require('./routes/followup.routes');
 const leadController = require('./controllers/lead.controller');
 const { requireVerifiedUser, requireInternalService } = require('./middleware/security');
 
@@ -46,6 +47,7 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/leads', requireProtectedLeadRequest, leadRoutes);
+app.use('/api/follow-ups', requireGatewayUser, followupRoutes);
 
 // Internal endpoints (service-to-service, no auth)
 const Lead = require('./models/Lead');
