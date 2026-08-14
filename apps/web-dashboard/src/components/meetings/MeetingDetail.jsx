@@ -107,6 +107,14 @@ export default function MeetingDetail({ meeting: initialMeeting, isOpen, onClose
                 <User size={14} className="text-primary" />
                 <span className="text-xs font-medium text-[var(--vz-heading)]">{meeting.hostId?.contact?.name || 'Host'} (Host)</span>
               </div>
+              {meeting.guest?.name && (
+                <div className="flex items-center gap-2 p-2 rounded hover:bg-[var(--vz-body-bg)]">
+                  <User size={14} className="text-secondary" />
+                  <span className="text-xs text-[var(--vz-heading)]">
+                    {meeting.guest.name} <span className="text-[var(--vz-text-muted)]">(Guest)</span>
+                  </span>
+                </div>
+              )}
               {meeting.attendees?.map((a, i) => {
                 const userName = a.userId?.contact?.name || usersData?.data?.find(u => u._id === (a.userId?._id || a.userId))?.contact?.name || 'Unknown User'
                 return (

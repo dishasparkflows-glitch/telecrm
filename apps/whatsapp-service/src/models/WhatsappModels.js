@@ -133,7 +133,10 @@ whatsappMessageSchema.pre('save', function (next) {
 
 whatsappMessageSchema.index({ tenantId: 1, leadId: 1, createdAt: -1 });
 whatsappMessageSchema.index({ tenantId: 1, 'message.from': 1, createdAt: -1 });
-whatsappMessageSchema.index({ 'provider.waMessageId': 1 });
+whatsappMessageSchema.index(
+    { 'provider.waMessageId': 1 },
+    { unique: true, partialFilterExpression: { 'provider.waMessageId': { $type: 'string' } } }
+);
 whatsappMessageSchema.index(
     { idempotencyKey: 1 },
     { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } }

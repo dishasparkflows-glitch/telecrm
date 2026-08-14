@@ -512,7 +512,12 @@ export default function WhatsApp() {
   const displayedMessages = chatSearch.trim()
     ? messages.filter((item) => `${item.content || ''} ${item.mediaName || ''}`.toLowerCase().includes(chatSearch.trim().toLowerCase()))
     : messages
-  const actionContacts = leads.map((lead) => ({ id: lead._id, name: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim(), phone: lead.contact?.phone }))
+  const actionContacts = leads.map((lead) => {
+    const fullPhone = lead.contact?.countryCode && lead.contact?.phone 
+      ? `${lead.contact.countryCode}${lead.contact.phone}` 
+      : lead.contact?.phone;
+    return { id: lead._id, name: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim(), phone: fullPhone };
+  })
 
   const filteredLeads = leads;
 
@@ -531,10 +536,15 @@ export default function WhatsApp() {
     if (!message.trim() || !selectedLead) return
     const lead = leads.find(l => l._id === selectedLead)
     if (!lead?.contact?.phone) return toast('This lead has no phone number on record', 'error')
+    
+    const fullPhone = lead.contact?.countryCode && lead.contact?.phone 
+      ? `${lead.contact.countryCode}${lead.contact.phone}` 
+      : lead.contact?.phone
+
     try {
       const result = replyingTo
-        ? await replyToMessage({ id: replyingTo._id, to: lead.contact?.phone, leadId: selectedLead, type: 'text', content: message }).unwrap()
-        : await sendMessage({ leadId: selectedLead, to: lead.contact?.phone, content: message }).unwrap()
+        ? await replyToMessage({ id: replyingTo._id, to: fullPhone, leadId: selectedLead, type: 'text', content: message }).unwrap()
+        : await sendMessage({ leadId: selectedLead, to: fullPhone, content: message }).unwrap()
       setMessage('')
       setReplyingTo(null)
       // Show warning if message was queued (config not set up)
@@ -550,9 +560,14 @@ export default function WhatsApp() {
   const handleSendMedia = async (media) => {
     const lead = leads.find((item) => item._id === selectedLead)
     if (!lead?.contact?.phone) throw new Error('This lead has no phone number')
+    
+    const fullPhone = lead.contact?.countryCode && lead.contact?.phone 
+      ? `${lead.contact.countryCode}${lead.contact.phone}` 
+      : lead.contact?.phone
+
     const result = replyingTo
-      ? await replyToMessage({ id: replyingTo._id, to: lead.contact?.phone, leadId: selectedLead, ...media }).unwrap()
-      : await sendMessage({ leadId: selectedLead, to: lead.contact?.phone, ...media }).unwrap()
+      ? await replyToMessage({ id: replyingTo._id, to: fullPhone, leadId: selectedLead, ...media }).unwrap()
+      : await sendMessage({ leadId: selectedLead, to: fullPhone, ...media }).unwrap()
     setReplyingTo(null)
     if (result?.data?.status === 'failed') throw new Error(result?.data?.lastError || 'Media delivery failed')
   }
@@ -561,10 +576,15 @@ export default function WhatsApp() {
     const lead = leads.find(l => l._id === selectedLead)
     if (!lead?.contact?.phone) return toast('This lead has no phone number', 'error')
     const resolvedBody = resolveTemplate(template, lead)
+    
+    const fullPhone = lead.contact?.countryCode && lead.contact?.phone 
+      ? `${lead.contact.countryCode}${lead.contact.phone}` 
+      : lead.contact?.phone
+
     try {
       const result = await sendMessage({
         leadId: selectedLead,
-        to: lead.contact?.phone,
+        to: fullPhone,
         content: resolvedBody,
         type: 'template',
         templateName: template.name,

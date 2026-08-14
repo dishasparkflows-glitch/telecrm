@@ -363,7 +363,11 @@ export default function LeadsList() {
                           {lead.contact?.email && <span className="flex items-center gap-1 text-xs"><MailIcon size={11} /> {lead.contact?.email}</span>}
                           {lead.contact?.phone && (
                             <button 
-                              onClick={(e) => { e.stopPropagation(); dispatch(openDialer({ phone: lead.contact?.phone, leadId: lead._id })) }}
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                const fullPhone = lead.contact?.countryCode && lead.contact?.phone ? `${lead.contact.countryCode}${lead.contact.phone}` : lead.contact?.phone;
+                                dispatch(openDialer({ phone: fullPhone, leadId: lead._id })) 
+                              }}
                               className="flex items-center gap-1 text-xs text-primary hover:underline"
                             >
                               <Phone size={11} /> {lead.contact?.phone}

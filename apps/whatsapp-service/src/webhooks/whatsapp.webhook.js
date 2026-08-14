@@ -328,6 +328,7 @@ router.post(
                         tenantId,
                         branchId,
                         userId,
+                        leadId: lead._id,
                         message: {
                             direction:   'inbound',
                             from:        msg.from,
@@ -423,6 +424,7 @@ router.post(
                             await WhatsappMessage.create({
                                 tenantId,
                                 branchId,
+                                leadId: lead._id,
                                 message: {
                                     direction:    'outbound',
                                     from:         bizNumber,

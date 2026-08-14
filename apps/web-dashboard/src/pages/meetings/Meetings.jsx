@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useGetMeetingsQuery, useScheduleMeetingMutation, useUpdateMeetingMutation, useDeleteMeetingMutation, useGetBookingLinksQuery, useCreateBookingLinkMutation, useDeleteBookingLinkMutation } from '../../features/meetings/meetingApi'
-import { useGetUsersQuery } from '../../features/auth/authApi'
+import { useGetAllUsersListQuery } from '../../features/users/userApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
@@ -36,8 +36,8 @@ export default function Meetings() {
   const PAGE_SIZE = 25
 
   const { data: meetingsData, isLoading } = useGetMeetingsQuery({ page, limit: PAGE_SIZE })
-  const { data: linksData } = useGetBookingLinksQuery()
-  const { data: usersData } = useGetUsersQuery({ limit: 100 })
+  const { data: linksData, isFetching: isFetchingLinks } = useGetBookingLinksQuery(undefined, { skip: activeTab !== 'links' })
+  const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery(undefined, { skip: !showSchedule })
   const { data: fieldsData } = useGetCustomFieldsQuery()
   const [scheduleMeeting, { isLoading: scheduling }] = useScheduleMeetingMutation()
   const [updateMeeting, { isLoading: updating }] = useUpdateMeetingMutation()
@@ -120,7 +120,7 @@ export default function Meetings() {
 
   const tabs = [
     { key: 'upcoming', label: 'Upcoming', icon: Calendar, count: pagination.total || meetings.length },
-    { key: 'links', label: 'Booking Links', icon: Link2, count: bookingLinks.length },
+    { key: 'links', label: 'Booking Links', icon: Link2, count: activeTab === 'links' ? bookingLinks.length : undefined },
   ]
 
   return (
@@ -154,7 +154,12 @@ export default function Meetings() {
                     <div className="flex items-center gap-3 mt-1 text-xs text-[var(--vz-text-muted)]">
                       <span className="flex items-center gap-1"><Clock size={11} /> {new Date(m.meeting?.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       <span className="flex items-center gap-1"><Video size={11} /> {m.meeting?.duration}min</span>
-                      {m.attendees?.length > 0 && <span className="flex items-center gap-1"><Plus size={11} /> {m.attendees.length} Attendees</span>}
+                      {(m.attendees?.length > 0 || m.guest) && (
+                        <span className="flex items-center gap-1">
+                          <Plus size={11} /> 
+                          {(m.attendees?.length || 0) + (m.guest ? 1 : 0)} Attendees
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -179,7 +184,9 @@ export default function Meetings() {
 
       {activeTab === 'links' && (
         <Card>
-          {bookingLinks.length === 0 ? (
+          {isFetchingLinks ? (
+            <div className="text-center py-12 text-[var(--vz-text-muted)]">Loading links...</div>
+          ) : bookingLinks.length === 0 ? (
             <EmptyState icon={Link2} title="No booking links" description="Create a shareable link so leads can book meetings with you" />
           ) : (
             <div className="space-y-3">
@@ -187,7 +194,14 @@ export default function Meetings() {
                 <div key={link._id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)]">
                   <div>
                     <p className="text-sm font-medium text-[var(--vz-heading)]">{link.title}</p>
-                    <p className="text-xs text-primary mt-0.5">{window.location.origin}/book/{link.slug}</p>
+                    <a 
+                      href={`${window.location.origin}/book/${link.slug}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-xs text-primary mt-0.5 hover:underline block"
+                    >
+                      {window.location.origin}/book/{link.slug}
+                    </a>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/book/${link.slug}`); toast('Link copied!', 'success') }}>
@@ -220,7 +234,7 @@ export default function Meetings() {
                 onChange={(val) => setSelectedAttendee(val)}
                 className="flex-1"
                 options={[
-                  { value: '', label: 'Select User' },
+                  { value: '', label: isFetchingUsers ? 'Loading users...' : 'Select User' },
                   ...(usersData?.data || []).map(u => ({ value: u._id, label: `${u.name} (${u.role})` }))
                 ]}
               />
@@ -340,11 +354,13 @@ export default function Meetings() {
       </Modal>
 
       {/* Detail Modal */}
-      <MeetingDetail 
-        isOpen={showDetail} 
-        onClose={() => setShowDetail(false)} 
-        meeting={selectedMeeting} 
-      />
+      {showDetail && (
+        <MeetingDetail 
+          isOpen={showDetail} 
+          onClose={() => setShowDetail(false)} 
+          meeting={selectedMeeting} 
+        />
+      )}
     </>
   )
 }

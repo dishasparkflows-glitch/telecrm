@@ -138,7 +138,8 @@ export default function LeadDetail() {
 
   const handleCall = () => {
     if (lead.contact?.phone) {
-      dispatch(openDialer({ phone: lead.contact?.phone, leadId: lead._id }))
+      const fullPhone = lead.contact?.countryCode && lead.contact?.phone ? `${lead.contact.countryCode}${lead.contact.phone}` : lead.contact?.phone;
+      dispatch(openDialer({ phone: fullPhone, leadId: lead._id }))
     }
   }
 
