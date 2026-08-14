@@ -7,10 +7,14 @@ const { ApiResponse, ApiError, asyncHandler } = require('@sparkcrm/shared-utils'
  */
 const getAllDefinitions = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const definitions = await CustomFieldDefinition.find({
-        tenantId,
-        isActive: true
-    }).sort({ order: 1 });
+    const { entity } = req.query;
+
+    const filter = { tenantId, isActive: true };
+    if (entity) {
+        filter.entity = entity;
+    }
+
+    const definitions = await CustomFieldDefinition.find(filter).sort({ order: 1 });
     ApiResponse.success(res, definitions);
 });
 

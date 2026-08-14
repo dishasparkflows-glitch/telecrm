@@ -3,6 +3,7 @@ const { ApiResponse, ApiError, asyncHandler,ROLES, buildScopeFilter, getPresigne
 const { getRolesBulk, getBranchesBulk } = require('../services/serviceClients/tenant.client');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const crypto = require('crypto');
+const { validateCustomFields } = require('../utils/customFieldValidator');
 const axios = require('axios');
 const { env } = require('@sparkcrm/shared-config');
 const { createServiceHeaders } = require('@sparkcrm/shared-middleware');
@@ -66,9 +67,13 @@ const validateRoleAssignment = async ({ tenantId, roleId, callerRole }) => {
 const inviteUser = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const invitedByUserId = req.headers['x-user-id'];
-    const { contact, roleId, branchId } = req.body;
+    const { contact, roleId, branchId, customFields } = req.body;
 
     if (!contact?.name || !contact?.email) throw ApiError.badRequest('Name and email are required');
+
+    if (customFields) {
+        await validateCustomFields(tenantId, 'User', customFields);
+    }
 
     await Promise.all([
         validateRoleAssignment({
@@ -96,6 +101,7 @@ const inviteUser = asyncHandler(async (req, res) => {
             email: contact.email.toLowerCase(),
             password: tempPassword,
             phone: contact.phone || '',
+            whatsappNumber: contact.whatsappNumber || '',
         },
         authentication: {
             isEmailVerified: true,
@@ -117,6 +123,7 @@ const inviteUser = asyncHandler(async (req, res) => {
         },
         roleId: roleId || null,
         branchId: branchId || null,
+        customFields: customFields || {},
     });
 
     // Send invite email
@@ -198,15 +205,39 @@ const getUsers = asyncHandler(async (req, res) => {
  * Get all active users id and name for dropdowns
  */
 const getAllUsersList = asyncHandler(async (req, res) => {
+    const { branchId } = req.query;
     const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
     filter.isActive = true;
+    if (branchId) filter.branchId = branchId;
 
-    const users = await User.find(filter).select('_id contact.name contact.email').sort({ 'contact.name': 1 });
+    const users = await User.find(filter).select('_id contact.name contact.email roleId branchId profile.avatar').sort({ 'contact.name': 1 });
 
-    const formattedUsers = users.map((u) => ({
-        _id: u._id,
-        name: u.contact?.name || '',
-        email: u.contact?.email || '',
+    const tenantId = req.headers['x-tenant-id'];
+    const roleIds = [...new Set(users.map(u => u.roleId).filter(Boolean).map(String))];
+    const branchIds = [...new Set(users.map(u => u.branchId).filter(Boolean).map(String))];
+
+    const [roles, branches] = await Promise.all([
+        getRolesBulk(tenantId, roleIds),
+        getBranchesBulk(tenantId, branchIds),
+    ]);
+
+    const roleMap = new Map(roles.map(r => [String(r._id), r]));
+    const branchMap = new Map(branches.map(b => [String(b._id), b]));
+
+    const formattedUsers = await Promise.all(users.map(async (u) => {
+        const userObj = {
+            _id: u._id,
+            name: u.contact?.name || '',
+            email: u.contact?.email || '',
+            roleId: roleMap.get(String(u.roleId)) || u.roleId,
+            branchId: branchMap.get(String(u.branchId)) || u.branchId
+        };
+        
+        if (u.profile?.avatar) {
+            userObj.avatar = await getPresignedDownloadUrl(u.profile.avatar);
+        }
+        
+        return userObj;
     }));
 
     ApiResponse.success(res, formattedUsers);
@@ -236,10 +267,14 @@ const getUserById = asyncHandler(async (req, res) => {
  */
 const updateUser = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const { contact, roleId, branchId, isActive } = req.body;
+    const { contact, roleId, branchId, isActive, customFields } = req.body;
 
     const user = await User.findOne({ _id: req.params.id, tenantId });
     if (!user) throw ApiError.notFound('User not found');
+    
+    if (customFields) {
+        await validateCustomFields(tenantId, 'User', customFields);
+    }
     await Promise.all([
         validateRoleAssignment({ tenantId, roleId, callerRole: req.headers['x-user-role'] }),
         validateBranchAssignment({ tenantId, branchId }),
@@ -258,6 +293,7 @@ const updateUser = asyncHandler(async (req, res) => {
     if (roleId !== undefined) user.roleId = roleId || null;
     if (branchId !== undefined) user.branchId = branchId || null;
     if (isActive !== undefined) user.isActive = isActive;
+    if (customFields !== undefined) user.customFields = customFields;
 
     await user.save();
     ApiResponse.success(res, user.toJSON(), 'User updated');

@@ -235,7 +235,7 @@ userSchema.methods.resetLoginAttempts = async function () {
 
 // ─── Remove sensitive fields from JSON ───
 userSchema.methods.toJSON = function () {
-    const obj = this.toObject({ virtuals: true });
+    const obj = this.toObject({ virtuals: true, flattenMaps: true });
     obj.name = obj.name || this.contact?.name || '';
     obj.email = obj.email || this.contact?.email || '';
     obj.phone = obj.phone || this.contact?.phone || '';

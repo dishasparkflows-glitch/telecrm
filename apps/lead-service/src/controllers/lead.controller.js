@@ -9,6 +9,7 @@ const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord }
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { auditLogger } = require('@sparkcrm/shared-middleware');
 const { getUsersBulk } = require('../services/serviceClients/user.client');
+const { validateCustomFields } = require('../utils/customFieldValidator');
 
 const LEAD_SORT_FIELDS = new Set(['createdAt', 'updatedAt', 'firstName', 'lastName', 'stage', 'priority', 'score', 'scoring.score', 'expectedValue', 'followUpAt']);
 
@@ -21,6 +22,10 @@ const createLead = asyncHandler(async (req, res) => {
     const userId = req.headers['x-user-id'];
     const scope = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'leads' });
     const leadData = pickLeadCreateInput(req.body);
+
+    if (leadData.customFields) {
+        await validateCustomFields(tenantId, 'Lead', leadData.customFields);
+    }
 
     const result = await createOrUpdateLeadFromSource({
         tenantId,
@@ -154,6 +159,10 @@ const updateLead = asyncHandler(async (req, res) => {
     const lead = await Lead.findOne({ _id: leadId, tenantId });
     if (!lead) throw ApiError.notFound('Lead not found');
     const existingdata = lead.toObject();
+
+    if (changes.customFields) {
+        await validateCustomFields(tenantId, 'Lead', changes.customFields);
+    }
 
     // Check access — agents can only edit their assigned leads
     if (!canAccessRecord(req, lead, { ownerField: 'assignedTo', module: 'leads' })) {

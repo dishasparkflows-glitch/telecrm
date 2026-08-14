@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Search, Filter, UserPlus, Building2, Trash2, Edit3, X, Users, Shield, Circle, Download, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, Phone } from 'lucide-react'
 import { useListUsersQuery, useInviteUserMutation, useUpdateUserMutation, useDeleteUserMutation } from '../../features/users/userApi'
+import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
 import { useListRolesCompactQuery } from '../../features/roles/roleApi'
 import { useListBranchesQuery } from '../../features/branches/branchApi'
 import { useSelector } from 'react-redux'
@@ -96,10 +97,11 @@ export default function UsersList() {
   const [updateUser, { isLoading: updatingUser }] = useUpdateUserMutation()
   const [deleteUser, { isLoading: deletingUser }] = useDeleteUserMutation()
   const [showInvite, setShowInvite] = useState(false)
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '', phone: '', roleId: '', branchId: '', password: '' })
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', phone: '', whatsappNumber: '', countryCode: '+91', roleId: '', branchId: '', password: '' })
   const [showEdit, setShowEdit] = useState(false)
   const [editUserForm, setEditUserForm] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, user: null })
+  const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'User' }, { skip: !showInvite && !showEdit })
   const { user: currentUser } = useSelector((s) => s.auth)
 
   const users = usersResp?.data || []
@@ -123,20 +125,31 @@ export default function UsersList() {
 
   const handleInvite = async () => {
     if (!inviteForm.name || !inviteForm.email) return toast('Name and email are required', 'warning')
+    
+    const userFields = fieldsData?.data || [];
+    for (const field of userFields) {
+      if (field.isRequired && (!inviteForm.customFields || !inviteForm.customFields[field.name])) {
+        return toast(`${field.label || field.name} is required`, 'error')
+      }
+    }
+
     try {
       const payload = {
         contact: {
           name: inviteForm.name,
           email: inviteForm.email,
           phone: inviteForm.phone,
+          whatsappNumber: inviteForm.whatsappNumber,
+          countryCode: inviteForm.countryCode,
           password: inviteForm.password,
         },
         roleId: inviteForm.roleId,
         branchId: inviteForm.branchId,
+        customFields: inviteForm.customFields || {},
       }
       await inviteUser(payload).unwrap()
       setShowInvite(false)
-      setInviteForm({ name: '', email: '', phone: '', roleId: '', branchId: '', password: '' })
+      setInviteForm({ name: '', email: '', phone: '', whatsappNumber: '', countryCode: '+91', roleId: '', branchId: '', password: '', customFields: {} })
     } catch (err) { toast(err.data?.message || 'Failed to invite user', 'error') }
   }
 
@@ -146,25 +159,38 @@ export default function UsersList() {
       name: user.contact?.name || '',
       email: user.contact?.email || '',
       phone: user.contact?.phone || '',
+      whatsappNumber: user.contact?.whatsappNumber || '',
+      countryCode: user.contact?.countryCode || '+91',
       role: user.role,
       roleId: typeof user.roleId === 'object' ? user.roleId?._id : user.roleId,
       branchId: typeof user.branchId === 'object' ? user.branchId?._id : user.branchId,
       isActive: user.isActive,
       avatar: user.contact?.avatar || '',
-      password: ''
+      password: '',
+      customFields: user.customFields || {}
     })
     setShowEdit(true)
   }
 
   const handleUpdate = async (e) => {
     e.preventDefault()
+
+    const userFields = fieldsData?.data || [];
+    for (const field of userFields) {
+      if (field.isRequired && (!editUserForm.customFields || !editUserForm.customFields[field.name])) {
+        return toast(`${field.label || field.name} is required`, 'error')
+      }
+    }
+
     try {
-      const { id, name, email, phone, avatar, password, role, roleId, branchId, isActive } = editUserForm
+      const { id, name, email, phone, whatsappNumber, countryCode, avatar, password, role, roleId, branchId, isActive, customFields } = editUserForm
       const payload = {
         contact: {
           name,
           email,
           phone,
+          whatsappNumber,
+          countryCode,
           avatar,
           ...(password ? { password } : {}),
         },
@@ -172,6 +198,7 @@ export default function UsersList() {
         roleId,
         branchId,
         isActive,
+        customFields: customFields || {},
       }
       await updateUser({ id, ...payload }).unwrap()
       setShowEdit(false)
@@ -482,9 +509,47 @@ export default function UsersList() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Phone" type="tel" placeholder="+91 98765 43210" value={inviteForm.phone} onChange={(e) => setInviteForm({ ...inviteForm, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Phone</label>
+              <div className="flex rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 transition-all overflow-hidden">
+                <div className="bg-[var(--vz-bg-soft)] text-sm text-[var(--vz-heading)] border-r border-[var(--vz-input-border)] py-2 px-3 flex items-center gap-1.5 select-none">
+                  <span>🇮🇳</span>
+                  <span>+91</span>
+                </div>
+                <input
+                  type="tel"
+                  maxLength={10}
+                  placeholder="Phone number"
+                  className="w-full bg-transparent text-sm text-[var(--vz-heading)] px-3 py-2 outline-none placeholder:text-[var(--vz-text-muted)]"
+                  value={inviteForm.phone}
+                  onChange={(e) => setInviteForm({ ...inviteForm, phone: e.target.value.replace(/[^\d]/g, '') })}
+                />
+              </div>
+            </div>
+            <Input label="WhatsApp Number" type="tel" placeholder="e.g. +919876543210" value={inviteForm.whatsappNumber} onChange={(e) => setInviteForm({ ...inviteForm, whatsappNumber: e.target.value })} />
             <Input label="Set Password" type="password" placeholder="••••••••" value={inviteForm.password} onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })} />
           </div>
+
+          {/* User Custom Fields */}
+          {fieldsData?.data?.length > 0 && (
+            <div className="pt-3 border-t border-[var(--vz-border)] space-y-3">
+              <h6 className="text-[10px] font-bold text-[var(--vz-text-muted)] uppercase tracking-wider">Additional User Details</h6>
+              <div className="grid grid-cols-2 gap-3">
+                {fieldsData.data.map(field => (
+                  <div key={field._id}>
+                    <label className="block text-xs font-semibold text-[var(--vz-heading)] mb-1">{field.name}</label>
+                    <Input 
+                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                      placeholder={field.name}
+                      value={inviteForm.customFields?.[field.name] || ''}
+                      onChange={(e) => setInviteForm({ ...inviteForm, customFields: { ...inviteForm.customFields, [field.name]: e.target.value } })}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <p className="text-xs text-[var(--vz-text-muted)] italic">
             Note: An invitation email will be sent. If you specify a password, the user can log in immediately. Otherwise, a random temporary password will be generated.
           </p>
@@ -543,9 +608,46 @@ export default function UsersList() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Phone" placeholder="+91 ..." value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value.replace(/[^\d\+\-\(\)\s]/g, '') })} />
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Phone</label>
+              <div className="flex rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30 transition-all overflow-hidden">
+                <div className="bg-[var(--vz-bg-soft)] text-sm text-[var(--vz-heading)] border-r border-[var(--vz-input-border)] py-2 px-3 flex items-center gap-1.5 select-none">
+                  <span>🇮🇳</span>
+                  <span>+91</span>
+                </div>
+                <input
+                  type="tel"
+                  maxLength={10}
+                  placeholder="Phone number"
+                  className="w-full bg-transparent text-sm text-[var(--vz-heading)] px-3 py-2 outline-none placeholder:text-[var(--vz-text-muted)]"
+                  value={editUserForm.phone}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value.replace(/[^\d]/g, '') })}
+                />
+              </div>
+            </div>
+              <Input label="WhatsApp Number" type="tel" placeholder="e.g. +919876543210" value={editUserForm.whatsappNumber} onChange={(e) => setEditUserForm({ ...editUserForm, whatsappNumber: e.target.value })} />
               <Input label="Change Password?" type="password" placeholder="Leave blank to keep same" value={editUserForm.password} onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })} />
             </div>
+
+            {/* Dynamic User Fields */}
+            {fieldsData?.data?.length > 0 && (
+              <div className="pt-3 border-t border-[var(--vz-border)] space-y-3">
+                <h6 className="text-[10px] font-bold text-[var(--vz-text-muted)] uppercase tracking-wider">Additional Information</h6>
+                <div className="grid grid-cols-2 gap-3">
+                  {fieldsData.data.map(field => (
+                    <div key={field._id}>
+                      <label className="block text-xs font-semibold text-[var(--vz-heading)] mb-1">{field.name}</label>
+                      <Input 
+                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                        placeholder={field.name}
+                        value={editUserForm.customFields?.[field.name] || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, customFields: { ...editUserForm.customFields, [field.name]: e.target.value } })}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-2 pt-2">
               <input type="checkbox" id="user_active_list" checked={editUserForm.isActive} onChange={(e) => setEditUserForm({ ...editUserForm, isActive: e.target.checked })} />
               <label htmlFor="user_active_list" className="text-sm font-medium text-[var(--vz-heading)]">Account Active</label>

@@ -13,6 +13,7 @@ const {
 const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { getUsersBulk } = require('../services/serviceClients/user.client');
+const { validateCustomFields } = require('../utils/customFieldValidator');
 
 const zonedSlot = (date, timezone) => {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -59,6 +60,10 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
     const userId = req.headers['x-user-id'];
     const scope = buildScopeFilter(req, { ownerField: 'hostId', module: 'meetings' });
     const meetingData = pickMeetingCreateInput(req.body);
+    
+    if (meetingData.customFields) {
+        await validateCustomFields(scope.tenantId, 'Meeting', meetingData.customFields);
+    }
     
     let conference = undefined;
     let calendar = undefined;
@@ -280,6 +285,10 @@ const updateMeeting = asyncHandler(async (req, res) => {
     if (!meeting) throw ApiError.notFound('Meeting not found');
     if (!canAccessMeeting(req, meeting)) {
         throw ApiError.forbidden('You do not have access to this meeting');
+    }
+
+    if (changes.customFields) {
+        await validateCustomFields(tenantId, 'Meeting', changes.customFields);
     }
 
     Object.assign(meeting, changes);

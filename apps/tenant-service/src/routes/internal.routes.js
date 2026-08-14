@@ -8,6 +8,31 @@ const Module = require('../models/Module');
 const Branch = require('../models/Branch');
 const { seedTenantDefaults } = require('../helpers/seedDefaults');
 const { filterModulesForTenantPlan } = require('../utils/moduleAccess');
+const CustomFieldDefinition = require('../models/CustomFieldDefinition');
+
+/**
+ * GET /internal/custom-fields/:entity
+ * Internal endpoint for fetching custom field definitions
+ */
+router.get(
+    '/custom-fields/:entity',
+    asyncHandler(async (req, res) => {
+        // internal router passes identity in headers (or req object in some setups)
+        // Check how it receives tenantId. Actually, req.query.tenantId or req.headers['x-tenant-id']
+        // Let's use req.query.tenantId for internal bulk get
+        const { tenantId } = req.query;
+        if (!tenantId) {
+            return res.status(400).json({ success: false, message: 'Tenant ID required' });
+        }
+        const { entity } = req.params;
+        const definitions = await CustomFieldDefinition.find({
+            tenantId,
+            entity,
+            isActive: true
+        }).sort({ order: 1 });
+        res.json({ success: true, data: definitions });
+    })
+);
 
 
 /**

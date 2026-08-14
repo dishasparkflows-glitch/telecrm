@@ -39,7 +39,7 @@ export default function Meetings() {
   const { data: meetingsData, isLoading } = useGetMeetingsQuery({ page, limit: PAGE_SIZE })
   const { data: linksData, isFetching: isFetchingLinks } = useGetBookingLinksQuery(undefined, { skip: activeTab !== 'links' })
   const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery(undefined, { skip: !showSchedule })
-  const { data: fieldsData } = useGetCustomFieldsQuery()
+  const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Meeting' }, { skip: !showSchedule && !showEdit })
   const [scheduleMeeting, { isLoading: scheduling }] = useScheduleMeetingMutation()
   const [updateMeeting, { isLoading: updating }] = useUpdateMeetingMutation()
 
@@ -54,6 +54,14 @@ export default function Meetings() {
   const handleSchedule = async () => {
     try {
       const { dateTime, leadId, title, duration, meetingUrl, attendees, provider, meetingType, location, customFields } = meetingData
+      
+      const meetingFields = fieldsData?.data || [];
+      for (const field of meetingFields) {
+        if (field.isRequired && !customFields[field.name]) {
+          return toast(`${field.label} is required`, 'error')
+        }
+      }
+
       const payload = { 
         provider: meetingType === 'online' ? provider : null,
         meetingType,
@@ -300,11 +308,11 @@ export default function Meetings() {
           </div>
 
           {/* Dynamic Custom Fields */}
-          {fieldsData?.data?.filter(f => f.targetEntity === 'Meeting').length > 0 && (
+          {fieldsData?.data?.length > 0 && (
             <div className="pt-3 border-t border-[var(--vz-border)] space-y-3">
-              <h6 className="text-xs font-bold text-[var(--vz-heading)] uppercase tracking-wider text-primary">Meeting Details (Custom)</h6>
+              <h6 className="text-xs font-bold text-[var(--vz-heading)] uppercase tracking-wider text-primary">Additional Information</h6>
               <div className="grid grid-cols-2 gap-3">
-                {fieldsData.data.filter(f => f.targetEntity === 'Meeting').map(field => (
+                {fieldsData.data.map(field => (
                   <div key={field._id} className={field.type === 'textarea' ? 'col-span-2' : ''}>
                     <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1.5">{field.name} {field.required && <span className="text-danger">*</span>}</label>
                     <Input 

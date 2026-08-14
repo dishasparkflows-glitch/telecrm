@@ -84,7 +84,7 @@ export default function LeadsList() {
   })
 
   const { data: usersData } = useGetUsersQuery()
-  const { data: fieldsData } = useGetCustomFieldsQuery()
+  const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Lead' }, { skip: !showAdd })
   const { data: profileData } = useGetProfileQuery()
   const [createLead, { isLoading: creating }] = useCreateLeadMutation()
   const [importLeads, { isLoading: importing }] = useImportLeadsMutation()
@@ -122,6 +122,13 @@ export default function LeadsList() {
     if (!newLead.contact.lastName?.trim()) return toast('Last name is required', 'error')
     if (!newLead.contact.email?.trim()) return toast('Email is required', 'error')
     if (!newLead.contact.phone?.trim() || newLead.contact.phone.length !== 10) return toast('Phone number must be exactly 10 digits', 'error')
+
+    const leadFields = fieldsData?.data || [];
+    for (const field of leadFields) {
+      if (field.isRequired && !newLead.customFields[field.name]) {
+        return toast(`${field.label} is required`, 'error')
+      }
+    }
 
     try {
       const contactData = { ...newLead.contact };
@@ -600,11 +607,11 @@ export default function LeadsList() {
           </div>
 
           {/* Dynamic Custom Fields */}
-          {fieldsData?.data?.filter(f => f.targetEntity === 'Lead').length > 0 && (
+          {fieldsData?.data?.length > 0 && (
             <div className="pt-3 border-t border-[var(--vz-border)] space-y-3">
               <h6 className="text-xs font-bold text-[var(--vz-heading)] uppercase tracking-wider text-primary">Additional Information</h6>
               <div className="grid grid-cols-2 gap-3">
-                {fieldsData.data.filter(f => f.targetEntity === 'Lead').map(field => (
+                {fieldsData.data.map(field => (
                   <div key={field._id} className={field.type === 'textarea' ? 'col-span-2' : ''}>
                     <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1.5">{field.name} {field.required && <span className="text-danger">*</span>}</label>
                     {field.type === 'textarea' ? (

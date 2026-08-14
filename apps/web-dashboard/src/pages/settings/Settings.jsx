@@ -10,7 +10,7 @@ import {
 } from '../../features/tenant/tenantApi'
 import { useGetUploadUrlMutation } from '../../features/uploads/uploadApi'
 import {
-  useListUsersQuery,
+  useGetAllUsersListQuery,
   useInviteUserMutation,
   useUpdateUserMutation
 } from '../../features/users/userApi'
@@ -143,15 +143,19 @@ const TabItem = ({ icon: Icon, label, active, onClick, count }) => (
 
 export default function Settings() {
   const toast = useToast()
-  const [activeTab, setActiveTab] = useState('company')
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('meta')) return 'lead_sources'
+    }
+    return 'company'
+  })
   const { user: currentUser, activeBranchId } = useSelector((s) => s.auth)
   const [show2FAModal, setShow2FAModal] = useState(false)
   const fileInputRef = useRef(null)
 
   // Queries
   const { data: profileData, refetch: refetchProfile } = useGetProfileQuery()
-  const [usersPage, setUsersPage] = useState(1)
-  const [allUsers, setAllUsers] = useState([])
   const [assignmentForm, setAssignmentForm] = useState({
     strategy: 'manual',
     isActive: true,
@@ -159,8 +163,8 @@ export default function Settings() {
   })
   
   const shouldFetchUsers = activeTab === 'lead_sources' || (activeTab === 'assignment' && assignmentForm.strategy !== 'manual')
-  const { data: usersResp, isLoading: usersLoading, isFetching: usersFetching } = useListUsersQuery(
-    { branchId: activeBranchId, page: usersPage, limit: 16 }, 
+  const { data: compactUsersResp, isLoading: usersLoading, isFetching: usersFetching } = useGetAllUsersListQuery(
+    { branchId: activeBranchId }, 
     { skip: !shouldFetchUsers }
   )
   const { data: rolesResp } = useListRolesQuery(undefined, { skip: activeTab !== 'assignment' && activeTab !== 'users' })
@@ -207,25 +211,8 @@ export default function Settings() {
   const googleStatus = googleStatusResp?.data || { connected: false }
 
   const profile = profileData?.data || {}
-  const users = allUsers
-
-  useEffect(() => {
-    if (usersResp?.data) {
-      if (usersPage === 1) {
-        setAllUsers(usersResp.data)
-      } else {
-        setAllUsers(prev => {
-          const existingIds = new Set(prev.map(u => u._id))
-          const newUsers = usersResp.data.filter(u => !existingIds.has(u._id))
-          return [...prev, ...newUsers]
-        })
-      }
-    }
-  }, [usersResp?.data, usersPage])
-
-  useEffect(() => {
-    setUsersPage(1)
-  }, [activeBranchId])
+  const users = compactUsersResp?.data || []
+  const compactUsers = users
   const roles = rolesResp?.data || []
   const branches = branchesResp?.data || []
   const referralCode = referralData?.data?.code || ''
@@ -303,24 +290,16 @@ export default function Settings() {
     const params = new URLSearchParams(window.location.search)
     const metaStatus = params.get('meta')
     if (!metaStatus) return
-    setActiveTab('lead_sources')
     if (metaStatus === 'connected') toast('Meta account connected successfully', 'success')
     else toast(params.get('message') || 'Meta account connection failed', 'error')
     window.history.replaceState({}, '', window.location.pathname)
   }, [toast])
 
-  // Sync activeBranchId to invite form when it changes
-  useEffect(() => {
-    if (activeBranchId && !inviteForm.branchId) {
-      setInviteForm(prev => ({ ...prev, branchId: activeBranchId }))
-    }
-  }, [activeBranchId, inviteForm.branchId])
-
-  // Sync form state
+  // Tab state is handled during initial render now
   useEffect(() => {
     if (profileData?.data) {
       const company = profileData.data.company || {}
-      setCompanyForm({
+      setTimeout(() => setCompanyForm({
         companyName: company.name || '',
         email: company.email || '',
         phone: company.phone || '',
@@ -328,26 +307,26 @@ export default function Settings() {
         address: company.address || '',
         timezone: profileData.data.timezone || 'Asia/Kolkata',
         website: company.website || ''
-      })
+      }), 0)
     }
   }, [profileData])
 
   useEffect(() => {
     if (profileData?.data?.pipelineStages) {
-      setPipelineDraft([...profileData.data.pipelineStages].sort((a, b) => (a.order || 0) - (b.order || 0)))
+      setTimeout(() => setPipelineDraft([...profileData.data.pipelineStages].sort((a, b) => (a.order || 0) - (b.order || 0))), 0)
     }
   }, [profileData])
 
   useEffect(() => {
     const policy = assignmentPolicyResp?.data
     if (policy) {
-      setAssignmentForm({
+      setTimeout(() => setAssignmentForm({
         strategy: policy.strategy || 'manual',
         isActive: policy.isActive !== false,
         agentIds: (policy.agentIds || []).map(String),
-      })
+      }), 0)
     } else {
-      setAssignmentForm({ strategy: 'manual', isActive: true, agentIds: [] })
+      setTimeout(() => setAssignmentForm({ strategy: 'manual', isActive: true, agentIds: [] }), 0)
     }
   }, [assignmentPolicyResp])
 
@@ -634,6 +613,14 @@ export default function Settings() {
 
   const handleInvite = async () => {
     if (!inviteForm.name || !inviteForm.email) return toast('Name and email required', 'error')
+
+    const userFields = customFieldsResp?.data?.filter(f => f.entity === 'User') || [];
+    for (const field of userFields) {
+      if (field.isRequired && (!inviteForm.customFields || !inviteForm.customFields[field.name])) {
+        return toast(`${field.label} is required`, 'error')
+      }
+    }
+
     try {
       const payload = {
         contact: {
@@ -649,19 +636,27 @@ export default function Settings() {
         role: inviteForm.role,
         roleId: inviteForm.roleId,
         branchId: inviteForm.branchId,
+        customFields: inviteForm.customFields || {},
       }
       await inviteUser(payload).unwrap()
       toast('Invitation sent successfully', 'success')
       setShowInvite(false)
-      setInviteForm({ name: '', email: '', phone: '', role: 'agent', roleId: '', branchId: '', password: '' })
+      setInviteForm({ name: '', email: '', phone: '', role: 'agent', roleId: '', branchId: activeBranchId || '', password: '' })
     } catch (err) {
       toast(err.data?.message || 'Failed to invite', 'error')
     }
   }
 
   const handleUpdateUser = async () => {
+    const userFields = customFieldsResp?.data?.filter(f => f.entity === 'User') || [];
+    for (const field of userFields) {
+      if (field.isRequired && (!editUserForm.customFields || !editUserForm.customFields[field.name])) {
+        return toast(`${field.label} is required`, 'error')
+      }
+    }
+
     try {
-        const { id, name, email, phone, avatar, password, role, roleId, branchId, isBranchLeader, isActive } = editUserForm
+        const { id, name, email, phone, avatar, password, role, roleId, branchId, isBranchLeader, isActive, customFields } = editUserForm
         const payload = {
           contact: {
             name,
@@ -675,6 +670,7 @@ export default function Settings() {
           branchId,
           isBranchLeader,
           isActive,
+          customFields: customFields || {},
         }
         await updateUser({ id, ...payload }).unwrap()
         toast('User updated successfully', 'success')
@@ -707,13 +703,8 @@ export default function Settings() {
   const getBranchName = (id) => branches.find(b => b._id === id)?.name || 'Head Office'
   const getRoleName = (id) => roles.find(r => r._id === id)?.name || 'Agent'
 
-  const handleUsersScroll = (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    if (scrollHeight - scrollTop <= clientHeight + 10) {
-      if (!usersFetching && usersResp?.pagination && usersResp.pagination.page < usersResp.pagination.totalPages) {
-        setUsersPage(prev => prev + 1);
-      }
-    }
+  const handleUsersScroll = () => {
+    // Pagination removed, users are fetched compactly
   }
 
   return (
@@ -986,7 +977,7 @@ export default function Settings() {
                         onChange={(val) => setLeadSourceApiForm({ ...leadSourceApiForm, defaultAssignedTo: val })}
                         options={[
                           { value: '', label: 'Use assignment policy' },
-                          ...users.filter((user) => user.isActive !== false).map((user) => ({ value: user._id, label: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email }))
+                          ...compactUsers.map((user) => ({ value: user._id, label: user.name || user.email }))
                         ]}
                       />
                     </div>
@@ -1151,7 +1142,7 @@ export default function Settings() {
                         onChange={(val) => setLeadSourceMappingForm({ ...leadSourceMappingForm, defaultAssignedTo: val })}
                         options={[
                           { value: '', label: 'Use assignment policy' },
-                          ...users.filter((u) => u.isActive !== false).map((u) => ({ value: u._id, label: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email }))
+                          ...compactUsers.map((u) => ({ value: u._id, label: u.name || u.email }))
                         ]}
                       />
                     </div>
@@ -1318,7 +1309,7 @@ export default function Settings() {
                             <div className="flex items-center justify-between gap-3">
                               <div>
                                 <p className="text-sm font-semibold text-[var(--vz-heading)]">{u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email}</p>
-                                <p className="text-[11px] text-[var(--vz-text-muted)]">{getRoleName(u.roleId)} · {getBranchName(u.branchId)}</p>
+                                <p className="text-[11px] text-[var(--vz-text-muted)]">{u.roleId?.name || getRoleName(u.roleId)} · {u.branchId?.name || getBranchName(u.branchId)}</p>
                               </div>
                               {assignmentForm.agentIds.includes(u._id) && <CheckCircle2 size={16} className="text-primary shrink-0" />}
                             </div>
@@ -1345,13 +1336,7 @@ export default function Settings() {
                     <p className="text-xs text-[var(--vz-text-muted)]">Extend any CRM entity with dynamic data fields</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Select 
-                      value={fieldFilter} 
-                      onChange={(val) => setFieldFilter(val)}
-                      className="w-40"
-                      options={['Lead', 'User', 'Meeting', 'Branch', 'Role'].map(ent => ({ value: ent, label: `${ent} Fields` }))}
-                    />
-                    <Button size="sm" onClick={() => { setFieldForm({ ...fieldForm, targetEntity: fieldFilter }); setShowAddField(true); }}>
+                    <Button size="sm" onClick={() => { setFieldForm({ ...fieldForm, targetEntity: 'Lead' }); setShowAddField(true); }}>
                       <Plus size={14} className="mr-1.5" /> Add Field
                     </Button>
                   </div>
@@ -1361,33 +1346,44 @@ export default function Settings() {
                   <div className="py-20 text-center">
                     <Loader2 size={32} className="text-primary animate-spin inline-block" />
                   </div>
-                ) : (!customFieldsResp?.data || customFieldsResp.data.filter(f => f.entity === fieldFilter).length === 0) ? (
-                  <EmptyState icon={Database} title={`No ${fieldFilter} Fields`} description={`You haven't added any custom fields for ${fieldFilter}s yet.`} />
+                ) : (!customFieldsResp?.data || customFieldsResp.data.length === 0) ? (
+                  <EmptyState icon={Database} title={`No Custom Fields`} description={`You haven't added any custom fields yet.`} />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {customFieldsResp.data.filter(f => f.entity === fieldFilter).map((f) => (
-                      <div key={f._id} className="p-4 rounded-xl border border-[var(--vz-border)] hover:bg-[var(--vz-body-bg)]/50 transition-all cursor-default group">
-                        <div className="flex items-start justify-between mb-2">
-                           <div className="w-8 h-8 rounded-lg bg-info/10 text-info flex items-center justify-center">
-                              {f.type === 'text' && <LayoutGrid size={16} />}
-                              {f.type === 'number' && <p className="font-bold text-xs">#</p>}
-                              {f.type === 'date' && <Clock size={16} />}
-                              {!['text','number','date'].includes(f.type) && <Smartphone size={16} />}
-                           </div>
-                           <div className="flex gap-1">
-                             {f.required && <Badge color="danger">Req</Badge>}
-                             <Badge color="soft-primary" className="capitalize">{f.type}</Badge>
-                           </div>
+                  <div className="p-4 space-y-8">
+                    {['Lead', 'User', 'Meeting', 'Branch', 'Role', 'Module'].map(ent => {
+                      const fieldsForEntity = customFieldsResp.data.filter(f => f.entity === ent);
+                      if (fieldsForEntity.length === 0) return null;
+                      return (
+                        <div key={ent} className="space-y-3">
+                          <h6 className="text-xs font-bold text-[var(--vz-heading)] uppercase tracking-wider border-b border-[var(--vz-border)] pb-2">{ent} Fields</h6>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {fieldsForEntity.map((f) => (
+                              <div key={f._id} className="p-4 rounded-xl border border-[var(--vz-border)] hover:bg-[var(--vz-body-bg)]/50 transition-all cursor-default group">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="w-8 h-8 rounded-lg bg-info/10 text-info flex items-center justify-center">
+                                      {f.type === 'text' && <LayoutGrid size={16} />}
+                                      {f.type === 'number' && <p className="font-bold text-xs">#</p>}
+                                      {f.type === 'date' && <Clock size={16} />}
+                                      {!['text','number','date'].includes(f.type) && <Smartphone size={16} />}
+                                  </div>
+                                  <div className="flex gap-1">
+                                    {f.isRequired && <Badge color="danger">Req</Badge>}
+                                    <Badge color="soft-primary" className="capitalize">{f.type}</Badge>
+                                  </div>
+                                </div>
+                                <p className="text-sm font-bold text-[var(--vz-heading)]">{f.name}</p>
+                                <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-tight">{f.entity} Module</p>
+                                <div className="mt-3 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => handleDeleteField(f._id)} className="text-xs text-danger font-bold flex items-center gap-1 hover:underline">
+                                    <Trash2 size={10} /> Delete
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <p className="text-sm font-bold text-[var(--vz-heading)]">{f.name}</p>
-                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-tight">{f.targetEntity} Module</p>
-                        <div className="mt-3 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button onClick={() => handleDeleteField(f._id)} className="text-xs text-danger font-bold flex items-center gap-1 hover:underline">
-                             <Trash2 size={10} /> Delete
-                           </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </Card>

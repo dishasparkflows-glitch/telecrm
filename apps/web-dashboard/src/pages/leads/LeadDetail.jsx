@@ -43,7 +43,7 @@ export default function LeadDetail() {
   const { data, isLoading } = useGetLeadQuery(id)
   const { data: timelineData, isFetching: timelineFetching } = useGetLeadTimelineQuery({ id, limit: 100 }, { skip: activeTab !== 'timeline' })
   const { data: usersData } = useGetAllUsersListQuery()
-  const { data: fieldsData } = useGetCustomFieldsQuery()
+  const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Lead' })
   const { data: profileData } = useGetProfileQuery()
   const { data: whatsappChatData, isFetching: whatsappFetching } = useGetChatQuery(id, { skip: activeTab !== 'whatsapp' })
   const { data: callLogsData, isFetching: callsFetching } = useGetCallLogsQuery({ leadId: id, limit: 50 }, { skip: activeTab !== 'calls' })
@@ -122,6 +122,14 @@ export default function LeadDetail() {
     if (!editForm.contact.lastName?.trim()) return toast('Last name is required', 'error')
     if (!editForm.contact.email?.trim()) return toast('Email is required', 'error')
     if (!editForm.contact.phone?.trim() || editForm.contact.phone.length !== 10) return toast('Phone number must be exactly 10 digits', 'error')
+    
+    const leadFields = fieldsData?.data || [];
+    for (const field of leadFields) {
+      if (field.isRequired && !editForm.customFields[field.name]) {
+        return toast(`${field.label} is required`, 'error')
+      }
+    }
+
     try {
       await updateLead({ id, ...editForm }).unwrap()
       toast('Lead updated', 'success')
@@ -312,11 +320,11 @@ export default function LeadDetail() {
                 )}
 
                 {/* Custom Fields Display */}
-                {fieldsData?.data?.filter(f => f.targetEntity === 'Lead').length > 0 && (
+                {fieldsData?.data?.length > 0 && (
                   <div className="space-y-3">
                     <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase">Custom Details</p>
                     <div className="grid grid-cols-2 gap-4">
-                      {fieldsData.data.filter(f => f.targetEntity === 'Lead').map(field => (
+                      {fieldsData.data.map(field => (
                         <div key={field._id} className="p-3 rounded-lg border border-[var(--vz-border)] bg-[var(--vz-body-bg)]/50">
                           <p className="text-[10px] text-[var(--vz-text-muted)] uppercase font-bold mb-1">{field.name}</p>
                           <p className="text-sm text-[var(--vz-heading)] font-medium">
@@ -514,11 +522,11 @@ export default function LeadDetail() {
             }} />
             
             {/* Dynamic Custom Fields in Edit */}
-            {fieldsData?.data?.filter(f => f.targetEntity === 'Lead').length > 0 && (
+            {fieldsData?.data?.length > 0 && (
               <div className="pt-3 border-t border-[var(--vz-border)] space-y-3">
                 <h6 className="text-xs font-bold text-[var(--vz-heading)] uppercase tracking-wider text-primary">Custom Information</h6>
                 <div className="grid grid-cols-2 gap-3">
-                  {fieldsData.data.filter(f => f.targetEntity === 'Lead').map(field => (
+                  {fieldsData.data.map(field => (
                     <div key={field._id} className={field.type === 'textarea' ? 'col-span-2' : ''}>
                       <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1.5">{field.name}</label>
                       <Input 
