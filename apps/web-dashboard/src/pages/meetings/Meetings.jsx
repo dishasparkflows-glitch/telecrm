@@ -67,7 +67,7 @@ export default function Meetings() {
         meetingType,
         location: meetingType === 'offline' ? location : null,
         meeting: { title, scheduledAt: dateTime, duration, link: meetingType === 'online' ? meetingUrl : null },
-        attendees,
+        attendees: attendees.map(a => ({ userId: a.userId })),
         customFields 
       }
       if (leadId) payload.leadId = leadId

@@ -52,24 +52,24 @@ const meetingSchema = new mongoose.Schema(
             of: mongoose.Schema.Types.Mixed,
             default: {},
         },
-        location: { type: String }, // 'phone', 'video', address
+        location: { type: String },
         reminderSent: { type: Boolean, default: false },
 
         // ─── Integration ───
         meetingType: { type: String, enum: ['online', 'offline', 'phone'], default: 'online' },
-        provider: { type: String, enum: ['google_meet', null], default: null },
+        provider: { type: String },
         source: { type: String, enum: ['booking_link', 'manual'], default: 'manual' },
         calendar: {
-            provider: { type: String, enum: ['google', null], default: null },
-            calendarId: { type: String, default: null },
-            eventId: { type: String, default: null },
-            eventHtmlLink: { type: String, default: null },
+            provider: { type: String, enum: ['google', null] },
+            calendarId: { type: String },
+            eventId: { type: String },
+            eventHtmlLink: { type: String },
         },
         conference: {
-            provider: { type: String, enum: ['google_meet', null], default: null },
-            meetingUrl: { type: String, default: null },
-            conferenceId: { type: String, default: null },
-            status: { type: String, enum: ['pending', 'success', 'failed', null], default: null },
+            provider: { type: String, enum: ['google_meet', null] },
+            meetingUrl: { type: String },
+            conferenceId: { type: String },
+            status: { type: String, enum: ['pending', 'success', 'failed', null] },
         },
         meta: {
             createdBy: { type: mongoose.Schema.Types.ObjectId },

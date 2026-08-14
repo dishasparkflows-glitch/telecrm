@@ -363,7 +363,7 @@ export default function LeadDetail() {
                         <div>
                           <p className="text-sm text-[var(--vz-heading)]">{note.text}</p>
                           <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">
-                            {note.createdBy?.firstName || 'System'} · {note.createdAt || note.meta?.createdAt ? new Date(note.createdAt || note.meta?.createdAt).toLocaleDateString() : '—'}
+                            {(typeof note.createdBy === 'object' ? note.createdBy?.contact?.name : null) || 'System'} · {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : '—'}
                           </p>
                         </div>
                       </div>
@@ -401,12 +401,14 @@ export default function LeadDetail() {
                       <div key={i} className="flex gap-3 py-3 border-b border-[var(--vz-border)] last:border-0">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                           <span className="text-xs font-semibold text-primary">
-                            {note.createdBy?.firstName?.[0] || 'S'}
+                            {(typeof note.createdBy === 'object' ? note.createdBy?.contact?.name?.[0] : null) || 'S'}
                           </span>
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-[var(--vz-heading)]">{note.createdBy?.firstName || 'System'}</p>
+                            <p className="text-sm font-medium text-[var(--vz-heading)]">
+                              {(typeof note.createdBy === 'object' ? note.createdBy?.contact?.name : null) || 'System'}
+                            </p>
                             <p className="text-xs text-[var(--vz-text-muted)]">
                               {note.createdAt || note.meta?.createdAt ? new Date(note.createdAt || note.meta?.createdAt).toLocaleString() : '—'}
                             </p>

@@ -94,6 +94,18 @@ export default function MeetingDetail({ meeting: initialMeeting, isOpen, onClose
                   <a href={meeting.meeting?.link} target="_blank" rel="noreferrer">Join Meeting</a>
                 </div>
               )}
+              {meeting.meetingType && (
+                <div className="flex flex-col gap-0.5 mt-2">
+                  <span className="text-[10px] font-bold text-[var(--vz-text-muted)] uppercase tracking-wider">Meeting Type</span>
+                  <span className="text-sm text-[var(--vz-heading)] capitalize">{meeting.meetingType} {meeting.provider ? `(${meeting.provider})` : ''}</span>
+                </div>
+              )}
+              {meeting.location && (
+                <div className="flex flex-col gap-0.5 mt-2">
+                  <span className="text-[10px] font-bold text-[var(--vz-text-muted)] uppercase tracking-wider">Location</span>
+                  <span className="text-sm text-[var(--vz-heading)]">{meeting.location}</span>
+                </div>
+              )}
               <div className="pt-2">
                 <Badge color={meeting.meeting?.status === 'confirmed' ? 'success' : 'warning'}>{meeting.meeting?.status || 'scheduled'}</Badge>
               </div>
@@ -128,16 +140,27 @@ export default function MeetingDetail({ meeting: initialMeeting, isOpen, onClose
           </div>
 
           {/* Custom Fields */}
-          {fieldsResp?.data?.filter(f => f.targetEntity === 'Meeting').length > 0 && (
+          {((fieldsResp?.data?.filter(f => f.targetEntity === 'Meeting').length > 0) || (meeting.customFields && Object.keys(meeting.customFields).length > 0)) && (
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-[var(--vz-heading)] uppercase tracking-wider">Extended Info</h4>
               <div className="space-y-3">
-                {fieldsResp.data.filter(f => f.targetEntity === 'Meeting').map(field => (
+                {/* Defined Fields */}
+                {fieldsResp?.data?.filter(f => f.targetEntity === 'Meeting').map(field => (
                   <div key={field._id} className="p-2 rounded border border-[var(--vz-border)] bg-[var(--vz-input-bg)]/50">
                     <p className="text-[10px] text-[var(--vz-text-muted)] uppercase font-bold">{field.name}</p>
                     <p className="text-xs text-[var(--vz-heading)]">{meeting.customFields?.[field.name] || '—'}</p>
                   </div>
                 ))}
+                {/* Raw Undefined Fields (fallback if no definition exists) */}
+                {meeting.customFields && Object.entries(meeting.customFields).map(([key, value]) => {
+                  if (fieldsResp?.data?.find(f => f.name === key && f.targetEntity === 'Meeting')) return null;
+                  return (
+                    <div key={key} className="p-2 rounded border border-[var(--vz-border)] bg-[var(--vz-input-bg)]/50">
+                      <p className="text-[10px] text-[var(--vz-text-muted)] uppercase font-bold">{key}</p>
+                      <p className="text-xs text-[var(--vz-heading)]">{String(value)}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

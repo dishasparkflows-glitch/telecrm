@@ -98,8 +98,10 @@ const getLeads = asyncHandler(async (req, res) => {
     else if (['priority', 'expectedValue', 'followUpAt'].includes(sortBy)) dbSortBy = `lifecycle.${sortBy}`;
     const sort = { [dbSortBy]: sortOrder === 'asc' ? 1 : -1 };
 
+    const LIST_PROJECTION = 'contact pipeline.stage scoring.score scoring.scoreBreakdown source assignedTo fullName';
+
     const [dbLeads, total] = await Promise.all([
-        Lead.find(filter).sort(sort).skip(skip).limit(limit),
+        Lead.find(filter).select(LIST_PROJECTION).sort(sort).skip(skip).limit(limit),
         Lead.countDocuments(filter),
     ]);
 
@@ -137,10 +139,27 @@ const getLead = asyncHandler(async (req, res) => {
     }
     
     const obj = lead.toObject();
-    if (obj.assignedTo) {
-        const users = await getUsersBulk(tenantId, [String(obj.assignedTo)]);
-        if (users && users.length > 0) {
-            obj.assignedTo = users[0];
+    const userIdsToFetch = new Set();
+    if (obj.assignedTo) userIdsToFetch.add(String(obj.assignedTo));
+    if (obj.notes && obj.notes.length > 0) {
+        obj.notes.forEach(n => {
+            if (n.createdBy) userIdsToFetch.add(String(n.createdBy));
+        });
+    }
+
+    if (userIdsToFetch.size > 0) {
+        const users = await getUsersBulk(tenantId, Array.from(userIdsToFetch));
+        const userMap = new Map(users.map(u => [String(u._id), u]));
+        if (obj.assignedTo) {
+            obj.assignedTo = userMap.get(String(obj.assignedTo)) || obj.assignedTo;
+        }
+        if (obj.notes && obj.notes.length > 0) {
+            obj.notes = obj.notes.map(n => {
+                if (n.createdBy && userMap.has(String(n.createdBy))) {
+                    n.createdBy = userMap.get(String(n.createdBy));
+                }
+                return n;
+            });
         }
     }
 
@@ -152,7 +171,6 @@ const getLead = asyncHandler(async (req, res) => {
  * Update a lead
  */
 const updateLead = asyncHandler(async (req, res) => {
-    console.log("heeyyyyy")
     const tenantId = req.headers['x-tenant-id'];
     const leadId = requireObjectId(req.params.id, 'lead ID');
     const changes = pickLeadUpdateInput(req.body);
