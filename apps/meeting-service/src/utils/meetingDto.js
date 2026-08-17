@@ -8,7 +8,7 @@ const MEETING_CREATE_FIELDS = Object.freeze([
 const MEETING_UPDATE_FIELDS = Object.freeze([...MEETING_CREATE_FIELDS, 'status']);
 const ATTENDEE_FIELDS = Object.freeze(['userId', 'role', 'status']);
 const BOOKING_LINK_FIELDS = Object.freeze([
-    'slug', 'title', 'description', 'durationOptions', 'availability', 'isActive', 'provider', 'meetingType'
+    'slug', 'title', 'description', 'durationOptions', 'defaultDuration', 'slotInterval', 'availability', 'isActive', 'provider', 'meetingType'
 ]);
 const AVAILABILITY_FIELDS = Object.freeze(['days', 'startTime', 'endTime', 'timezone']);
 const PUBLIC_BOOKING_FIELDS = Object.freeze([
@@ -83,6 +83,19 @@ function pickBookingLinkInput(input) {
             throw ApiError.badRequest('durationOptions must contain whole minutes between 5 and 480');
         }
         link.durationOptions = [...new Set(link.durationOptions)];
+    }
+    if (link.defaultDuration !== undefined) {
+        if (!Number.isInteger(link.defaultDuration) || link.defaultDuration < 5) {
+            throw ApiError.badRequest('defaultDuration must be a positive integer >= 5');
+        }
+        if (link.durationOptions && !link.durationOptions.includes(link.defaultDuration)) {
+            throw ApiError.badRequest('defaultDuration must exist in durationOptions');
+        }
+    }
+    if (link.slotInterval !== undefined) {
+        if (!Number.isInteger(link.slotInterval) || link.slotInterval < 5) {
+            throw ApiError.badRequest('slotInterval must be a positive integer >= 5');
+        }
     }
     if (link.availability !== undefined) {
         link.availability = pickStrictObject(link.availability, AVAILABILITY_FIELDS, 'availability');

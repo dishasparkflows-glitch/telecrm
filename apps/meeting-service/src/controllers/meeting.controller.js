@@ -102,7 +102,7 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
                     meetingUrl: gEvent.hangoutLink
                 };
                 calendar = {
-                    provider: 'google_calendar',
+                    provider: 'google',
                     eventId: gEvent.id
                 };
                 
@@ -159,7 +159,7 @@ const getMeetings = asyncHandler(async (req, res) => {
         }
     }
     const [meetings, total] = await Promise.all([
-        Meeting.find(filter).sort({ 'meeting.scheduledAt': 1 }).skip(skip).limit(limit).lean(),
+        Meeting.find(filter).select('-meta -calendar -attendees').sort({ 'meeting.scheduledAt': 1 }).skip(skip).limit(limit).lean(),
         Meeting.countDocuments(filter),
     ]);
 
@@ -428,17 +428,28 @@ const bookMeeting = asyncHandler(async (req, res) => {
 
 const getBookingLinks = asyncHandler(async (req, res) => {
     const filter = buildScopeFilter(req, { ownerField: 'userId', module: 'meetings' });
-    const links = await BookingLink.find(filter).sort({ 'meta.createdAt': -1 });
-    ApiResponse.success(res, links);
+    const links = await BookingLink.find(filter).sort({ 'meta.createdAt': -1 }).lean();
+    
+    const mappedLinks = links.map(link => ({
+        ...link,
+        defaultDuration: link.defaultDuration || link.durationOptions?.[0] || 30,
+        slotInterval: link.slotInterval || 15
+    }));
+    
+    ApiResponse.success(res, mappedLinks);
 });
 
 const getBookingLinkBySlug = asyncHandler(async (req, res) => {
     const { slug } = req.params;
     const link = await BookingLink.findOne({ slug, isActive: true })
-        .select('title description durationOptions availability userId')
+        .select('title description durationOptions defaultDuration slotInterval provider meetingType bookingRules customerFields availability userId')
         .lean();
         
     if (!link) throw ApiError.notFound('Booking link not found or inactive');
+    
+    link.defaultDuration = link.defaultDuration || link.durationOptions?.[0] || 30;
+    link.slotInterval = link.slotInterval || 15;
+    
     ApiResponse.success(res, link);
 });
 

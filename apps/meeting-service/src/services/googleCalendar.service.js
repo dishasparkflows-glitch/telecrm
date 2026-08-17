@@ -123,6 +123,7 @@ async function createCalendarEvent(tokens, calendarId, eventDetails) {
     const response = await calendar.events.insert({
         calendarId: calendarId,
         conferenceDataVersion: 1,
+        sendUpdates: 'all',
         requestBody: event,
     });
     

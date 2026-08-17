@@ -27,12 +27,10 @@ const leadSchema = new mongoose.Schema(
             },
             lastName: {
                 type: String,
-                required: [true, 'Last name is required'],
                 trim: true,
             },
             email: {
                 type: String,
-                required: [true, 'Email is required'],
                 lowercase: true,
                 trim: true,
             },
@@ -49,7 +47,6 @@ const leadSchema = new mongoose.Schema(
             },
             phone: {
                 type: String,
-                required: [true, 'Phone number is required'],
                 trim: true,
             },
             phoneNormalized: {

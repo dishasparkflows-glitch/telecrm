@@ -49,8 +49,7 @@ const meetingSchema = new mongoose.Schema(
         // ─── Custom Fields ───
         customFields: {
             type: Map,
-            of: mongoose.Schema.Types.Mixed,
-            default: {},
+            of: mongoose.Schema.Types.Mixed
         },
         location: { type: String },
         reminderSent: { type: Boolean, default: false },
@@ -95,6 +94,8 @@ const bookingLinkSchema = new mongoose.Schema(
         title: { type: String, default: 'Book a Meeting' },
         description: { type: String, default: '' },
         durationOptions: { type: [Number], default: [15, 30, 60] },
+        defaultDuration: { type: Number, default: 30 },
+        slotInterval: { type: Number, default: 15 },
         availability: {
             days: { type: [String], default: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] },
             startTime: { type: String, default: '09:00' },
@@ -104,7 +105,7 @@ const bookingLinkSchema = new mongoose.Schema(
         isActive: { type: Boolean, default: true },
         
         meetingType: { type: String, enum: ['online', 'offline', 'phone'], default: 'online' },
-        provider: { type: String, enum: ['google_meet', null], default: 'google_meet' },
+        provider: { type: String, enum: ['google_meet', 'sparkcrm', null], default: 'google_meet' },
         bookingRules: {
             bufferBefore: { type: Number, default: 0 },
             bufferAfter: { type: Number, default: 0 },

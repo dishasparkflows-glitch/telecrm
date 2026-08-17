@@ -837,6 +837,61 @@ const bulkUpdateLeads = asyncHandler(async (req, res) => {
     }, 'Bulk update completed');
 });
 
+/**
+ * GET /api/leads/export-data
+ * Fetch leads data for Excel/CSV export
+ */
+const exportLeadsData = asyncHandler(async (req, res) => {
+    const { search, stage, source, assignedTo, priority, tags, isArchived = 'false', sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+    const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'leads' });
+    filter.isArchived = isArchived === 'true';
+
+    if (assignedTo) applyAssignedToFilter(filter, requireObjectId(assignedTo, 'assignedTo'));
+    if (stage) filter['pipeline.stage'] = stage;
+    if (source) filter.source = source;
+    if (priority) filter['lifecycle.priority'] = priority;
+    if (tags) filter.tags = { $in: tags.split(',') };
+
+    if (search) {
+        const escapedSearch = escapeRegex(search);
+        filter.$or = [
+            { 'contact.firstName': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.lastName': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.email': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.phone': { $regex: escapedSearch, $options: 'i' } },
+            { 'contact.company': { $regex: escapedSearch, $options: 'i' } },
+        ];
+    }
+
+    if (!LEAD_SORT_FIELDS.has(sortBy)) throw ApiError.badRequest('Unsupported lead sort field');
+    let dbSortBy = sortBy;
+    if (['firstName', 'lastName'].includes(sortBy)) dbSortBy = `contact.${sortBy}`;
+    else if (sortBy === 'stage') dbSortBy = 'pipeline.stage';
+    else if (['priority', 'expectedValue', 'followUpAt'].includes(sortBy)) dbSortBy = `lifecycle.${sortBy}`;
+    const sort = { [dbSortBy]: sortOrder === 'asc' ? 1 : -1 };
+
+    const LIST_PROJECTION = 'contact pipeline.stage source scoring.score meta.createdAt assignedTo';
+
+    // Fetch up to 10000 leads for export to avoid memory issues
+    const dbLeads = await Lead.find(filter).select(LIST_PROJECTION).sort(sort).limit(10000).lean();
+
+    const tenantId = req.headers['x-tenant-id'];
+    const userIds = [...new Set(dbLeads.map(l => l.assignedTo).filter(Boolean).map(String))];
+    let userMap = new Map();
+    if (userIds.length > 0) {
+        const users = await getUsersBulk(tenantId, userIds);
+        userMap = new Map(users.map(u => [String(u._id), u]));
+    }
+
+    const leads = dbLeads.map(lead => {
+        lead.assignedTo = userMap.get(String(lead.assignedTo)) || null;
+        return lead;
+    });
+
+    ApiResponse.success(res, leads, 'Export data fetched');
+});
+
 module.exports = {
     bulkUpdateLeads,
     createLead,
@@ -852,4 +907,5 @@ module.exports = {
     getLeadTimeline,
     getLeadByPhone,
     getLeadsBulk,
+    exportLeadsData,
 };

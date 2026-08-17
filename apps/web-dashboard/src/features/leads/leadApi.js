@@ -12,6 +12,12 @@ export const leadApi = baseApi.injectEndpoints({
                     ? [...result.data.map(({ _id }) => ({ type: 'Lead', id: _id })), { type: 'Lead', id: 'LIST' }]
                     : [{ type: 'Lead', id: 'LIST' }],
         }),
+        getLeadsExport: builder.query({
+            query: (params) => ({
+                url: '/leads/export-data',
+                params,
+            }),
+        }),
         getActiveLeads: builder.query({
             query: (params) => ({
                 url: '/leads/compact',
@@ -204,6 +210,7 @@ export const leadApi = baseApi.injectEndpoints({
 
 export const {
     useGetLeadsQuery,
+    useLazyGetLeadsExportQuery,
     useGetActiveLeadsQuery,
     useGetLeadQuery,
     useGetLeadStatsQuery,

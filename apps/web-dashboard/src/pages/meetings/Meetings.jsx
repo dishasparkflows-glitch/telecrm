@@ -23,13 +23,17 @@ export default function Meetings() {
   const [showCreateLink, setShowCreateLink] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
+  const [showLinkDetail, setShowLinkDetail] = useState(false)
+  const [selectedLink, setSelectedLink] = useState(null)
   const [selectedMeeting, setSelectedMeeting] = useState(null)
   const [meetingData, setMeetingData] = useState({ title: '', leadId: '', dateTime: '', duration: 30, attendees: [], meetingUrl: '', provider: 'sparkcrm', meetingType: 'online', location: '', customFields: {} })
   const [editMeetingForm, setEditMeetingForm] = useState(null)
   const [selectedAttendee, setSelectedAttendee] = useState('')
   const [linkData, setLinkData] = useState({ 
     title: '', 
-    duration: 30,
+    durationOptions: [30],
+    defaultDuration: 30,
+    slotInterval: 15,
     provider: 'sparkcrm',
     availability: { days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], startTime: '09:00', endTime: '18:00' }
   })
@@ -81,10 +85,10 @@ export default function Meetings() {
   const handleEditOpen = (meeting) => {
     setEditMeetingForm({
       id: meeting._id,
-      title: meeting.title,
-      dateTime: new Date(meeting.scheduledAt || meeting.dateTime).toISOString().slice(0, 16),
-      duration: meeting.duration,
-      status: meeting.status || 'scheduled',
+      title: meeting.meeting?.title || '',
+      dateTime: new Date(meeting.meeting?.scheduledAt || new Date()).toISOString().slice(0, 16),
+      duration: meeting.meeting?.duration || 30,
+      status: meeting.meeting?.status || 'scheduled',
       attendees: meeting.attendees || [],
       meetingUrl: meeting.meetingUrl || ''
     })
@@ -117,7 +121,9 @@ export default function Meetings() {
     try {
       await createLink({ 
         title: linkData.title, 
-        durationOptions: [linkData.duration],
+        durationOptions: linkData.durationOptions,
+        defaultDuration: linkData.defaultDuration,
+        slotInterval: linkData.slotInterval,
         availability: linkData.availability,
         provider: linkData.provider
       }).unwrap()
@@ -217,7 +223,7 @@ export default function Meetings() {
           ) : (
             <div className="space-y-3">
               {bookingLinks.map((link) => (
-                <div key={link._id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)]">
+                <div key={link._id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)] hover:border-primary/50 transition-colors cursor-pointer" onClick={() => { setSelectedLink(link); setShowLinkDetail(true); }}>
                   <div>
                     <p className="text-sm font-medium text-[var(--vz-heading)]">{link.title}</p>
                     <a 
@@ -225,15 +231,16 @@ export default function Meetings() {
                       target="_blank" 
                       rel="noopener noreferrer" 
                       className="text-xs text-primary mt-0.5 hover:underline block"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {window.location.origin}/book/{link.slug}
                     </a>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/book/${link.slug}`); toast('Link copied!', 'success') }}>
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${window.location.origin}/book/${link.slug}`); toast('Link copied!', 'success') }}>
                       <Copy size={14} /> Copy
                     </Button>
-                    <button onClick={() => handleDeleteLink(link._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors" title="Delete">
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteLink(link._id) }} className="p-1.5 rounded hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors" title="Delete">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -337,21 +344,64 @@ export default function Meetings() {
       <Modal isOpen={showCreateLink} onClose={() => setShowCreateLink(false)} title="Create Booking Link" size="sm">
         <div className="space-y-4">
           <Input label="Link Title" placeholder="e.g. 30-min Demo Call" value={linkData.title} onChange={(e) => setLinkData({ ...linkData, title: e.target.value })} />
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--vz-heading)]">Meeting Duration</label>
+            <div className="flex flex-wrap gap-3">
+              {[15, 30, 45, 60].map(dur => (
+                <label key={dur} className="flex items-center gap-1.5 text-sm text-[var(--vz-text)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4"
+                    checked={linkData.durationOptions.includes(dur)}
+                    onChange={(e) => {
+                      let newOpts = e.target.checked 
+                        ? [...linkData.durationOptions, dur].sort((a,b)=>a-b)
+                        : linkData.durationOptions.filter(d => d !== dur);
+                      if (newOpts.length === 0) newOpts = [30];
+                      let newDefault = linkData.defaultDuration;
+                      if (!newOpts.includes(newDefault)) newDefault = newOpts[0];
+                      setLinkData({ ...linkData, durationOptions: newOpts, defaultDuration: newDefault });
+                    }}
+                  />
+                  {dur} min
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Duration (min)" type="number" value={linkData.duration} onChange={(e) => setLinkData({ ...linkData, duration: +e.target.value })} />
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Meeting Provider</label>
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Default Duration</label>
               <Select
-                value={linkData.provider}
-                onChange={(val) => setLinkData({ ...linkData, provider: val })}
+                value={linkData.defaultDuration}
+                onChange={(val) => setLinkData({ ...linkData, defaultDuration: +val })}
+                options={linkData.durationOptions.map(dur => ({ value: dur, label: `${dur} min` }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Slot Interval</label>
+              <Select
+                value={linkData.slotInterval}
+                onChange={(val) => setLinkData({ ...linkData, slotInterval: +val })}
                 options={[
-                  { value: 'sparkcrm', label: 'Default' },
-                  { value: 'google_meet', label: 'Google Meet' }
+                  { value: 15, label: '15 min' },
+                  { value: 30, label: '30 min' },
+                  { value: 60, label: '60 min' }
                 ]}
               />
             </div>
           </div>
-          
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-[var(--vz-heading)]">Meeting Provider</label>
+            <Select
+              value={linkData.provider}
+              onChange={(val) => setLinkData({ ...linkData, provider: val })}
+              options={[
+                { value: 'sparkcrm', label: 'Default' },
+                { value: 'google_meet', label: 'Google Meet' }
+              ]}
+            />
+          </div>
+
           <div className="space-y-2">
             <label className="block text-sm font-medium text-[var(--vz-heading)]">Availability Days</label>
             <div className="flex flex-wrap gap-2">
@@ -421,6 +471,65 @@ export default function Meetings() {
           meeting={selectedMeeting} 
         />
       )}
+
+      {/* Booking Link Detail Modal */}
+      <Modal isOpen={showLinkDetail} onClose={() => setShowLinkDetail(false)} title="Booking Link Details" size="sm">
+        {selectedLink && (
+          <div className="space-y-4 text-sm text-[var(--vz-text)]">
+            <div>
+              <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Link Title</p>
+              <p className="font-medium text-[var(--vz-heading)]">{selectedLink.title}</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Durations</p>
+                <div className="flex gap-1 flex-wrap">
+                  {selectedLink.durationOptions?.map(d => (
+                    <Badge key={d} color="primary">{d} min</Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Provider</p>
+                <p className="capitalize">{selectedLink.provider?.replace('_', ' ') || 'Default'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Default Duration</p>
+                <p className="capitalize">{selectedLink.defaultDuration || selectedLink.durationOptions?.[0]} min</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Slot Interval</p>
+                <p className="capitalize">{selectedLink.slotInterval || 15} min</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Availability</p>
+              <p className="capitalize">{selectedLink.availability?.days?.join(', ')}</p>
+              <p className="text-xs text-[var(--vz-text-muted)] mt-1">{selectedLink.availability?.startTime} - {selectedLink.availability?.endTime} ({selectedLink.availability?.timezone})</p>
+            </div>
+            
+            <div className="pt-4 border-t border-[var(--vz-border)]">
+              <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-2">Booking URL</p>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={`${window.location.origin}/book/${selectedLink.slug}`}
+                  className="flex-1 text-xs bg-[var(--vz-body-bg)] border border-[var(--vz-border)] rounded px-2 py-1.5 focus:outline-none"
+                />
+                <Button size="sm" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/book/${selectedLink.slug}`); toast('Copied!', 'success') }}>
+                  Copy
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   )
 }

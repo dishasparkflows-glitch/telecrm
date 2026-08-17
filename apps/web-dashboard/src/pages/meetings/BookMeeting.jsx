@@ -45,6 +45,7 @@ export default function BookMeeting() {
     const slots = []
     let current = new Date(`${selectedDate}T${startTime}:00`)
     const end = new Date(`${selectedDate}T${endTime}:00`)
+    const slotInterval = link.slotInterval || 15
 
     while (current < end) {
       const slotEnd = new Date(current.getTime() + selectedDuration * 60000)
@@ -63,10 +64,10 @@ export default function BookMeeting() {
         return current < busyEnd && slotEnd > busyStart
       })
 
-      if (!internalOverlap && !googleOverlap) {
+      if (!internalOverlap && !googleOverlap && slotEnd <= end) {
         slots.push(current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }))
       }
-      current = new Date(current.getTime() + selectedDuration * 60000)
+      current = new Date(current.getTime() + slotInterval * 60000)
     }
     return slots
   }, [selectedDate, selectedDuration, link, availabilityData])
@@ -163,24 +164,26 @@ export default function BookMeeting() {
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Select a Date & Time</h2>
               
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Duration</label>
-                <div className="flex gap-3">
-                  {link.durationOptions?.map(dur => (
-                    <button
-                      key={dur}
-                      onClick={() => setSelectedDuration(dur)}
-                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                        selectedDuration === dur 
-                          ? 'border-primary bg-primary text-white shadow-md' 
-                          : 'border-slate-200 dark:border-slate-700 hover:border-primary/50 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {dur} min
-                    </button>
-                  ))}
+              {link.durationOptions?.length > 1 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">How long would you like to meet?</label>
+                  <div className="flex flex-wrap gap-3">
+                    {link.durationOptions?.map(dur => (
+                      <button
+                        key={dur}
+                        onClick={() => setSelectedDuration(dur)}
+                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          selectedDuration === dur 
+                            ? 'border-primary bg-primary text-white shadow-md' 
+                            : 'border-slate-200 dark:border-slate-700 hover:border-primary/50 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {dur} min
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid md:grid-cols-2 gap-8">
                 <div>

@@ -29,6 +29,7 @@ router.put('/assignment-policy', assignmentPolicyCtrl.upsertAssignmentPolicy);
 router.delete('/assignment-policies/:id', assignmentPolicyCtrl.deleteAssignmentPolicy);
 
 router.get('/', leadCtrl.getLeads);
+router.get('/export-data', leadCtrl.exportLeadsData);
 router.get('/compact', leadCtrl.getActiveLeads);
 router.get('/:id/timeline', leadCtrl.getLeadTimeline);
 router.get('/:id', leadCtrl.getLead);

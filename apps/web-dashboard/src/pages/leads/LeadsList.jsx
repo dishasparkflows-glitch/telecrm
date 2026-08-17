@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { openDialer } from '../../slices/uiSlice'
-import { useGetLeadsQuery, useCreateLeadMutation, useImportLeadsMutation, useArchiveLeadMutation, useBulkUpdateLeadsMutation } from '../../features/leads/leadApi'
+import { useGetLeadsQuery, useLazyGetLeadsExportQuery, useCreateLeadMutation, useImportLeadsMutation, useArchiveLeadMutation, useBulkUpdateLeadsMutation } from '../../features/leads/leadApi'
 import { useGetAllUsersListQuery } from '../../features/users/userApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
 import { useGetProfileQuery } from '../../features/tenant/tenantApi'
@@ -18,9 +18,10 @@ import Select from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import {
-  Search, Plus, Upload, Filter, Phone, Mail as MailIcon,
+  Search, Plus, Upload, Download, Filter, Phone, Mail as MailIcon,
   Users, Trash2, Eye, X, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 
 const stageColors = {
   new: 'primary', contacted: 'info', qualified: 'warning',
@@ -44,6 +45,7 @@ const IMPORT_FIELDS = [
   { value: 'contact.company', label: 'Company' },
   { value: 'stage', label: 'Stage' },
   { value: 'sourceDetails', label: 'Source Details' },
+  { value: 'assignedTo', label: 'Assigned To' },
 ]
 
 const IMPORT_ALIASES = {
@@ -53,6 +55,7 @@ const IMPORT_ALIASES = {
   phone: 'contact.phone', phonenumber: 'contact.phone', phone_number: 'contact.phone', mobile: 'contact.phone', mobilenumber: 'contact.phone',
   company: 'contact.company', companyname: 'contact.company', company_name: 'contact.company',
   stage: 'stage', status: 'stage', source: 'sourceDetails', sourcedetails: 'sourceDetails',
+  assignedto: 'assignedTo', assigned_to: 'assignedTo', owner: 'assignedTo',
 }
 
 export default function LeadsList() {
@@ -96,6 +99,7 @@ export default function LeadsList() {
   const [importLeads, { isLoading: importing }] = useImportLeadsMutation()
   const [archiveLead, { isLoading: isArchiving }] = useArchiveLeadMutation()
   const [bulkUpdateLeads, { isLoading: isBulkUpdating }] = useBulkUpdateLeadsMutation()
+  const [getLeadsExport, { isFetching: isExporting }] = useLazyGetLeadsExportQuery()
 
   const leads = data?.data || []
   const pagination = data?.pagination || {}
@@ -154,37 +158,40 @@ export default function LeadsList() {
     }
   }
 
-  const parseCsvLine = (line) => {
-    const values = []
-    let value = ''
-    let quoted = false
-    for (let index = 0; index < line.length; index += 1) {
-      const character = line[index]
-      if (character === '"' && quoted && line[index + 1] === '"') {
-        value += '"'
-        index += 1
-      } else if (character === '"') {
-        quoted = !quoted
-      } else if (character === ',' && !quoted) {
-        values.push(value.trim())
-        value = ''
-      } else {
-        value += character
-      }
-    }
-    values.push(value.trim())
-    return values
-  }
+  const handleExport = async () => {
+    try {
+      const result = await getLeadsExport({
+        ...(debouncedSearch && { search: debouncedSearch }),
+        ...(stageFilter && { stage: stageFilter }),
+        ...(sourceFilter && { source: sourceFilter }),
+      }).unwrap()
 
-  const parseCsv = (text) => {
-    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim())
-    if (lines.length < 2) return { headers: [], rows: [] }
-    const headers = parseCsvLine(lines[0]).map((header, index) => header || `Column ${index + 1}`)
-    const rows = lines.slice(1).map((line) => {
-      const values = parseCsvLine(line)
-      return headers.reduce((record, header, index) => ({ ...record, [header]: values[index] || '' }), {})
-    })
-    return { headers, rows }
+      if (!result.data || result.data.length === 0) {
+        return toast('No leads found to export', 'warning')
+      }
+
+      const exportData = result.data.map(lead => ({
+        'First Name': lead.contact?.firstName || '',
+        'Last Name': lead.contact?.lastName || '',
+        'Email': lead.contact?.email || '',
+        'Phone': lead.contact?.phone || '',
+        'Company': lead.contact?.company || '',
+        'Stage': stageLabelMap[lead.pipeline?.stage] || lead.pipeline?.stage || '',
+        'Source': sourceLabels[lead.source] || lead.source || '',
+        'Score': lead.scoring?.score || 0,
+        'Assigned To': getAssignedName(lead.assignedTo),
+        'Created Date': (lead.meta && lead.meta.createdAt) ? new Date(lead.meta.createdAt).toLocaleDateString() : (lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : '')
+      }))
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads')
+      XLSX.writeFile(workbook, 'Leads_Export.xlsx')
+      
+      toast('Exported successfully', 'success')
+    } catch (err) {
+      toast('Failed to export leads', 'error')
+    }
   }
 
   const handleImportFile = async (e) => {
@@ -192,18 +199,35 @@ export default function LeadsList() {
     e.target.value = ''
     if (!file) return
     try {
-      const parsed = parseCsv(await file.text())
-      if (!parsed.rows.length) return toast('CSV must include a header row and at least one lead', 'error')
-      const mapping = Object.fromEntries(parsed.headers.map((header) => {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+      if (rows.length < 2) return toast('File must include a header row and at least one lead', 'error')
+      
+      const headers = rows[0].map((h, i) => String(h).trim() || `Column ${i + 1}`)
+      const parsedRows = rows.slice(1).map(row => {
+        return headers.reduce((record, header, index) => {
+          record[header] = String(row[index] || '').trim()
+          return record
+        }, {})
+      }).filter(row => Object.values(row).some(v => v !== ''))
+      
+      if (!parsedRows.length) return toast('File contains no valid data rows', 'error')
+      
+      const mapping = Object.fromEntries(headers.map((header) => {
         const normalized = header.toLowerCase().replace(/[^a-z0-9_]/g, '')
         return [header, IMPORT_ALIASES[normalized] || '']
       }))
-      setImportHeaders(parsed.headers)
-      setImportRows(parsed.rows)
+      
+      setImportHeaders(headers)
+      setImportRows(parsedRows)
       setImportMapping(mapping)
       setShowImport(true)
-    } catch {
-      toast('Could not read this CSV file', 'error')
+    } catch (err) {
+      toast('Could not read this file. Ensure it is a valid CSV or Excel file.', 'error')
     }
   }
 
@@ -215,7 +239,13 @@ export default function LeadsList() {
     const leadsToImport = importRows.map((row) => importHeaders.reduce((lead, header) => {
       const target = importMapping[header]
       if (target) {
-        if (target.startsWith('contact.')) {
+        if (target === 'assignedTo') {
+            const val = String(row[header] || '').trim().toLowerCase()
+            const matchedUser = users.find(u => u.name?.toLowerCase() === val || u.email?.toLowerCase() === val)
+            if (matchedUser) {
+                lead.assignedTo = matchedUser._id
+            }
+        } else if (target.startsWith('contact.')) {
             const field = target.split('.')[1]
             if (!lead.contact) lead.contact = {}
             lead.contact[field] = row[header]
@@ -319,7 +349,10 @@ export default function LeadsList() {
           </div>
 
           <div className="flex items-center gap-2">
-            <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImportFile} />
+            <Button variant="soft-primary" size="sm" onClick={handleExport} disabled={isExporting}>
+              <Download size={14} /> {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={handleImportFile} />
             <Button variant="soft-primary" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
               <Upload size={14} /> {importing ? 'Importing...' : 'Import'}
             </Button>

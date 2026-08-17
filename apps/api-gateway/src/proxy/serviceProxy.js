@@ -114,7 +114,9 @@ const SERVICE_ROUTES = {
         module: 'meetings',
         feature: 'meeting_scheduler',
         publicPaths: [
+            { method: 'GET', pattern: /^\/api\/meetings\/book\/[^/]+\/?$/ },
             { method: 'POST', pattern: /^\/api\/meetings\/book\/[^/]+\/?$/ },
+            { method: 'GET', pattern: /^\/api\/meetings\/book\/[^/]+\/availability\/?$/ },
             { method: 'GET', pattern: /^\/api\/meetings\/google\/callback\/?$/ },
         ],
     },

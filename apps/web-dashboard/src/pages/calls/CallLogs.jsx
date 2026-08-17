@@ -12,6 +12,7 @@ import { useToast } from '../../components/ui/Toast'
 import { Phone, Clock, PhoneIncoming, PhoneMissed, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown, Play, Pause, Volume2, VolumeX, MoreVertical, Download } from 'lucide-react'
 
 const statusColors = { completed: 'success', missed: 'danger', busy: 'warning', 'no-answer': 'info', failed: 'danger' }
+const dispositionColors = { interested: 'success', not_interested: 'danger', callback: 'warning', converted: 'success', wrong_number: 'secondary', voicemail: 'info' }
 
 /* ── Compact audio player ─────────────────────────────────── */
 
@@ -236,7 +237,13 @@ export default function CallLogs() {
                           <div className="text-[10px] text-danger mt-1 font-medium">Exotel KYC verification required</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-[var(--vz-text)] capitalize">{log.disposition?.code || '—'}</td>
+                      <td className="px-4 py-3">
+                        {log.disposition?.code ? (
+                          <Badge color={dispositionColors[log.disposition.code.toLowerCase()] || 'primary'}>
+                            {log.disposition.code.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </Badge>
+                        ) : '—'}
+                      </td>
                       <td className="px-4 py-3 text-[var(--vz-text)]">
                         {log.recording?.playbackUrl ? (
                           <MiniAudioPlayer src={log.recording.playbackUrl} />

@@ -224,7 +224,7 @@ const FollowUpsList = () => {
                     </div>
                 ) : (
                     <EmptyState 
-                        icon={<Calendar size={48} />}
+                        icon={Calendar}
                         title="No Follow-ups Found"
                         description="There are no follow-ups matching your current filters."
                     />
