@@ -31,6 +31,10 @@ export default function Meetings() {
   const [selectedAttendee, setSelectedAttendee] = useState('')
   const [linkData, setLinkData] = useState({ 
     title: '', 
+    assignmentType: 'specific_user',
+    assignedUserId: '',
+    assignedUserIds: [],
+    fallbackUserId: '',
     durationOptions: [30],
     defaultDuration: 30,
     slotInterval: 15,
@@ -368,6 +372,49 @@ export default function Meetings() {
               ))}
             </div>
           </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-[var(--vz-heading)]">Assignment Type</label>
+            <Select
+              value={linkData.assignmentType}
+              onChange={(val) => setLinkData({ ...linkData, assignmentType: val })}
+              options={[
+                { value: 'specific_user', label: 'Specific User' },
+                { value: 'round_robin', label: 'Round Robin' }
+              ]}
+            />
+          </div>
+          {linkData.assignmentType === 'specific_user' && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Assigned User</label>
+              <Select
+                value={linkData.assignedUserId}
+                onChange={(val) => setLinkData({ ...linkData, assignedUserId: val })}
+                options={[{ value: '', label: 'Myself (Default)' }, ...(usersData?.data || []).map(u => ({ value: u._id, label: u.name || u.email }))]}
+              />
+            </div>
+          )}
+          {linkData.assignmentType === 'round_robin' && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Select Team Members (Select multiple)</label>
+              <div className="max-h-32 overflow-y-auto border border-[var(--vz-border)] rounded-md p-2 space-y-1">
+                {(usersData?.data || []).map(user => (
+                  <label key={user._id} className="flex items-center gap-2 text-sm text-[var(--vz-text)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={linkData.assignedUserIds.includes(user._id)}
+                      onChange={(e) => {
+                        const newIds = e.target.checked 
+                          ? [...linkData.assignedUserIds, user._id]
+                          : linkData.assignedUserIds.filter(id => id !== user._id);
+                        setLinkData({ ...linkData, assignedUserIds: newIds });
+                      }}
+                    />
+                    {user.name || user.email}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-[var(--vz-heading)]">Default Duration</label>

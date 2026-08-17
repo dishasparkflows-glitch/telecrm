@@ -116,6 +116,141 @@ const submitForm = asyncHandler(async (req, res) => {
     ApiResponse.success(res, { message: form.settings.successMessage }, 'Form submitted');
 });
 
+// PUBLIC endpoint — renders HTML preview
+const getFormPreview = asyncHandler(async (req, res) => {
+    const formId = requireObjectId(req.params.id, 'form ID');
+    const form = await SmartForm.findOne({ _id: formId, isActive: true });
+    if (!form) {
+        return res.status(404).send('<h1>Form not found or inactive</h1>');
+    }
+
+    // Generate HTML for the form
+    const fieldsHtml = (form.fields || []).map(f => {
+        let inputHtml = '';
+        const requiredAttr = f.required ? 'required' : '';
+        const commonClass = 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500';
+        
+        switch (f.type) {
+            case 'textarea':
+                inputHtml = `<textarea name="${f.name}" placeholder="${f.placeholder || ''}" ${requiredAttr} class="${commonClass}" rows="4"></textarea>`;
+                break;
+            case 'dropdown':
+                const optionsHtml = (f.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
+                inputHtml = `<select name="${f.name}" ${requiredAttr} class="${commonClass}"><option value="">Select an option</option>${optionsHtml}</select>`;
+                break;
+            case 'checkbox':
+                inputHtml = `<input type="checkbox" name="${f.name}" value="true" ${requiredAttr} class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"> <span class="text-sm text-gray-700">${f.label}</span>`;
+                return `<div class="mb-4 flex items-center">${inputHtml}</div>`;
+            default:
+                // text, email, phone, number, date
+                const inputType = f.type === 'phone' ? 'tel' : f.type;
+                inputHtml = `<input type="${inputType}" name="${f.name}" placeholder="${f.placeholder || ''}" ${requiredAttr} class="${commonClass}">`;
+        }
+
+        return `
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">${f.label} ${f.required ? '<span class="text-red-500">*</span>' : ''}</label>
+                ${inputHtml}
+            </div>
+        `;
+    }).join('');
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${form.name}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            body { background-color: #f9fafb; font-family: ${form.styling?.fontFamily || 'Inter, sans-serif'}; }
+            .hidden { display: none !important; }
+            /* Fallback basic styling in case Tailwind is blocked */
+            input, select, textarea { width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+            button { width: 100%; padding: 10px; background: ${form.styling?.primaryColor || '#4f46e5'}; color: white; border: none; border-radius: 4px; cursor: pointer; }
+            .form-container { max-width: 500px; margin: 40px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        </style>
+    </head>
+    <body class="min-h-screen flex items-center justify-center p-4">
+        <div class="form-container bg-white rounded-xl shadow-lg w-full max-w-md p-8 border border-gray-100">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">${form.name}</h1>
+            ${form.description ? `<p class="text-gray-500 text-sm mb-6">${form.description}</p>` : '<div class="mb-6"></div>'}
+            
+            <form id="smartForm" class="space-y-4" onsubmit="submitForm(event)">
+                ${fieldsHtml}
+                <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors mt-6" style="background-color: ${form.styling?.primaryColor || '#4f46e5'}">
+                    ${form.settings?.submitButtonText || 'Submit'}
+                </button>
+            </form>
+            
+            <div id="successMessage" class="hidden mt-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm text-center">
+                ${form.settings?.successMessage || 'Form submitted successfully!'}
+            </div>
+            <div id="errorMessage" class="hidden mt-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm text-center">
+                An error occurred. Please try again.
+            </div>
+        </div>
+
+        <script>
+            async function submitForm(e) {
+                e.preventDefault();
+                const form = e.target;
+                const button = form.querySelector('button[type="submit"]');
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Handle checkboxes
+                form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    data[cb.name] = cb.checked;
+                });
+
+                const originalText = button.innerText;
+                button.innerText = 'Submitting...';
+                button.disabled = true;
+                button.style.opacity = '0.7';
+
+                try {
+                    const res = await fetch('/api/forms/${form._id}/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await res.json();
+                    
+                    if (res.ok) {
+                        form.style.display = 'none';
+                        document.getElementById('successMessage').style.display = 'block';
+                        document.getElementById('errorMessage').style.display = 'none';
+                    } else {
+                        // Attempt to extract validation error messages
+                        let errorMsg = result.message || 'Validation error';
+                        if (result.errors && Array.isArray(result.errors)) {
+                            errorMsg = result.errors.map(err => err.message).join(', ');
+                        }
+                        throw new Error(errorMsg);
+                    }
+                } catch (err) {
+                    const errDiv = document.getElementById('errorMessage');
+                    errDiv.innerText = err.message || 'Failed to submit form';
+                    errDiv.style.display = 'block';
+                    button.innerText = originalText;
+                    button.disabled = false;
+                    button.style.opacity = '1';
+                }
+            }
+        </script>
+    </body>
+    </html>
+    `;
+    
+    // Override Content-Security-Policy to allow inline scripts and Tailwind CDN
+    res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';");
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+});
+
 const getSubmissions = asyncHandler(async (req, res) => {
     const formId = requireObjectId(req.params.id, 'form ID');
     const { page, limit, skip } = pagination(req.query);
@@ -148,4 +283,4 @@ const deleteForm = asyncHandler(async (req, res) => {
     ApiResponse.success(res, null, 'Form deleted');
 });
 
-module.exports = { createForm, getForms, getForm, updateForm, submitForm, getSubmissions, deleteForm, validateSubmission };
+module.exports = { createForm, getForms, getForm, updateForm, submitForm, getSubmissions, deleteForm, validateSubmission, getFormPreview };

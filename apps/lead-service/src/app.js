@@ -65,6 +65,8 @@ app.get('/internal/leads/count', requireInternalCaller, async (req, res) => {
   }
 });
 
+app.post('/internal/leads/ingest', requireInternalCaller, leadController.ingestLeadInternal);
+
 app.use(errorHandler);
 
 module.exports = app;

@@ -892,6 +892,30 @@ const exportLeadsData = asyncHandler(async (req, res) => {
     ApiResponse.success(res, leads, 'Export data fetched');
 });
 
+/**
+ * POST /internal/leads/ingest
+ * Used by other microservices to ingest leads via leadIngestion.service.js
+ */
+const ingestLeadInternal = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const payload = req.body;
+    
+    // Default assignment parameters if provided by the caller
+    const result = await createOrUpdateLeadFromSource({
+        tenantId,
+        branchId: payload.branchId || null,
+        source: payload.source || 'api',
+        sourceDetails: payload.sourceDetails || '',
+        leadData: payload.leadData || {},
+        assignedTo: payload.assignedTo || null,
+        actorId: payload.actorId || null,
+        actorType: 'system',
+        publishCreatedEvent: true,
+    });
+    
+    ApiResponse.success(res, result, 'Lead ingested internally');
+});
+
 module.exports = {
     bulkUpdateLeads,
     createLead,
@@ -908,4 +932,5 @@ module.exports = {
     getLeadByPhone,
     getLeadsBulk,
     exportLeadsData,
+    ingestLeadInternal,
 };

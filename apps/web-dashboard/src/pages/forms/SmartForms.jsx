@@ -164,7 +164,7 @@ export default function SmartForms() {
   }
 
   const copyEmbed = (id) => {
-    const code = `<iframe src="${window.location.origin}/api/forms/${id}/submit" width="100%" height="600px" frameborder="0"></iframe>`
+    const code = `<iframe src="${window.location.origin}/api/forms/${id}/preview" width="100%" height="600px" frameborder="0"></iframe>`
     navigator.clipboard.writeText(code)
     toast('Embed code copied!', 'success')
   }

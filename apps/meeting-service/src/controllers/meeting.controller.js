@@ -13,7 +13,9 @@ const {
 const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { getUsersBulk } = require('../services/serviceClients/user.client');
+const { createOrFindLead } = require('../services/serviceClients/lead.client');
 const { validateCustomFields } = require('../utils/customFieldValidator');
+const { resolveBookingHost } = require('../services/assignmentResolver.service');
 
 const zonedSlot = (date, timezone) => {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -335,11 +337,35 @@ const bookMeeting = asyncHandler(async (req, res) => {
         throw ApiError.badRequest('Selected time is outside booking availability');
     }
 
-    const lock = await withBookingLock(`meeting-host:${link.userId}`, async () => {
+    const lock = await withBookingLock(`meeting-host:${link._id}`, async () => {
         const requestedEnd = new Date(scheduledAt.getTime() + duration * 60 * 1000);
+        
+        // 1. Find or Create Lead
+        let lead = null;
+        if (booking.guest?.email || booking.guest?.phone) {
+            lead = await createOrFindLead(link.tenantId, {
+                branchId: link.branchId,
+                source: 'booking_link',
+                sourceDetails: link.title,
+                leadData: {
+                    contact: {
+                        firstName: booking.guest.name ? booking.guest.name.split(' ')[0] : 'Unknown',
+                        lastName: booking.guest.name ? booking.guest.name.split(' ').slice(1).join(' ') : '',
+                        email: booking.guest.email,
+                        phone: booking.guest.phone,
+                    },
+                    assignedTo: link.assignmentType === 'specific_user' ? (link.assignedUserId || link.userId) : null
+                }
+            });
+        }
+
+        // 2. Resolve Host
+        const resolvedHostId = await resolveBookingHost(link, lead, scheduledAt, requestedEnd, link.tenantId);
+
+        // 3. Check Overlaps for resolved host
         const candidates = await Meeting.find({
             tenantId: link.tenantId,
-            hostId: link.userId,
+            hostId: resolvedHostId,
             'meeting.status': { $in: ['scheduled', 'confirmed'] },
             'meeting.scheduledAt': { $lt: requestedEnd },
         }).select('meeting.scheduledAt meeting.duration');
@@ -348,7 +374,7 @@ const bookMeeting = asyncHandler(async (req, res) => {
         ));
         if (overlaps) throw ApiError.conflict('The selected time is no longer available');
 
-        const tokens = await getGoogleTokens(link.tenantId, link.userId);
+        const tokens = await getGoogleTokens(link.tenantId, resolvedHostId);
         if (link.provider === 'google_meet' && tokens && tokens.refresh_token) {
             try {
                 const busySlots = await googleCalendarService.getFreeBusy(tokens, tokens.calendarId, scheduledAt, requestedEnd, link.availability.timezone);
@@ -364,7 +390,9 @@ const bookMeeting = asyncHandler(async (req, res) => {
         const meetingDoc = await Meeting.create({
             tenantId: link.tenantId,
             branchId: link.branchId || null,
-            hostId: link.userId,
+            hostId: resolvedHostId,
+            leadId: lead ? lead._id : null,
+            bookingLinkId: link._id,
             meetingType: link.meetingType || 'online',
             provider: link.provider,
             source: 'booking_link',
@@ -595,15 +623,25 @@ const getBookingAvailability = asyncHandler(async (req, res) => {
     const endOfDay = new Date(targetDate);
     endOfDay.setDate(endOfDay.getDate() + 1);
 
+    // Determine which user's calendar to check for availability
+    let userToCheck = link.userId;
+    if (link.assignmentType === 'specific_user' && link.assignedUserId) {
+        userToCheck = link.assignedUserId;
+    } else if (link.assignmentType === 'round_robin' && link.assignedUserIds?.length > 0) {
+        // For round robin, check the first user as a baseline for availability UI.
+        // The backend booking logic will properly check all users and pick an available one.
+        userToCheck = link.assignedUserIds[0];
+    }
+
     const existingMeetings = await Meeting.find({
         tenantId: link.tenantId,
-        hostId: link.userId,
+        hostId: userToCheck,
         'meeting.status': { $in: ['scheduled', 'confirmed'] },
         'meeting.scheduledAt': { $gte: startOfDay, $lt: endOfDay },
     }).select('meeting.scheduledAt meeting.duration').lean();
 
     let googleBusySlots = [];
-    const tokens = await getGoogleTokens(link.tenantId, link.userId);
+    const tokens = await getGoogleTokens(link.tenantId, userToCheck);
     if (link.provider === 'google_meet' && tokens && tokens.refresh_token) {
         try {
             googleBusySlots = await googleCalendarService.getFreeBusy(tokens, tokens.calendarId, startOfDay, endOfDay, link.availability.timezone);

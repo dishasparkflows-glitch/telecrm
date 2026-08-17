@@ -113,30 +113,55 @@ export default function MeetingDetail({ meeting: initialMeeting, isOpen, onClose
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-sm font-bold text-[var(--vz-heading)] uppercase tracking-wider">Attendees</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 p-2 rounded bg-primary/5">
-                <User size={14} className="text-primary" />
-                <span className="text-xs font-medium text-[var(--vz-heading)]">{meeting.hostId?.contact?.name || 'Host'} (Host)</span>
-              </div>
-              {meeting.guest?.name && (
-                <div className="flex items-center gap-2 p-2 rounded hover:bg-[var(--vz-body-bg)]">
-                  <User size={14} className="text-secondary" />
-                  <span className="text-xs text-[var(--vz-heading)]">
-                    {meeting.guest.name} <span className="text-[var(--vz-text-muted)]">(Guest)</span>
-                  </span>
-                </div>
-              )}
-              {meeting.attendees?.map((a, i) => {
-                const userName = a.userId?.contact?.name || usersData?.data?.find(u => u._id === (a.userId?._id || a.userId))?.contact?.name || 'Unknown User'
-                return (
-                  <div key={i} className="flex items-center gap-2 p-2 rounded hover:bg-[var(--vz-body-bg)]">
-                    <User size={14} className="text-[var(--vz-text-muted)]" />
-                    <span className="text-xs text-[var(--vz-heading)]">{userName}</span>
-                  </div>
-                )
-              })}
+            <h4 className="text-sm font-bold text-[var(--vz-heading)] uppercase tracking-wider">Host</h4>
+            <div className="flex items-center gap-2 p-2 rounded bg-primary/5">
+              <User size={14} className="text-primary" />
+              <span className="text-xs font-medium text-[var(--vz-heading)]">{meeting.hostId?.contact?.name || usersData?.data?.find(u => u._id === (meeting.hostId?._id || meeting.hostId))?.name || 'Host'}</span>
             </div>
+
+            <h4 className="text-sm font-bold text-[var(--vz-heading)] uppercase tracking-wider mt-4">Customer</h4>
+            {meeting.guest?.name ? (
+              <div className="flex items-center gap-2 p-2 rounded hover:bg-[var(--vz-body-bg)] border border-[var(--vz-border)]">
+                <User size={14} className="text-secondary" />
+                <div className="flex flex-col">
+                  <span className="text-xs text-[var(--vz-heading)]">{meeting.guest.name}</span>
+                  <span className="text-[10px] text-[var(--vz-text-muted)]">{meeting.guest.email} {meeting.guest.phone ? `| ${meeting.guest.phone}` : ''}</span>
+                </div>
+              </div>
+            ) : (
+              <span className="text-xs text-[var(--vz-text-muted)]">No customer info</span>
+            )}
+            
+            {meeting.leadId && (
+              <div className="mt-2 text-xs">
+                <span className="text-[var(--vz-text-muted)]">Related Lead: </span>
+                <a href={`/leads/${typeof meeting.leadId === 'object' ? meeting.leadId._id : meeting.leadId}`} className="text-primary hover:underline">View Lead Record</a>
+              </div>
+            )}
+
+            {meeting.bookingLinkId && (
+              <div className="mt-2 text-xs">
+                <span className="text-[var(--vz-text-muted)]">Source: </span>
+                <span className="font-medium text-[var(--vz-heading)]">Booking Link</span>
+              </div>
+            )}
+
+            {meeting.attendees?.length > 0 && (
+              <div className="pt-2">
+                <h4 className="text-sm font-bold text-[var(--vz-heading)] uppercase tracking-wider mb-2">Other Attendees</h4>
+                <div className="space-y-2">
+                  {meeting.attendees.map((a, i) => {
+                    const userName = a.userId?.contact?.name || usersData?.data?.find(u => u._id === (a.userId?._id || a.userId))?.name || 'Unknown User'
+                    return (
+                      <div key={i} className="flex items-center gap-2 p-2 rounded hover:bg-[var(--vz-body-bg)]">
+                        <User size={14} className="text-[var(--vz-text-muted)]" />
+                        <span className="text-xs text-[var(--vz-heading)]">{userName}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Custom Fields */}

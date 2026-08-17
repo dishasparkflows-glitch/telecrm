@@ -6,6 +6,7 @@ const meetingSchema = new mongoose.Schema(
         branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
         hostId: { type: mongoose.Schema.Types.ObjectId, required: true },
         leadId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        bookingLinkId: { type: mongoose.Schema.Types.ObjectId, ref: 'BookingLink', default: null },
         meeting: {
             title: { type: String, required: true, trim: true },
             description: { type: String, default: '' },
@@ -93,6 +94,10 @@ const bookingLinkSchema = new mongoose.Schema(
         slug: { type: String, required: true, unique: true },
         title: { type: String, default: 'Book a Meeting' },
         description: { type: String, default: '' },
+        assignmentType: { type: String, enum: ['specific_user', 'round_robin', 'group'], default: 'specific_user' },
+        assignedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        assignedUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+        fallbackUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         durationOptions: { type: [Number], default: [15, 30, 60] },
         defaultDuration: { type: Number, default: 30 },
         slotInterval: { type: Number, default: 15 },

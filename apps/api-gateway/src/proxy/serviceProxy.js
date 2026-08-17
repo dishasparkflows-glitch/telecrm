@@ -107,6 +107,7 @@ const SERVICE_ROUTES = {
         feature: 'smart_forms',
         publicPaths: [
             { method: 'POST', pattern: /^\/api\/forms\/[a-f0-9]+\/submit\/?$/ },
+            { method: 'GET', pattern: /^\/api\/forms\/[a-f0-9]+\/preview\/?$/ },
         ],
     },
     '/api/meetings': {
