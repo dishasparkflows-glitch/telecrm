@@ -180,6 +180,9 @@ export default function Meetings() {
                     <div className="flex items-center gap-3 mt-1 text-xs text-[var(--vz-text-muted)]">
                       <span className="flex items-center gap-1"><Clock size={11} /> {new Date(m.meeting?.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       <span className="flex items-center gap-1"><Video size={11} /> {m.meeting?.duration}min</span>
+                      {m.meetingType && (
+                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 capitalize border border-gray-200">{m.meetingType}</span>
+                      )}
                       {m.conference?.provider === 'google_meet' && (
                         <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Google Meet</span>
                       )}

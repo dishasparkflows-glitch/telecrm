@@ -13,35 +13,100 @@ const registerEventListeners = async () => {
     // ─── form.submitted → Auto-create lead from form submission ───
     await subscribeToEvents(EVENTS.FORM_SUBMITTED, async (_channel, data) => {
         try {
-            const { tenantId, branchId, data: formData, settings } = data;
+            const { tenantId, branchId, data: formData, settings, fields, utm, formName } = data;
+            
+            if (settings && settings.createLead === false) {
+                console.log(`📋 form.submitted: Lead creation disabled for form ${data.formId}`);
+                return;
+            }
 
-            // Map form fields to lead fields while preserving current Smart Form defaults.
+            // Map form fields to lead fields using crmField configuration
+            const contact = {};
+            const customFields = {};
+            const address = {};
+            let firstName = 'Unknown';
+            let lastName = '';
+            let email = '';
+            let phone = '';
+            
+            // Backwards compatibility for old forms
+            if (!fields || !fields.some(f => f.crmField)) {
+                firstName = formData.firstName || formData.name || 'Unknown';
+                lastName = formData.lastName || '';
+                email = formData.email || '';
+                phone = formData.phone || formData.mobile || '';
+                contact.company = formData.company || '';
+            } else {
+                for (const field of fields) {
+                    if (!field.crmField) continue;
+                    const value = formData[field.name];
+                    if (value === undefined || value === null) continue;
+                    
+                    if (field.crmField === 'firstName') firstName = value;
+                    else if (field.crmField === 'lastName') lastName = value;
+                    else if (field.crmField === 'email') email = value;
+                    else if (field.crmField === 'phone') phone = value;
+                    else if (field.crmField.startsWith('contact.')) {
+                        contact[field.crmField.replace('contact.', '')] = value;
+                    } else if (field.crmField.startsWith('address.')) {
+                        address[field.crmField.replace('address.', '')] = value;
+                    } else if (field.crmField.startsWith('customFields.')) {
+                        customFields[field.crmField.replace('customFields.', '')] = value;
+                    } else if (field.crmField === 'company') {
+                        contact.company = value;
+                    } else if (field.crmField === 'designation') {
+                        contact.designation = value;
+                    }
+                }
+            }
+
+            const tags = settings?.autoTag || [];
+            
+            // Map UTM parameters
+            let touch = null;
+            if (utm && (utm.utmSource || utm.utmCampaign || utm.utmMedium)) {
+                touch = {
+                    formId: String(data.formId || ''),
+                    formName: formName || undefined,
+                    campaignName: utm.utmCampaign,
+                    capturedAt: new Date(),
+                };
+            } else {
+                touch = { formId: String(data.formId || ''), formName: formName || undefined, capturedAt: new Date() };
+            }
+
             const leadData = {
-                firstName: formData.firstName || formData.name || 'Unknown',
-                lastName: formData.lastName || '',
-                email: formData.email || '',
-                phone: formData.phone || formData.mobile || '',
-                company: formData.company || '',
-                tags: settings?.autoTag || [],
-                customFields: formData.customFields || {},
+                contact: {
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    ...contact
+                },
+                address,
+                customFields,
+                tags,
+                pipeline: {
+                    stage: settings?.leadStage || 'new'
+                }
             };
-
+            
             const result = await createOrUpdateLeadFromSource({
                 tenantId,
                 branchId: branchId || null,
-                source: 'smart_form',
-                sourceDetails: `Form: ${data.formId}`,
+                source: settings?.leadSource || 'smart_form',
+                sourceDetails: formName ? `Form: ${formName}` : `Form: ${data.formId}`,
                 leadData,
-                assignedTo: settings?.assignTo || null,
+                assignedTo: null,
                 actorType: 'integration',
-                origin: { provider: 'smart_form', sourceId: String(data.formId || ''), rawSource: 'form.submitted' },
-                firstTouch: { formId: String(data.formId || ''), capturedAt: new Date() },
-                lastTouch: { formId: String(data.formId || ''), capturedAt: new Date() },
+                origin: { provider: 'smart_form', sourceName: formName ? `Form: ${formName}` : undefined, sourceId: String(data.formId || ''), rawSource: 'form.submitted' },
+                firstTouch: touch,
+                lastTouch: touch,
                 rawPayload: formData,
             });
 
             if (result.duplicate) {
-                console.log(`📋 form.submitted: Duplicate lead matched (${leadData.email || leadData.phone})`);
+                console.log(`📋 form.submitted: Duplicate lead matched (${email || phone})`);
                 return;
             }
 

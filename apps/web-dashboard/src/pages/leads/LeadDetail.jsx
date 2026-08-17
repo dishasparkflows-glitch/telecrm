@@ -131,8 +131,35 @@ export default function LeadDetail() {
       }
     }
 
+    const payload = {};
+    const contactDiff = {};
+    ['firstName', 'lastName', 'email', 'phone', 'company'].forEach(k => {
+      if (editForm.contact[k] !== (lead.contact?.[k] || '')) contactDiff[k] = editForm.contact[k];
+    });
+    if (Object.keys(contactDiff).length > 0) payload.contact = contactDiff;
+
+    const lifecycleDiff = {};
+    if (editForm.lifecycle?.expectedValue !== currentExpectedValue) lifecycleDiff.expectedValue = editForm.lifecycle.expectedValue;
+    const oldDateStr = currentFollowUpAt ? new Date(new Date(currentFollowUpAt).getTime() - new Date(currentFollowUpAt).getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '';
+    if (editForm.lifecycle?.followUpAt !== oldDateStr) lifecycleDiff.followUpAt = editForm.lifecycle.followUpAt;
+    
+    if (Object.keys(lifecycleDiff).length > 0) payload.lifecycle = lifecycleDiff;
+
+    const customFieldsDiff = {};
+    const oldCustomFields = lead.customFields || {};
+    Object.keys(editForm.customFields).forEach(k => {
+      if (editForm.customFields[k] !== oldCustomFields[k]) customFieldsDiff[k] = editForm.customFields[k];
+    });
+    if (Object.keys(customFieldsDiff).length > 0) payload.customFields = customFieldsDiff;
+
+    if (Object.keys(payload).length === 0) {
+      toast('No changes detected', 'info');
+      setShowEdit(false);
+      return;
+    }
+
     try {
-      await updateLead({ id, ...editForm }).unwrap()
+      await updateLead({ id, ...payload }).unwrap()
       toast('Lead updated', 'success')
       setShowEdit(false)
     } catch { toast('Failed to update lead', 'error') }

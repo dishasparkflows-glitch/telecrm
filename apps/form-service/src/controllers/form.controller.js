@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { SmartForm, FormSubmission } = require('../models/SmartForm');
 const { pickFormWriteInput, requireObjectId, pagination } = require('../utils/formDto');
 const { ApiResponse, ApiError, asyncHandler, buildScopeFilter } = require('@sparkcrm/shared-utils');
@@ -8,27 +9,51 @@ const validateSubmission = (form, data) => {
         throw ApiError.badRequest('Submission data must be an object');
     }
     const fields = form.fields || [];
-    const declaredFields = new Map(fields.map((field) => [field.name, field]));
-
-    for (const name of Object.keys(data)) {
-        if (!declaredFields.has(name)) throw ApiError.badRequest(`Unknown field: ${name}`);
-    }
-
+    // Only collect declared fields, ignore extraneous data
     const submission = {};
     for (const field of fields) {
-        const value = data[field.name];
+        let value = data[field.name];
+        
+        // If field was conditional and hidden, it might not be sent. Skip validation if not required.
+        // Wait, if it's required BUT hidden by showIf, it shouldn't be required. 
+        // We evaluate showIf based on data.
+        if (field.showIf && field.showIf.field) {
+            const dependValue = data[field.showIf.field];
+            let shouldShow = true;
+            if (field.showIf.operator === 'equals') shouldShow = dependValue === field.showIf.value;
+            else if (field.showIf.operator === 'not_equals') shouldShow = dependValue !== field.showIf.value;
+            else if (field.showIf.operator === 'contains') shouldShow = String(dependValue || '').includes(field.showIf.value);
+            
+            if (!shouldShow) {
+                continue;
+            }
+        }
+
         if (value === undefined || value === null || value === '') {
             if (field.required) throw ApiError.badRequest(`${field.label || field.name} is required`);
             continue;
         }
 
+        // Handle stringified numbers or arrays from FormData
+        if (field.type === 'number' || field.type === 'currency') {
+            value = Number(value);
+        }
+
         const valid = (() => {
             switch (field.type) {
                 case 'email': return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-                case 'number': return typeof value === 'number' && Number.isFinite(value);
-                case 'dropdown': return Array.isArray(field.options) && field.options.includes(value);
-                case 'checkbox': return typeof value === 'boolean';
-                case 'date': return (typeof value === 'string' || value instanceof Date) && !Number.isNaN(new Date(value).getTime());
+                case 'number': 
+                case 'currency': return typeof value === 'number' && Number.isFinite(value);
+                case 'dropdown': 
+                case 'radio': return typeof value === 'string' && field.options.includes(value);
+                case 'multiselect': 
+                    if (typeof value === 'string') value = [value];
+                    return Array.isArray(value) && value.every(v => field.options.includes(v));
+                case 'checkbox': 
+                    if (typeof value === 'string') value = value === 'true' || value === 'on';
+                    return typeof value === 'boolean';
+                case 'date': 
+                case 'datetime': return (typeof value === 'string' || value instanceof Date) && !Number.isNaN(new Date(value).getTime());
                 default: return typeof value === 'string';
             }
         })();
@@ -91,6 +116,14 @@ const submitForm = asyncHandler(async (req, res) => {
     if (!form) throw ApiError.notFound('Form not found or inactive');
 
     const data = validateSubmission(form, req.body);
+    
+    // Extract UTM
+    const utmSource = req.query.utm_source || req.body.utm_source || '';
+    const utmMedium = req.query.utm_medium || req.body.utm_medium || '';
+    const utmCampaign = req.query.utm_campaign || req.body.utm_campaign || '';
+    const utmTerm = req.query.utm_term || req.body.utm_term || '';
+    const utmContent = req.query.utm_content || req.body.utm_content || '';
+
     const submission = await FormSubmission.create({
         tenantId: form.tenantId,
         branchId: form.branchId,
@@ -98,6 +131,11 @@ const submitForm = asyncHandler(async (req, res) => {
         data,
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
+        utmSource,
+        utmMedium,
+        utmCampaign,
+        utmTerm,
+        utmContent,
     });
 
     form.submissionCount += 1;
@@ -108,12 +146,20 @@ const submitForm = asyncHandler(async (req, res) => {
         tenantId: form.tenantId,
         branchId: form.branchId,
         formId: form._id,
+        formName: form.name,
         submissionId: submission._id,
         data,
         settings: form.settings,
+        fields: form.fields, // Pass fields for CRM mapping
+        utm: { utmSource, utmMedium, utmCampaign, utmTerm, utmContent }
     });
 
-    ApiResponse.success(res, { message: form.settings.successMessage }, 'Form submitted');
+    ApiResponse.success(res, { 
+        message: form.settings.successMessage,
+        afterSubmitAction: form.settings.afterSubmitAction,
+        redirectUrl: form.settings.redirectUrl,
+        bookingLinkId: form.settings.bookingLinkId
+    }, 'Form submitted');
 });
 
 // PUBLIC endpoint — renders HTML preview
@@ -132,25 +178,49 @@ const getFormPreview = asyncHandler(async (req, res) => {
         
         switch (f.type) {
             case 'textarea':
-                inputHtml = `<textarea name="${f.name}" placeholder="${f.placeholder || ''}" ${requiredAttr} class="${commonClass}" rows="4"></textarea>`;
+                inputHtml = `<textarea name="${f.name}" placeholder="${f.placeholder || ''}" ${requiredAttr} class="${commonClass}" rows="4">${f.defaultValue || ''}</textarea>`;
                 break;
-            case 'dropdown':
-                const optionsHtml = (f.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
+            case 'dropdown': {
+                const optionsHtml = (f.options || []).map(o => `<option value="${o}" ${f.defaultValue === o ? 'selected' : ''}>${o}</option>`).join('');
                 inputHtml = `<select name="${f.name}" ${requiredAttr} class="${commonClass}"><option value="">Select an option</option>${optionsHtml}</select>`;
                 break;
+            }
+            case 'radio':
+                inputHtml = `<div class="space-y-2">` + (f.options || []).map(o => 
+                    `<label class="flex items-center space-x-2"><input type="radio" name="${f.name}" value="${o}" ${f.defaultValue === o ? 'checked' : ''} ${requiredAttr} class="text-indigo-600 focus:ring-indigo-500 border-gray-300"> <span class="text-sm text-gray-700">${o}</span></label>`
+                ).join('') + `</div>`;
+                break;
+            case 'multiselect': {
+                const msOptionsHtml = (f.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
+                inputHtml = `<select name="${f.name}" multiple ${requiredAttr} class="${commonClass}">${msOptionsHtml}</select><p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>`;
+                break;
+            }
             case 'checkbox':
-                inputHtml = `<input type="checkbox" name="${f.name}" value="true" ${requiredAttr} class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"> <span class="text-sm text-gray-700">${f.label}</span>`;
-                return `<div class="mb-4 flex items-center">${inputHtml}</div>`;
-            default:
-                // text, email, phone, number, date
-                const inputType = f.type === 'phone' ? 'tel' : f.type;
-                inputHtml = `<input type="${inputType}" name="${f.name}" placeholder="${f.placeholder || ''}" ${requiredAttr} class="${commonClass}">`;
+                inputHtml = `<div class="flex items-center"><input type="checkbox" name="${f.name}" value="true" ${f.defaultValue === 'true' ? 'checked' : ''} ${requiredAttr} class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"> <span class="text-sm text-gray-700">${f.label}</span></div>`;
+                break;
+            default: {
+                // text, email, phone, number, date, datetime, currency
+                let inputType = f.type;
+                if (f.type === 'phone') inputType = 'tel';
+                if (f.type === 'datetime') inputType = 'datetime-local';
+                if (f.type === 'currency') inputType = 'number';
+                inputHtml = `<input type="${inputType}" name="${f.name}" placeholder="${f.placeholder || ''}" value="${f.defaultValue || ''}" ${requiredAttr} class="${commonClass}" ${f.type === 'currency' || f.type === 'number' ? 'step="any"' : ''}>`;
+                break;
+            }
+        }
+
+        const showIfData = f.showIf && f.showIf.field ? `data-show-if-field="${f.showIf.field}" data-show-if-operator="${f.showIf.operator}" data-show-if-value="${f.showIf.value}"` : '';
+
+        // If it's a standalone checkbox, we don't need another label above it
+        if (f.type === 'checkbox') {
+            return `<div class="mb-4 form-field-container" data-field-name="${f.name}" ${showIfData}>${inputHtml} ${f.helpText ? `<p class="text-xs text-gray-500 mt-1">${f.helpText}</p>` : ''}</div>`;
         }
 
         return `
-            <div class="mb-4">
+            <div class="mb-4 form-field-container" data-field-name="${f.name}" ${showIfData}>
                 <label class="block text-sm font-medium text-gray-700 mb-1">${f.label} ${f.required ? '<span class="text-red-500">*</span>' : ''}</label>
                 ${inputHtml}
+                ${f.helpText ? `<p class="text-xs text-gray-500 mt-1">${f.helpText}</p>` : ''}
             </div>
         `;
     }).join('');
@@ -166,9 +236,9 @@ const getFormPreview = asyncHandler(async (req, res) => {
         <style>
             body { background-color: #f9fafb; font-family: ${form.styling?.fontFamily || 'Inter, sans-serif'}; }
             .hidden { display: none !important; }
-            /* Fallback basic styling in case Tailwind is blocked */
-            input, select, textarea { width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
-            button { width: 100%; padding: 10px; background: ${form.styling?.primaryColor || '#4f46e5'}; color: white; border: none; border-radius: 4px; cursor: pointer; }
+            input, select, textarea { width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px; }
+            input[type="radio"], input[type="checkbox"] { width: auto; margin-bottom: 0; }
+            button { width: 100%; padding: 10px; color: white; border: none; border-radius: 4px; cursor: pointer; }
             .form-container { max-width: 500px; margin: 40px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         </style>
     </head>
@@ -185,14 +255,51 @@ const getFormPreview = asyncHandler(async (req, res) => {
             </form>
             
             <div id="successMessage" class="hidden mt-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm text-center">
-                ${form.settings?.successMessage || 'Form submitted successfully!'}
             </div>
             <div id="errorMessage" class="hidden mt-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm text-center">
-                An error occurred. Please try again.
             </div>
         </div>
 
         <script>
+            // Handle URL UTM parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const utmParams = {
+                utm_source: urlParams.get('utm_source') || '',
+                utm_medium: urlParams.get('utm_medium') || '',
+                utm_campaign: urlParams.get('utm_campaign') || '',
+                utm_term: urlParams.get('utm_term') || '',
+                utm_content: urlParams.get('utm_content') || ''
+            };
+
+            // Conditional Logic
+            function evaluateConditionals() {
+                const form = document.getElementById('smartForm');
+                const formData = new FormData(form);
+                
+                document.querySelectorAll('.form-field-container').forEach(container => {
+                    const dependField = container.getAttribute('data-show-if-field');
+                    if (dependField) {
+                        const operator = container.getAttribute('data-show-if-operator');
+                        const value = container.getAttribute('data-show-if-value');
+                        const dependValue = formData.get(dependField);
+                        
+                        let shouldShow = true;
+                        if (operator === 'equals') shouldShow = dependValue === value;
+                        else if (operator === 'not_equals') shouldShow = dependValue !== value;
+                        else if (operator === 'contains') shouldShow = dependValue && dependValue.includes(value);
+
+                        container.style.display = shouldShow ? 'block' : 'none';
+                        // Disable inputs inside hidden containers so they don't block HTML5 validation or get submitted
+                        container.querySelectorAll('input, select, textarea').forEach(input => {
+                            input.disabled = !shouldShow;
+                        });
+                    }
+                });
+            }
+
+            document.getElementById('smartForm').addEventListener('change', evaluateConditionals);
+            evaluateConditionals();
+
             async function submitForm(e) {
                 e.preventDefault();
                 const form = e.target;
@@ -200,10 +307,17 @@ const getFormPreview = asyncHandler(async (req, res) => {
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData.entries());
                 
-                // Handle checkboxes
+                // Handle checkboxes and multiselect
                 form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                     data[cb.name] = cb.checked;
                 });
+                form.querySelectorAll('select[multiple]').forEach(select => {
+                    const selected = Array.from(select.options).filter(opt => opt.selected).map(opt => opt.value);
+                    data[select.name] = selected;
+                });
+
+                // Attach UTM
+                Object.assign(data, utmParams);
 
                 const originalText = button.innerText;
                 button.innerText = 'Submitting...';
@@ -220,11 +334,24 @@ const getFormPreview = asyncHandler(async (req, res) => {
                     const result = await res.json();
                     
                     if (res.ok) {
+                        const action = result.data?.afterSubmitAction || 'message';
+                        
+                        if (action === 'redirect' && result.data?.redirectUrl) {
+                            window.location.href = result.data.redirectUrl;
+                            return;
+                        } else if (action === 'booking' && result.data?.bookingLinkId) {
+                            // If your app has a public booking page
+                            window.location.href = '/book/' + result.data.bookingLinkId;
+                            return;
+                        }
+
+                        // Default message
                         form.style.display = 'none';
-                        document.getElementById('successMessage').style.display = 'block';
+                        const successDiv = document.getElementById('successMessage');
+                        successDiv.innerText = result.data?.message || 'Form submitted successfully!';
+                        successDiv.style.display = 'block';
                         document.getElementById('errorMessage').style.display = 'none';
                     } else {
-                        // Attempt to extract validation error messages
                         let errorMsg = result.message || 'Validation error';
                         if (result.errors && Array.isArray(result.errors)) {
                             errorMsg = result.errors.map(err => err.message).join(', ');
@@ -249,6 +376,21 @@ const getFormPreview = asyncHandler(async (req, res) => {
     res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';");
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
+});
+
+const getFormsBulk = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    if (!req.query.ids) return ApiResponse.success(res, []);
+    
+    const ids = req.query.ids.split(',').filter(id => mongoose.Types.ObjectId.isValid(id));
+    if (ids.length === 0) return ApiResponse.success(res, []);
+
+    const forms = await SmartForm.find({
+        _id: { $in: ids },
+        tenantId
+    }).select('name description');
+
+    ApiResponse.success(res, forms);
 });
 
 const getSubmissions = asyncHandler(async (req, res) => {
@@ -283,4 +425,4 @@ const deleteForm = asyncHandler(async (req, res) => {
     ApiResponse.success(res, null, 'Form deleted');
 });
 
-module.exports = { createForm, getForms, getForm, updateForm, submitForm, getSubmissions, deleteForm, validateSubmission, getFormPreview };
+module.exports = { createForm, getForms, getForm, updateForm, submitForm, getSubmissions, deleteForm, getFormsBulk, validateSubmission, getFormPreview };

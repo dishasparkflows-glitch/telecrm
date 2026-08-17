@@ -9,6 +9,7 @@ const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord }
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { auditLogger } = require('@sparkcrm/shared-middleware');
 const { getUsersBulk } = require('../services/serviceClients/user.client');
+const { getFormsBulk } = require('../services/serviceClients/form.client');
 const { validateCustomFields } = require('../utils/customFieldValidator');
 
 const LEAD_SORT_FIELDS = new Set(['createdAt', 'updatedAt', 'firstName', 'lastName', 'stage', 'priority', 'score', 'scoring.score', 'expectedValue', 'followUpAt']);
@@ -147,6 +148,30 @@ const getLead = asyncHandler(async (req, res) => {
         });
     }
 
+    // --- POPULATE FORM DATA ---
+    const formIdsToFetch = new Set();
+    const addFormId = (id) => {
+        if (id) formIdsToFetch.add(String(id));
+    };
+    addFormId(obj.firstTouch?.formId);
+    addFormId(obj.lastTouch?.formId);
+    if (obj.origin?.provider === 'smart_form') addFormId(obj.origin?.sourceId);
+
+    if (formIdsToFetch.size > 0) {
+        const forms = await getFormsBulk(tenantId, Array.from(formIdsToFetch));
+        const formMap = new Map(forms.map(f => [String(f._id), f.name]));
+        
+        if (obj.firstTouch?.formId && formMap.has(obj.firstTouch.formId)) {
+            obj.firstTouch.formName = formMap.get(obj.firstTouch.formId);
+        }
+        if (obj.lastTouch?.formId && formMap.has(obj.lastTouch.formId)) {
+            obj.lastTouch.formName = formMap.get(obj.lastTouch.formId);
+        }
+        if (obj.origin?.sourceId && obj.origin?.provider === 'smart_form' && formMap.has(obj.origin.sourceId)) {
+            obj.origin.sourceName = `Form: ${formMap.get(obj.origin.sourceId)}`;
+        }
+    }
+
     if (userIdsToFetch.size > 0) {
         const users = await getUsersBulk(tenantId, Array.from(userIdsToFetch));
         const userMap = new Map(users.map(u => [String(u._id), u]));
@@ -211,7 +236,6 @@ const updateLead = asyncHandler(async (req, res) => {
     if (changes.contact) {
         if (changes.contact.email !== undefined) changes.contact.emailNormalized = normalizeEmail(changes.contact.email);
         if (changes.contact.phone !== undefined) changes.contact.phoneNormalized = normalizePhone(changes.contact.phone);
-        // Deep merge contact object so we don't overwrite unspecified properties
         lead.contact = { ...(lead.contact || {}), ...changes.contact };
         delete changes.contact;
     }
@@ -222,6 +246,20 @@ const updateLead = asyncHandler(async (req, res) => {
     if (changes.lifecycle) {
         lead.lifecycle = { ...(lead.lifecycle || {}), ...changes.lifecycle };
         delete changes.lifecycle;
+    }
+    if (changes.customFields) {
+        if (!lead.customFields) {
+            lead.customFields = {};
+        }
+        for (const [key, value] of Object.entries(changes.customFields)) {
+            if (lead.customFields instanceof Map) {
+                lead.customFields.set(key, value);
+            } else {
+                lead.customFields[key] = value;
+            }
+        }
+        lead.markModified('customFields');
+        delete changes.customFields;
     }
     Object.assign(lead, changes);
 

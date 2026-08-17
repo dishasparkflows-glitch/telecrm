@@ -17,15 +17,22 @@ const FORM_FIELD_FIELDS = Object.freeze([
     'required',
     'options',
     'order',
+    'helpText',
+    'defaultValue',
+    'showIf',
+    'crmField'
 ]);
 const FORM_SETTINGS_FIELDS = Object.freeze([
     'submitButtonText',
     'successMessage',
     'redirectUrl',
     'notifyEmails',
-    'assignTo',
     'leadSource',
     'autoTag',
+    'afterSubmitAction',
+    'bookingLinkId',
+    'createLead',
+    'leadStage'
 ]);
 const FORM_STYLING_FIELDS = Object.freeze([
     'theme',
@@ -69,9 +76,6 @@ function sanitizeSettings(settings) {
         if (sanitized[field] !== undefined && !Array.isArray(sanitized[field])) {
             throw ApiError.badRequest(`settings.${field} must be an array`);
         }
-    }
-    if (sanitized.assignTo !== undefined && sanitized.assignTo !== null) {
-        sanitized.assignTo = requireObjectId(sanitized.assignTo, 'settings.assignTo');
     }
     return sanitized;
 }

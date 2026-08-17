@@ -33,59 +33,7 @@ import {
   X
 } from 'lucide-react'
 
-/* ---------- Field Builder Row ---------- */
-const FieldRow = ({ field, onUpdate, onRemove }) => (
-  <div className="flex items-center gap-3 p-3 bg-[var(--vz-body-bg)] rounded-lg border border-[var(--vz-border)] group">
-    <div className="text-[var(--vz-text-muted)] cursor-grab">
-      <GripVertical size={16} />
-    </div>
-    <div className="flex-1 grid grid-cols-12 gap-2">
-      <div className="col-span-4">
-        <input
-          placeholder="Field Label"
-          value={field.label || ''}
-          onChange={(e) => onUpdate({ ...field, label: e.target.value })}
-          className="w-full bg-transparent text-sm font-semibold text-[var(--vz-heading)] outline-none"
-        />
-      </div>
-      <div className="col-span-3">
-        <Select
-          value={field.type || 'text'}
-          onChange={(val) => onUpdate({ ...field, type: val })}
-          className="border-none"
-          options={[
-            { value: 'text', label: 'Short Text' },
-            { value: 'email', label: 'Email' },
-            { value: 'phone', label: 'Phone' },
-            { value: 'date', label: 'Date' },
-            { value: 'textarea', label: 'Long Text' },
-            { value: 'number', label: 'Number' }
-          ]}
-        />
-      </div>
-      <div className="col-span-4">
-        <input
-          placeholder="Name attribute (e.g. user_email)"
-          value={field.name || ''}
-          onChange={(e) => onUpdate({ ...field, name: e.target.value })}
-          className="w-full bg-transparent text-[11px] text-[var(--vz-text-muted)] italic outline-none"
-        />
-      </div>
-      <div className="col-span-1 flex justify-center">
-         <input 
-           type="checkbox" 
-           title="Required" 
-           checked={field.required || false} 
-           onChange={(e) => onUpdate({ ...field, required: e.target.checked })} 
-           className="accent-primary"
-         />
-      </div>
-    </div>
-    <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 p-1.5 text-danger hover:bg-danger/10 rounded transition-all">
-       <Trash2 size={14} />
-    </button>
-  </div>
-)
+import FormBuilderModal from './FormBuilderModal'
 
 /* ---------- Main Component ---------- */
 
@@ -138,8 +86,15 @@ export default function SmartForms() {
           required: field.required,
           options: field.options,
           order: field.order,
+          helpText: field.helpText,
+          defaultValue: field.defaultValue,
+          showIf: field.showIf,
+          crmField: field.crmField
         })),
-        isActive: editingForm.isActive
+        isActive: editingForm.isActive,
+        settings: editingForm.settings,
+        styling: editingForm.styling,
+        description: editingForm.description
       }).unwrap()
       toast('Form schema updated', 'success')
       setEditingForm(null)
@@ -158,10 +113,7 @@ export default function SmartForms() {
     }
   }
 
-  const addField = () => {
-    const newField = { label: '', name: '', type: 'text', required: false }
-    setEditingForm({ ...editingForm, fields: [...(editingForm.fields || []), newField] })
-  }
+
 
   const copyEmbed = (id) => {
     const code = `<iframe src="${window.location.origin}/api/forms/${id}/preview" width="100%" height="600px" frameborder="0"></iframe>`
@@ -180,6 +132,35 @@ export default function SmartForms() {
     if (!currentFormForSubs?.fields) return []
     return currentFormForSubs.fields.map(f => ({ label: f.label, key: f.name }))
   }, [currentFormForSubs])
+
+  const handleExportCSV = () => {
+    if (!currentSubmissions || currentSubmissions.length === 0) {
+      toast('No submissions to export', 'error')
+      return
+    }
+
+    const headers = ['Submission Date', ...subHeaders.map(h => h.label)].join(',')
+    const rows = currentSubmissions.map(sub => {
+      const dateStr = new Date(sub.meta?.createdAt).toLocaleString()
+      const rowData = subHeaders.map(h => {
+        const val = sub.data[h.key]
+        if (typeof val === 'object') return `"${JSON.stringify(val).replace(/"/g, '""')}"`
+        return `"${String(val || '').replace(/"/g, '""')}"`
+      })
+      return [`"${dateStr}"`, ...rowData].join(',')
+    })
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n")
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", `${(currentFormForSubs?.name || 'form').replace(/\s+/g, '_')}_submissions.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast('Export successful', 'success')
+  }
 
   return (
     <div className="space-y-6">
@@ -261,76 +242,12 @@ export default function SmartForms() {
 
       {/* Form Builder Modal */}
       {editingForm && (
-        <Modal isOpen onClose={() => setEditingForm(null)} title={`Form Builder: ${editingForm.name}`} size="lg">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-               <div>
-                  <h6 className="text-sm font-bold text-[var(--vz-heading)]">Define Form Schema</h6>
-                  <p className="text-[11px] text-[var(--vz-text-muted)]">Add the fields you want to collect from your users</p>
-               </div>
-               <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 text-xs font-bold text-[var(--vz-text-muted)] cursor-pointer">
-                     <input 
-                       type="checkbox" 
-                       checked={editingForm.isActive} 
-                       onChange={(e) => setEditingForm({...editingForm, isActive: e.target.checked})} 
-                       className="rounded text-primary"
-                     />
-                     Active
-                  </label>
-                  <Button size="sm" variant="soft-primary" onClick={addField}>
-                    <Plus size={14} /> Add Field
-                  </Button>
-               </div>
-            </div>
-
-            <div className="max-h-[400px] overflow-y-auto pr-1 space-y-3 custom-scrollbar">
-              {editingForm.fields?.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-[var(--vz-border)] rounded-xl">
-                   <MousePointer2 size={32} className="mx-auto text-[var(--vz-text-muted)] mb-3 opacity-30" />
-                   <p className="text-sm text-[var(--vz-text-muted)]">No fields added yet. Click 'Add Field' to start.</p>
-                </div>
-              ) : (
-                editingForm.fields.map((field, i) => (
-                  <FieldRow 
-                    key={i} 
-                    field={field} 
-                    index={i} 
-                    onUpdate={(updated) => {
-                      const newFields = [...editingForm.fields]
-                      newFields[i] = updated
-                      setEditingForm({ ...editingForm, fields: newFields })
-                    }}
-                    onRemove={() => {
-                      const newFields = editingForm.fields.filter((_, idx) => idx !== i)
-                      setEditingForm({ ...editingForm, fields: newFields })
-                    }}
-                  />
-                ))
-              )}
-            </div>
-
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-               <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                     <CheckCircle2 size={16} className="text-primary" />
-                  </div>
-                  <div>
-                    <h6 className="text-xs font-bold text-primary mb-1">Pro Tip: Field Names</h6>
-                    <p className="text-[10px] text-[var(--vz-text)] leading-relaxed">
-                      Use simple, alphanumeric names for the "Name" attribute (e.g. `client_name`). These will be the keys in your lead data.
-                    </p>
-                  </div>
-               </div>
-            </div>
-          </div>
-          <Modal.Footer>
-            <Button variant="ghost" size="sm" onClick={() => setEditingForm(null)}>Discard Changes</Button>
-            <Button size="sm" onClick={handleSaveFields} disabled={updating}>
-              {updating ? 'Saving Schema...' : 'Save & Publish'}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        <FormBuilderModal 
+          editingForm={editingForm} 
+          setEditingForm={setEditingForm} 
+          handleSaveFields={handleSaveFields} 
+          updating={updating} 
+        />
       )}
 
       {/* Submissions View Modal */}
@@ -350,7 +267,9 @@ export default function SmartForms() {
                       </p>
                    </div>
                 </div>
-                <Button variant="soft-primary" size="sm"><TableIcon size={14} className="mr-1.5" /> Export CSV</Button>
+                <Button variant="soft-primary" size="sm" onClick={handleExportCSV}>
+                  <TableIcon size={14} className="mr-1.5" /> Export CSV
+                </Button>
              </div>
 
              {subLoading ? (
