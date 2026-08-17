@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const { ApiResponse, ApiError, asyncHandler,ROLES, buildScopeFilter, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, ROLES, buildScopeFilter, getPresignedDownloadUrl, cacheHelper } = require('@sparkcrm/shared-utils');
 const { getRolesBulk, getBranchesBulk } = require('../services/serviceClients/tenant.client');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const crypto = require('crypto');
@@ -134,10 +134,11 @@ const inviteUser = asyncHandler(async (req, res) => {
             name: user.contact?.name || '',
             tempPassword,
             loginLink: `${process.env.DASHBOARD_URL || 'http://localhost:5174'}/login`,
-        },
+        }
     });
 
-    ApiResponse.created(res, user.toJSON(), 'User invited successfully');
+    await cacheHelper.deleteByPattern(`users:${tenantId}:*`);
+    ApiResponse.created(res, user, 'User invited successfully');
 });
 
 /**
@@ -145,27 +146,29 @@ const inviteUser = asyncHandler(async (req, res) => {
  * Get all users in current tenant
  */
 const getUsers = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, search, roleId, isActive } = req.query;
+    const { page = 1, limit = 10, search, roleId, isActive } = req.query;
 
-    // Build scope filter — superadmin sees all, managers see branch users
     const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
-    if (search) {
-        filter.$or = [
-            { 'contact.name': { $regex: search, $options: 'i' } },
-            { 'contact.email': { $regex: search, $options: 'i' } },
-            { 'contact.phone': { $regex: search, $options: 'i' } },
-        ];
-    }
-    if (roleId) filter.roleId = roleId;
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const [users, total] = await Promise.all([
-        User.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
-        User.countDocuments(filter),
-    ]);
-
     const tenantId = req.headers['x-tenant-id'];
+    const cacheKey = cacheHelper.generateKey(`users:${tenantId}:list`, req.query);
+
+    const data = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
+        if (search) {
+            filter.$or = [
+                { 'contact.name': { $regex: search, $options: 'i' } },
+                { 'contact.email': { $regex: search, $options: 'i' } },
+                { 'contact.phone': { $regex: search, $options: 'i' } },
+            ];
+        }
+        if (roleId) filter.roleId = roleId;
+        if (isActive !== undefined) filter.isActive = isActive === 'true';
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const [users, total] = await Promise.all([
+            User.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(parseInt(limit)),
+            User.countDocuments(filter),
+        ]);
+
     const roleIds = [...new Set(users.map(u => u.roleId).filter(Boolean).map(String))];
     const branchIds = [...new Set(users.map(u => u.branchId).filter(Boolean).map(String))];
 
@@ -192,12 +195,18 @@ const getUsers = asyncHandler(async (req, res) => {
         })
     );
 
-    ApiResponse.paginated(res, usersWithUrls, {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / parseInt(limit)),
+    return {
+        users: usersWithUrls,
+        pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            totalPages: Math.ceil(total / parseInt(limit)),
+        }
+    };
     });
+
+    ApiResponse.paginated(res, data.users, data.pagination);
 });
 
 /**
@@ -207,10 +216,14 @@ const getUsers = asyncHandler(async (req, res) => {
 const getAllUsersList = asyncHandler(async (req, res) => {
     const { branchId } = req.query;
     const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
-    filter.isActive = true;
-    if (branchId) filter.branchId = branchId;
+    const tenantId = req.headers['x-tenant-id'];
+    const cacheKey = cacheHelper.generateKey(`users:${tenantId}:compact`, req.query);
 
-    const users = await User.find(filter).select('_id contact.name contact.email roleId branchId profile.avatar').sort({ 'contact.name': 1 });
+    const formattedUsers = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
+        filter.isActive = true;
+        if (branchId) filter.branchId = branchId;
+
+        const users = await User.find(filter).select('_id contact.name contact.email roleId branchId profile.avatar').sort({ 'contact.name': 1 });
 
     const tenantId = req.headers['x-tenant-id'];
     const roleIds = [...new Set(users.map(u => u.roleId).filter(Boolean).map(String))];
@@ -238,7 +251,9 @@ const getAllUsersList = asyncHandler(async (req, res) => {
         }
         
         return userObj;
-    }));
+        }));
+        return formattedUsers;
+    });
 
     ApiResponse.success(res, formattedUsers);
 });
@@ -296,6 +311,8 @@ const updateUser = asyncHandler(async (req, res) => {
     if (customFields !== undefined) user.customFields = customFields;
 
     await user.save();
+    await cacheHelper.deleteByPattern(`users:${tenantId}:*`);
+
     ApiResponse.success(res, user.toJSON(), 'User updated');
 });
 
@@ -318,6 +335,7 @@ const updateUserRole = asyncHandler(async (req, res) => {
 
     user.roleId = roleId;
     await user.save();
+    await cacheHelper.deleteByPattern(`users:${tenantId}:*`);
 
     ApiResponse.success(res, user.toJSON(), 'User role updated');
 });
@@ -341,6 +359,7 @@ const updateUserStatus = asyncHandler(async (req, res) => {
         user.authentication.refreshToken = null;
     }
     await user.save();
+    await cacheHelper.deleteByPattern(`users:${tenantId}:*`);
 
     ApiResponse.success(res, user.toJSON(), `User ${isActive ? 'activated' : 'deactivated'}`);
 });
@@ -358,6 +377,7 @@ const deleteUser = asyncHandler(async (req, res) => {
     if (!user.authentication) user.authentication = {};
     user.authentication.refreshToken = null;
     await user.save();
+    await cacheHelper.deleteByPattern(`users:${tenantId}:*`);
 
     ApiResponse.success(res, null, 'User deactivated');
 });

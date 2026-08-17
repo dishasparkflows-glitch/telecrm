@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { CALL_STATUS, CALL_DISPOSITION } = require('@sparkcrm/shared-utils');
+const { CALL_STATUS } = require('@sparkcrm/shared-utils');
 
 const callLogSchema = new mongoose.Schema(
     {
@@ -30,7 +30,7 @@ const callLogSchema = new mongoose.Schema(
             fetchedAt: { type: Date, default: null }
         },
         disposition: {
-            code: { type: String, enum: Object.values(CALL_DISPOSITION) },
+            code: { type: String },
             notes: { type: String },
             updatedAt: { type: Date },
             updatedBy: { type: mongoose.Schema.Types.ObjectId }

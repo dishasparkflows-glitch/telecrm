@@ -4,7 +4,7 @@ const { ApiError } = require('@sparkcrm/shared-utils');
 const RULE_WRITE_FIELDS = Object.freeze(['name', 'description', 'trigger', 'actions']);
 const TRIGGER_FIELDS = Object.freeze(['event', 'conditions']);
 const CONDITION_FIELDS = Object.freeze(['field', 'operator', 'value']);
-const ACTION_FIELDS = Object.freeze(['type', 'config', 'delay']);
+const ACTION_FIELDS = Object.freeze(['type', 'config', 'delay', 'conditions']);
 
 function isPlainObject(value) {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -39,6 +39,9 @@ function pickRuleWriteInput(input) {
         for (const [index, action] of rule.actions.entries()) {
             if (action.config !== undefined && !isPlainObject(action.config)) {
                 throw ApiError.badRequest(`actions[${index}].config must be an object`);
+            }
+            if (action.conditions !== undefined) {
+                action.conditions = sanitizeArray(action.conditions, CONDITION_FIELDS, `actions[${index}].conditions`);
             }
         }
     }

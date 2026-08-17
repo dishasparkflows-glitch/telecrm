@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useGetCallLogsQuery, useGetCallStatsQuery, useUpdateDispositionMutation } from '../../features/calls/callApi'
+import { useGetProfileQuery } from '../../features/tenant/tenantApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
 import KPICard from '../../components/ui/KPICard'
@@ -12,8 +13,6 @@ import { useToast } from '../../components/ui/Toast'
 import { Phone, Clock, PhoneIncoming, PhoneMissed, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown, Play, Pause, Volume2, VolumeX, MoreVertical, Download } from 'lucide-react'
 
 const statusColors = { completed: 'success', missed: 'danger', busy: 'warning', 'no-answer': 'info', failed: 'danger' }
-const dispositionColors = { interested: 'success', not_interested: 'danger', callback: 'warning', converted: 'success', wrong_number: 'secondary', voicemail: 'info' }
-
 /* ── Compact audio player ─────────────────────────────────── */
 
 const SPEEDS = [0.5, 1, 1.5, 2]
@@ -169,8 +168,17 @@ export default function CallLogs() {
 
   const { data: logsData, isLoading } = useGetCallLogsQuery({ page, limit: pageSize })
   const { data: statsData } = useGetCallStatsQuery()
+  const { data: profileData } = useGetProfileQuery()
   const [updateDisposition] = useUpdateDispositionMutation()
 
+  const configuredDispositions = profileData?.data?.callDispositions || []
+
+  const getDispositionDisplay = (code) => {
+    if (!code) return { label: '-', color: 'primary' }
+    const match = configuredDispositions.find(d => d.slug === code)
+    if (match) return { label: match.name, color: match.color }
+    return { label: code.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), color: 'primary' }
+  }
   const logs = logsData?.data || []
   const pagination = logsData?.pagination || {}
   const stats = statsData?.data || {}
@@ -238,11 +246,17 @@ export default function CallLogs() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {log.disposition?.code ? (
-                          <Badge color={dispositionColors[log.disposition.code.toLowerCase()] || 'primary'}>
-                            {log.disposition.code.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                          </Badge>
-                        ) : '—'}
+                        {log.disposition?.code ? (() => {
+                          const dispDisplay = getDispositionDisplay(log.disposition.code);
+                          return (
+                            <Badge 
+                              color={dispDisplay.color.startsWith('#') ? undefined : dispDisplay.color} 
+                              customColor={dispDisplay.color.startsWith('#') ? dispDisplay.color : undefined}
+                            >
+                              {dispDisplay.label}
+                            </Badge>
+                          );
+                        })() : '-'}
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)]">
                         {log.recording?.playbackUrl ? (
@@ -344,9 +358,9 @@ export default function CallLogs() {
           onChange={(val) => setDisposition(val)}
           options={[
             { value: '', label: 'Select disposition' },
-            ...['interested', 'not_interested', 'callback', 'converted', 'wrong_number', 'voicemail'].map((d) => ({
-              value: d,
-              label: d.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+            ...configuredDispositions.filter(d => d.isActive).map(d => ({
+              value: d.slug,
+              label: d.name
             }))
           ]}
         />

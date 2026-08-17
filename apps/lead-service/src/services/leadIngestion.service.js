@@ -3,6 +3,7 @@ const { calculateLeadScore } = require('./scoring.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { ACTIVITY_TYPES, recordLeadActivity } = require('./leadActivity.service');
 const { assignLeadFromPolicy } = require('./assignment.service');
+const { cacheHelper } = require('@sparkcrm/shared-utils');
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 const normalizePhone = (phone) => String(phone || '').replace(/[^0-9]/g, '');
@@ -214,6 +215,9 @@ const createOrUpdateLeadFromSource = async ({
             assignedTo: lead.assignedTo,
         });
     }
+
+    // Invalidate lead cache across the tenant since a new lead was ingested
+    await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
 
     return { lead, created: true, duplicate: false };
 };

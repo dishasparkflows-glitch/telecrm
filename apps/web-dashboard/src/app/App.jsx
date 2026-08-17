@@ -22,6 +22,7 @@ const SmartForms = lazy(() => import('../pages/forms/SmartForms'))
 const Meetings = lazy(() => import('../pages/meetings/Meetings'))
 const BookMeeting = lazy(() => import('../pages/meetings/BookMeeting'))
 const Automations = lazy(() => import('../pages/automations/Automations'))
+const AutomationBuilder = lazy(() => import('../pages/automations/AutomationBuilder'))
 const Analytics = lazy(() => import('../pages/analytics/Analytics'))
 const Settings = lazy(() => import('../pages/settings/Settings'))
 const Billing = lazy(() => import('../pages/billing/Billing'))
@@ -128,6 +129,8 @@ export default function App() {
           <Route path="/forms" element={<FeatureRoute feature="smart_forms"><SmartForms /></FeatureRoute>} />
           <Route path="/meetings" element={<FeatureRoute feature="meeting_scheduler"><Meetings /></FeatureRoute>} />
           <Route path="/automations" element={<FeatureRoute feature="automation_basic"><Automations /></FeatureRoute>} />
+          <Route path="/automations/builder" element={<FeatureRoute feature="automation_basic"><AutomationBuilder /></FeatureRoute>} />
+          <Route path="/automations/builder/:id" element={<FeatureRoute feature="automation_basic"><AutomationBuilder /></FeatureRoute>} />
           <Route path="/analytics" element={<FeatureRoute feature="analytics_basic"><Analytics /></FeatureRoute>} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/profile" element={<Profile />} />

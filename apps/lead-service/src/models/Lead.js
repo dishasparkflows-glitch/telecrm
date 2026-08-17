@@ -256,8 +256,8 @@ leadSchema.virtual('fullName').get(function () {
     return `${this.contact?.firstName || ''} ${this.contact?.lastName || ''}`.trim();
 });
 
-leadSchema.set('toJSON', { virtuals: true });
-leadSchema.set('toObject', { virtuals: true });
+leadSchema.set('toJSON', { virtuals: true, flattenMaps: true });
+leadSchema.set('toObject', { virtuals: true, flattenMaps: true });
 
 const Lead = mongoose.model('Lead', leadSchema);
 module.exports = Lead;

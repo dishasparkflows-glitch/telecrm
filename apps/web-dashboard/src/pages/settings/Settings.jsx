@@ -5,6 +5,7 @@ import {
   useGetProfileQuery,
   useUpdateSettingsMutation,
   useUpdatePipelineMutation,
+  useUpdateCallDispositionsMutation,
   useGetReferralCodeQuery,
   useGetReferralStatsQuery,
 } from '../../features/tenant/tenantApi'
@@ -181,6 +182,7 @@ export default function Settings() {
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
   const [getUploadUrl, { isLoading: isUploadingLogo }] = useGetUploadUrlMutation()
   const [updatePipeline, { isLoading: savingPipeline }] = useUpdatePipelineMutation()
+  const [updateCallDispositions, { isLoading: savingDispositions }] = useUpdateCallDispositionsMutation()
   const [updatePassword, { isLoading: updatingPassword }] = useUpdatePasswordMutation()
   const [disable2FA, { isLoading: disabling2FA }] = useDisable2FAMutation()
   
@@ -251,6 +253,7 @@ export default function Settings() {
   const [fieldForm, setFieldForm] = useState({ name: '', type: 'text', required: false, entity: 'Lead' })
   const [fieldFilter, setFieldFilter] = useState('Lead')
   const [pipelineDraft, setPipelineDraft] = useState([])
+  const [dispositionsDraft, setDispositionsDraft] = useState([])
 
   const [leadSourceConnectionForm, setLeadSourceConnectionForm] = useState({
     label: 'Meta Lead Ads',
@@ -314,6 +317,9 @@ export default function Settings() {
   useEffect(() => {
     if (profileData?.data?.pipelineStages) {
       setTimeout(() => setPipelineDraft([...profileData.data.pipelineStages].sort((a, b) => (a.order || 0) - (b.order || 0))), 0)
+    }
+    if (profileData?.data?.callDispositions) {
+      setTimeout(() => setDispositionsDraft([...profileData.data.callDispositions].sort((a, b) => (a.order || 0) - (b.order || 0))), 0)
     }
   }, [profileData])
 
@@ -479,6 +485,24 @@ export default function Settings() {
       toast('Pipeline stages updated', 'success')
     } catch (err) {
       toast(err.data?.message || 'Failed to update pipeline', 'error')
+    }
+  }
+
+  const handleSaveDispositions = async () => {
+    const normalized = dispositionsDraft.map((disp, index) => ({
+      name: String(disp.name || '').trim(),
+      slug: String(disp.slug || disp.name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
+      color: disp.color || '#6366f1',
+      isActive: disp.isActive !== undefined ? disp.isActive : true,
+      order: index,
+    }))
+    if (normalized.some((disp) => !disp.name || !disp.slug)) return toast('Every call disposition needs a name', 'error')
+    if (new Set(normalized.map((disp) => disp.slug)).size !== normalized.length) return toast('Call disposition names must be unique', 'error')
+    try {
+      await updateCallDispositions({ dispositions: normalized }).unwrap()
+      toast('Call dispositions updated', 'success')
+    } catch (err) {
+      toast(err.data?.message || 'Failed to update dispositions', 'error')
     }
   }
 
@@ -759,6 +783,7 @@ export default function Settings() {
                 <TabItem icon={Building2} label="Company Details" active={activeTab === 'company'} onClick={() => setActiveTab('company')} />
                 {/* <TabItem icon={Users} label="Team Management" active={activeTab === 'users'} onClick={() => setActiveTab('users')} count={users.length} /> */}
                 <TabItem icon={GitBranch} label="Pipeline Stages" active={activeTab === 'pipeline'} onClick={() => setActiveTab('pipeline')} />
+                <TabItem icon={PhoneCall} label="Call Dispositions" active={activeTab === 'call_dispositions'} onClick={() => setActiveTab('call_dispositions')} />
                 <TabItem icon={Megaphone} label="Lead Sources" active={activeTab === 'lead_sources'} onClick={() => setActiveTab('lead_sources')} count={leadSourceMappingsResp?.data?.length} />
                 <TabItem icon={Shuffle} label="Lead Assignment" active={activeTab === 'assignment'} onClick={() => setActiveTab('assignment')} />
                 <TabItem icon={Database} label="Custom Fields" active={activeTab === 'fields'} onClick={() => setActiveTab('fields')} count={customFieldsResp?.data?.length} />
@@ -919,6 +944,49 @@ export default function Settings() {
                         <CheckCircle2 size={12} /> Optimized for Hubspot compatibility
                       </div>
                     </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* 3b. Call Dispositions */}
+            {activeTab === 'call_dispositions' && (
+              <Card>
+                <Card.Header className="flex items-center justify-between gap-3">
+                  <div>
+                    <Card.Title>Call Dispositions</Card.Title>
+                    <p className="text-xs text-[var(--vz-text-muted)]">Define the outcome of your calls</p>
+                  </div>
+                  <Button size="sm" onClick={handleSaveDispositions} disabled={savingDispositions}>{savingDispositions ? 'Saving...' : 'Save Dispositions'}</Button>
+                </Card.Header>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    {dispositionsDraft.map((disp, i) => (
+                      <div key={disp?._id || `${disp.slug}-${i}`} className="flex items-center gap-2 p-3 rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)]">
+                        <input type="color" value={disp.color || '#6366f1'} onChange={(e) => setDispositionsDraft((current) => current.map((item, index) => index === i ? { ...item, color: e.target.value } : item))} className="w-8 h-8 rounded border-0 bg-transparent" title="Disposition color" />
+                        <div className="flex-1">
+                          <input value={disp.name || ''} onChange={(e) => setDispositionsDraft((current) => current.map((item, index) => index === i ? { ...item, name: e.target.value } : item))}
+                            className="w-full px-2 py-1 text-sm font-semibold rounded border border-[var(--vz-input-border)] bg-[var(--vz-card-bg)] text-[var(--vz-heading)] outline-none focus:border-primary" />
+                          <p className="text-[10px] text-[var(--vz-text-muted)] mt-1">Outcome #{i + 1} • {disp.slug || 'slug generated on save'}</p>
+                        </div>
+                        <label className="flex items-center gap-1 text-xs font-semibold cursor-pointer text-[var(--vz-text)]">
+                          <input type="checkbox" checked={disp.isActive !== false} onChange={(e) => setDispositionsDraft((current) => current.map((item, index) => index === i ? { ...item, isActive: e.target.checked } : item))} />
+                          Active
+                        </label>
+                        <button type="button" disabled={dispositionsDraft.length <= 1} onClick={() => setDispositionsDraft((current) => current.filter((_, index) => index !== i))} className="p-1.5 text-danger hover:bg-danger/10 rounded disabled:opacity-30" title="Remove disposition"><Trash2 size={14} /></button>
+                      </div>
+                    ))}
+                    <Button variant="soft-primary" className="w-full border-dashed" size="sm" onClick={() => setDispositionsDraft((current) => [...current, { name: 'New Disposition', slug: `new_disp_${current.length + 1}`, color: '#6366f1', isActive: true, order: current.length }])}>
+                      <Plus size={14} className="mr-1" /> Add New Disposition
+                    </Button>
+                  </div>
+                  <div className="bg-primary/5 rounded-xl p-6 border border-primary/10">
+                    <h6 className="text-sm font-bold text-primary flex items-center gap-2 mb-3">
+                      <PhoneCall size={16} /> Dispositions Tip
+                    </h6>
+                    <p className="text-xs text-[var(--vz-text)] leading-relaxed">
+                      Call dispositions categorize the outcome of a phone call (e.g. "Callback Requested", "Wrong Number"). Keep the list concise and distinct so agents can log calls quickly.
+                    </p>
                   </div>
                 </div>
               </Card>

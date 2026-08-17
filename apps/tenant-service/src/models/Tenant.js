@@ -188,6 +188,29 @@ const tenantSchema = new mongoose.Schema(
                 { name: 'Lost', slug: 'lost', color: '#ef4444', order: 6 },
             ],
         },
+        // ─── Call Dispositions (default outcomes) ───
+        callDispositions: {
+            type: [
+                {
+                    name: { type: String, required: true },
+                    slug: { type: String, required: true },
+                    color: { type: String, default: '#6366f1' },
+                    isActive: { type: Boolean, default: true },
+                    order: { type: Number, default: 0 },
+                },
+            ],
+            default: [
+                { name: 'Interested', slug: 'interested', color: '#22c55e', isActive: true, order: 0 },
+                { name: 'Not Interested', slug: 'not_interested', color: '#ef4444', isActive: true, order: 1 },
+                { name: 'Callback Requested', slug: 'callback', color: '#eab308', isActive: true, order: 2 },
+                { name: 'Converted', slug: 'converted', color: '#3b82f6', isActive: true, order: 3 },
+                { name: 'Wrong Number', slug: 'wrong_number', color: '#6b7280', isActive: true, order: 4 },
+                { name: 'No Answer', slug: 'no_answer', color: '#f97316', isActive: true, order: 5 },
+                { name: 'Busy', slug: 'busy', color: '#8b5cf6', isActive: true, order: 6 },
+                { name: 'Voicemail', slug: 'voicemail', color: '#06b6d4', isActive: true, order: 7 },
+                { name: 'DND', slug: 'do_not_call', color: '#dc2626', isActive: true, order: 8 },
+            ],
+        },
         // ─── Custom Fields Definition ───
         customFields: [
             {

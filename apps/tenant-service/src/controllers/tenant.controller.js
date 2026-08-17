@@ -272,6 +272,32 @@ const updatePipeline = asyncHandler(async (req, res) => {
 });
 
 /**
+ * PUT /api/tenants/call-dispositions
+ */
+const updateCallDispositions = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const { dispositions } = req.body;
+
+    if (!dispositions || !Array.isArray(dispositions)) {
+        throw ApiError.badRequest('Call dispositions must be an array');
+    }
+
+    const tenant = await Tenant.findById(tenantId);
+    if (!tenant) throw ApiError.notFound('Tenant not found');
+
+    tenant.callDispositions = dispositions.map((disp, index) => ({
+        name: disp.name,
+        slug: disp.slug || disp.name.toLowerCase().replace(/\s+/g, '_'),
+        color: disp.color || '#6366f1',
+        isActive: disp.isActive !== undefined ? disp.isActive : true,
+        order: disp.order ?? index,
+    }));
+
+    await tenant.save();
+    ApiResponse.success(res, tenant.callDispositions, 'Call dispositions updated');
+});
+
+/**
  * POST /api/tenants/custom-fields
  */
 const addCustomField = asyncHandler(async (req, res) => {
@@ -331,6 +357,7 @@ module.exports = {
     getPaymentHistory,
     upgradePlan,
     updatePipeline,
+    updateCallDispositions,
     addCustomField,
     updateOnboarding,
 };

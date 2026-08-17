@@ -82,17 +82,6 @@ const CALL_STATUS = {
     FAILED: 'failed',
 };
 
-const CALL_DISPOSITION = {
-    INTERESTED: 'interested',
-    NOT_INTERESTED: 'not_interested',
-    CALLBACK: 'callback',
-    NO_ANSWER: 'no_answer',
-    WRONG_NUMBER: 'wrong_number',
-    DO_NOT_CALL: 'do_not_call',
-    VOICEMAIL: 'voicemail',
-    CONVERTED: 'converted',
-};
-
 const BILLING_TYPE = {
     ONE_TIME: 'one_time',
     RECURRING: 'recurring',
@@ -161,7 +150,7 @@ module.exports = {
     PIPELINE_STAGES,
     LEAD_PRIORITY,
     CALL_STATUS,
-    CALL_DISPOSITION,
+
     BILLING_TYPE,
     INVOICE_STATUS,
     FEATURE_CATEGORIES,

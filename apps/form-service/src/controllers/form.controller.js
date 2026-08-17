@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { SmartForm, FormSubmission } = require('../models/SmartForm');
 const { pickFormWriteInput, requireObjectId, pagination } = require('../utils/formDto');
-const { ApiResponse, ApiError, asyncHandler, buildScopeFilter } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, cacheHelper } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 
 const validateSubmission = (form, data) => {
@@ -76,17 +76,27 @@ const createForm = asyncHandler(async (req, res) => {
     // Generate embed code
     form.embedCode = `<iframe src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/forms/embed/${form._id}" width="100%" height="500" frameborder="0"></iframe>`;
     await form.save();
+    
+    await cacheHelper.deleteByPattern(`forms:${scope.tenantId}:*`);
+    
     ApiResponse.created(res, form, 'Form created');
 });
 
 const getForms = asyncHandler(async (req, res) => {
     const { page, limit, skip } = pagination(req.query);
     const filter = buildScopeFilter(req, { ownerField: null, module: 'forms' });
-    const [forms, total] = await Promise.all([
-        SmartForm.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(limit),
-        SmartForm.countDocuments(filter),
-    ]);
-    ApiResponse.paginated(res, forms, { page, limit, total, totalPages: Math.ceil(total / limit) });
+    
+    const cacheKey = cacheHelper.generateKey(`forms:${filter.tenantId}:list`, req.query);
+
+    const data = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
+        const [forms, total] = await Promise.all([
+            SmartForm.find(filter).sort({ 'meta.createdAt': -1 }).skip(skip).limit(limit),
+            SmartForm.countDocuments(filter),
+        ]);
+        return { forms, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+    });
+
+    ApiResponse.paginated(res, data.forms, data.pagination);
 });
 
 const getForm = asyncHandler(async (req, res) => {
@@ -106,6 +116,9 @@ const updateForm = asyncHandler(async (req, res) => {
 
     Object.assign(form, changes);
     await form.save();
+    
+    await cacheHelper.deleteByPattern(`forms:${scope.tenantId}:*`);
+    
     ApiResponse.success(res, form, 'Form updated');
 });
 
@@ -421,6 +434,8 @@ const deleteForm = asyncHandler(async (req, res) => {
 
     // Also delete submissions
     await FormSubmission.deleteMany({ formId: form._id, tenantId: scope.tenantId });
+
+    await cacheHelper.deleteByPattern(`forms:${scope.tenantId}:*`);
 
     ApiResponse.success(res, null, 'Form deleted');
 });

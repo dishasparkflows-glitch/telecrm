@@ -23,18 +23,11 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
-const stageColors = {
-  new: 'primary', contacted: 'info', qualified: 'warning',
-  negotiation: 'warning', won: 'success', lost: 'danger',
-}
-
 const sourceLabels = {
   manual: 'Manual', website: 'Website', facebook: 'Facebook',
   whatsapp: 'WhatsApp', csv: 'CSV Import', api: 'API',
   smart_form: 'Smart Form', referral: 'Referral',
 }
-
-
 
 const IMPORT_FIELDS = [
   { value: '', label: 'Do not import' },
@@ -107,9 +100,10 @@ export default function LeadsList() {
   const stageOptions = useMemo(() => {
     const configured = profileData?.data?.pipelineStages
     if (configured?.length) return [...configured].sort((a, b) => (a.order || 0) - (b.order || 0))
-    return Object.keys(stageColors).map((slug, order) => ({ slug, name: slug.charAt(0).toUpperCase() + slug.slice(1), order }))
+    return []
   }, [profileData])
   const stageLabelMap = useMemo(() => Object.fromEntries(stageOptions.map((s) => [s.slug, s.name])), [stageOptions])
+  const stageColorMap = useMemo(() => Object.fromEntries(stageOptions.map((s) => [s.slug, s.color])), [stageOptions])
   const getAssignedName = (assignedTo) => {
     if (!assignedTo) return 'Unassigned'
     if (typeof assignedTo === 'object' && (assignedTo.name)) {
@@ -153,8 +147,8 @@ export default function LeadsList() {
       toast('Lead created successfully', 'success')
       setShowAdd(false)
       setNewLead({ contact: { firstName: '', lastName: '', email: '', phone: '', countryCode: '+91', company: '' }, pipeline: { stage: 'new' }, stage: 'new', source: 'manual', customFields: {} })
-    } catch (err) {
-      toast(err.data?.message || 'Failed to create lead', 'error')
+    } catch (error) {
+      toast(error.data?.message || 'Failed to create lead', 'error')
     }
   }
 
@@ -189,7 +183,7 @@ export default function LeadsList() {
       XLSX.writeFile(workbook, 'Leads_Export.xlsx')
       
       toast('Exported successfully', 'success')
-    } catch (err) {
+    } catch (error) {
       toast('Failed to export leads', 'error')
     }
   }
@@ -226,7 +220,7 @@ export default function LeadsList() {
       setImportRows(parsedRows)
       setImportMapping(mapping)
       setShowImport(true)
-    } catch (err) {
+    } catch (error) {
       toast('Could not read this file. Ensure it is a valid CSV or Excel file.', 'error')
     }
   }
@@ -260,8 +254,8 @@ export default function LeadsList() {
       const result = await importLeads({ leads: leadsToImport }).unwrap()
       toast(result?.message || 'Import complete', 'success')
       setShowImport(false)
-    } catch (err) {
-      toast(err.data?.message || 'Failed to import leads', 'error')
+    } catch (error) {
+      toast(error.data?.message || 'Failed to import leads', 'error')
     }
   }
 
@@ -505,8 +499,9 @@ export default function LeadsList() {
                       <td className="px-4 py-3">
                         {(() => {
                           const currentStage = lead.pipeline?.stage;
+                          const mappedColor = stageColorMap[currentStage];
                           return (
-                            <Badge color={stageColors[currentStage] || 'primary'}>
+                            <Badge customColor={mappedColor} color={!mappedColor ? 'primary' : undefined}>
                               {stageLabelMap[currentStage] || currentStage?.charAt(0).toUpperCase() + currentStage?.slice(1)}
                             </Badge>
                           );

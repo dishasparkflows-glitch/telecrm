@@ -5,7 +5,7 @@ const { createOrUpdateLeadFromSource, normalizeEmail, normalizePhone } = require
 const { ACTIVITY_TYPES, recordLeadActivity } = require('../services/leadActivity.service');
 const { pagination, requireObjectId, escapeRegex } = require('../utils/input');
 const { pickLeadCreateInput, pickLeadUpdateInput, applyAssignedToFilter } = require('../utils/leadDto');
-const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord, cacheHelper } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { auditLogger } = require('@sparkcrm/shared-middleware');
 const { getUsersBulk } = require('../services/serviceClients/user.client');
@@ -61,15 +61,19 @@ const createLead = asyncHandler(async (req, res) => {
  * List leads with filters, search, pagination
  */
 const getLeads = asyncHandler(async (req, res) => {
-    const {
-        search, stage, source, assignedTo, priority, tags,
-        sortBy = 'createdAt', sortOrder = 'desc', isArchived = 'false',
-    } = req.query;
-    const { page, limit, skip } = pagination(req.query);
+    const tenantId = req.headers['x-tenant-id'];
+    const cacheKey = cacheHelper.generateKey(`leads:${tenantId}:list`, req.query);
 
-    // Build scope filter based on verified visibility; requested filters cannot widen it.
-    const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'leads' });
-    filter.isArchived = isArchived === 'true';
+    const data = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
+        const {
+            search, stage, source, assignedTo, priority, tags,
+            sortBy = 'createdAt', sortOrder = 'desc', isArchived = 'false',
+        } = req.query;
+        const { page, limit, skip } = pagination(req.query);
+
+        // Build scope filter based on verified visibility; requested filters cannot widen it.
+        const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'leads' });
+        filter.isArchived = isArchived === 'true';
 
     if (assignedTo) {
         applyAssignedToFilter(filter, requireObjectId(assignedTo, 'assignedTo'));
@@ -106,23 +110,26 @@ const getLeads = asyncHandler(async (req, res) => {
         Lead.countDocuments(filter),
     ]);
 
-    const tenantId = req.headers['x-tenant-id'];
     const userIds = [...new Set(dbLeads.map(l => l.assignedTo).filter(Boolean).map(String))];
     const users = await getUsersBulk(tenantId, userIds);
     const userMap = new Map(users.map(u => [String(u._id), u]));
-
     const leads = dbLeads.map(lead => {
         const obj = lead.toObject();
         obj.assignedTo = userMap.get(String(obj.assignedTo)) || null;
         return obj;
     });
 
-    ApiResponse.paginated(res, leads, {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+    return {
+        leads,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        }
+    };
     });
+    ApiResponse.paginated(res, data.leads, data.pagination);
 });
 
 /**
@@ -302,7 +309,6 @@ const updateLead = asyncHandler(async (req, res) => {
     };
 
     await lead.save();
-    console.log("auditLogger")
     await auditLogger.log({
         req,
         action: 'UPDATE',
@@ -337,6 +343,8 @@ const updateLead = asyncHandler(async (req, res) => {
         description: 'Lead details were updated',
         metadata: { fields: changedFields },
     });
+
+    await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
 
     ApiResponse.success(res, lead, 'Lead updated');
 });
@@ -383,6 +391,7 @@ const addNote = asyncHandler(async (req, res) => {
         title: 'Note added',
         description: text,
     });
+    await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
 
     ApiResponse.success(res, null, 'Note added');
 });
@@ -430,6 +439,7 @@ const assignLead = asyncHandler(async (req, res) => {
         description: assignedTo ? 'Lead assignment changed' : 'Lead set to unassigned',
         metadata: { assignedTo },
     });
+    await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
 
     ApiResponse.success(res, null, assignedTo ? 'Lead assigned' : 'Lead unassigned');
 });
@@ -491,6 +501,7 @@ const importLeads = asyncHandler(async (req, res) => {
             results.errors.push({ row: index + 1, error: err.message });
         }
     }
+    await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
 
     ApiResponse.success(res, results, `Import complete: ${results.created} created, ${results.duplicates} duplicates`);
 });
@@ -511,6 +522,9 @@ const archiveLead = asyncHandler(async (req, res) => {
 
     lead.isArchived = true;
     await lead.save();
+    
+    await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
+    
     ApiResponse.success(res, null, 'Lead archived');
 });
 
@@ -866,6 +880,8 @@ const bulkUpdateLeads = asyncHandler(async (req, res) => {
         recordType: 'Lead',
         details: { matchedCount: leads.length, modifiedCount, failedCount, fieldsUpdated: Object.keys(changes) }
     });
+
+    await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
 
     ApiResponse.success(res, {
         matchedCount: leads.length,

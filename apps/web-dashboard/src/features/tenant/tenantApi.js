@@ -46,6 +46,14 @@ export const tenantApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: [{ type: 'Tenant', id: 'PROFILE' }],
         }),
+        updateCallDispositions: builder.mutation({
+            query: (data) => ({
+                url: '/tenants/call-dispositions',
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: [{ type: 'Tenant', id: 'PROFILE' }],
+        }),
         addCustomField: builder.mutation({
             query: (data) => ({
                 url: '/tenants/custom-fields',
@@ -108,6 +116,7 @@ export const {
     useGetPaymentHistoryQuery,
     useUpgradePlanMutation,
     useUpdatePipelineMutation,
+    useUpdateCallDispositionsMutation,
     useAddCustomFieldMutation,
     useUpdateOnboardingMutation,
     useGetAllPlansQuery,

@@ -12,16 +12,23 @@ const automationRuleSchema = new mongoose.Schema(
             conditions: [
                 {
                     field: { type: String, required: true }, // e.g., 'source', 'stage', 'score'
-                    operator: { type: String, enum: ['equals', 'not_equals', 'contains', 'greater_than', 'less_than', 'in'], required: true },
-                    value: { type: mongoose.Schema.Types.Mixed, required: true },
+                    operator: { type: String, enum: ['equals', 'not_equals', 'contains', 'greater_than', 'less_than', 'in', 'not_in', 'is_empty', 'is_not_empty'], required: true },
+                    value: { type: mongoose.Schema.Types.Mixed },
                 },
             ],
         },
         actions: [
             {
-                type: { type: String, enum: ['assign_lead', 'send_email', 'send_whatsapp', 'change_stage', 'add_tag', 'create_task', 'send_notification', 'webhook'], required: true },
+                type: { type: String, enum: ['assign_lead', 'send_email', 'send_whatsapp', 'change_stage', 'change_status', 'add_tag', 'create_task', 'create_follow_up', 'send_notification', 'webhook'], required: true },
                 config: { type: mongoose.Schema.Types.Mixed, default: {} },
                 delay: { type: Number, default: 0 }, // minutes
+                conditions: [
+                    {
+                        field: { type: String, required: true },
+                        operator: { type: String, enum: ['equals', 'not_equals', 'contains', 'greater_than', 'less_than', 'in', 'not_in', 'is_empty', 'is_not_empty'], required: true },
+                        value: { type: mongoose.Schema.Types.Mixed },
+                    }
+                ]
             },
         ],
         executionCount: { type: Number, default: 0 },
@@ -55,12 +62,12 @@ const automationLogSchema = new mongoose.Schema(
         actionsExecuted: [
             {
                 type: { type: String },
-                status: { type: String, enum: ['success', 'failed', 'skipped'] },
+                status: { type: String, enum: ['pending', 'success', 'failed', 'skipped'] },
                 result: { type: mongoose.Schema.Types.Mixed },
                 executedAt: { type: Date, default: Date.now },
             },
         ],
-        status: { type: String, enum: ['success', 'partial', 'failed'], default: 'success' },
+        status: { type: String, enum: ['pending', 'success', 'partial', 'failed'], default: 'pending' },
     
         meta: {
             createdBy: { type: mongoose.Schema.Types.ObjectId },

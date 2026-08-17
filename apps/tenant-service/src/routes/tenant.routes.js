@@ -9,6 +9,7 @@ router.get('/billing', tenantCtrl.getBillingDetails);
 router.get('/payment-history', tenantCtrl.getPaymentHistory);
 router.post('/upgrade-plan', tenantCtrl.upgradePlan);
 router.put('/pipeline', tenantCtrl.updatePipeline);
+router.put('/call-dispositions', tenantCtrl.updateCallDispositions);
 router.post('/custom-fields', tenantCtrl.addCustomField);
 router.put('/onboarding', tenantCtrl.updateOnboarding);
 

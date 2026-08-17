@@ -8,11 +8,17 @@ const colorMap = {
   dark: 'bg-[var(--vz-text)]/10 text-[var(--vz-text)]',
 }
 
-export default function Badge({ children, color = 'primary', className = '' }) {
+export default function Badge({ children, color = 'primary', customColor, className = '' }) {
+  const customStyle = customColor ? {
+    backgroundColor: `${customColor}1A`, // 10% opacity
+    color: customColor,
+  } : {}
+
   return (
     <span
+      style={customStyle}
       className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium
-        ${colorMap[color] || colorMap.primary} ${className}`}
+        ${!customColor ? (colorMap[color] || colorMap.primary) : ''} ${className}`}
     >
       {children}
     </span>

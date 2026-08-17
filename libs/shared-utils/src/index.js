@@ -9,9 +9,11 @@ const cryptoUtils = require('./crypto');
 const cloudStorage = require('./cloudStorage');
 const metaPlugin = require('./metaPlugin');
 const { computeChanges, formatValue } = require('./diffUtils');
+const cacheHelper = require('./cacheHelper');
 
 module.exports = {
     ApiResponse,
+    cacheHelper,
     ApiError,
     asyncHandler,
     ...constants,

@@ -1,5 +1,6 @@
 const { EVENTS, subscribeToEvents } = require('@sparkcrm/shared-events');
 const { AutomationRule, AutomationLog } = require('../models/AutomationRule');
+const { connection } = require('../queue/automationQueue');
 
 /**
  * Wire up event listeners for automation-service
@@ -41,39 +42,51 @@ const registerEventListeners = async () => {
 
                 if (!rules.length) return;
 
+                const entityId = data._id || data.leadId || data.formId || data.id || 'unknown';
+
                 for (const rule of rules) {
-                    // Check conditions
+                    // Loop Protection / Idempotency Check
+                    if (entityId !== 'unknown') {
+                        const lockKey = `automation_lock:${rule._id}:${entityId}:${eventName}`;
+                        const isLocked = await connection.get(lockKey);
+                        if (isLocked) {
+                            console.log(`🔒 Loop protection triggered for rule ${rule._id} on entity ${entityId}`);
+                            continue;
+                        }
+                        await connection.set(lockKey, '1', 'EX', 60); // 60 seconds cooldown
+                    }
+
+                    // Check rule trigger conditions
                     const conditionsMet = evaluateConditions(rule.trigger.conditions, data);
                     if (!conditionsMet) continue;
 
-                    // Execute actions
+                    // Filter actions based on action conditions (Branch evaluation)
+                    const validActions = [];
                     const actionsExecuted = [];
                     for (const action of rule.actions) {
-                        try {
-                            // Delay support
-                            if (action.delay > 0) {
-                                // In production: queue via BullMQ with delay
-                                console.log(`⏱️ Action delayed by ${action.delay} min: ${action.type}`);
-                            }
-
+                        const actionConditionsMet = evaluateConditions(action.conditions, data);
+                        if (actionConditionsMet) {
+                            validActions.push(action);
                             actionsExecuted.push({
+                                _id: action._id,
                                 type: action.type,
-                                status: 'success',
-                                result: { config: action.config },
+                                status: 'pending',
+                                result: null,
                                 executedAt: new Date(),
                             });
-                        } catch (actionErr) {
+                        } else {
                             actionsExecuted.push({
+                                _id: action._id,
                                 type: action.type,
-                                status: 'failed',
-                                result: { error: actionErr.message },
+                                status: 'skipped',
+                                result: 'Branch condition not met',
                                 executedAt: new Date(),
                             });
                         }
                     }
 
-                    // Log execution
-                    await AutomationLog.create({
+                    // Create pending log
+                    const log = await AutomationLog.create({
                         tenantId,
                         branchId: rule.branchId || data.branchId || null,
                         ruleId: rule._id,
@@ -81,19 +94,25 @@ const registerEventListeners = async () => {
                         triggerEvent: eventName,
                         triggerData: data,
                         actionsExecuted,
-                        status: actionsExecuted.every((a) => a.status === 'success')
-                            ? 'success'
-                            : actionsExecuted.some((a) => a.status === 'success')
-                                ? 'partial'
-                                : 'failed',
+                        status: validActions.length > 0 ? 'pending' : 'success', // If all skipped, it's a success
                     });
+
+                    // Dispatch to queue
+                    const { enqueueAction } = require('../queue/automationQueue');
+                    for (const action of validActions) {
+                        try {
+                            await enqueueAction(log._id, tenantId, action, data);
+                        } catch (err) {
+                            console.error(`❌ Failed to enqueue action ${action.type}:`, err.message);
+                        }
+                    }
 
                     // Update rule stats
                     rule.executionCount += 1;
                     rule.lastExecutedAt = new Date();
                     await rule.save();
 
-                    console.log(`⚙️ Automation "${rule.name}" triggered by ${eventName}`);
+                    console.log(`⚙️ Automation "${rule.name}" triggered by ${eventName}. Queued ${validActions.length} actions.`);
                 }
             } catch (err) {
                 console.error(`❌ automation ${eventName} handler error:`, err.message);
@@ -119,6 +138,9 @@ const evaluateConditions = (conditions, data) => {
             case 'greater_than': return Number(fieldValue) > Number(cond.value);
             case 'less_than': return Number(fieldValue) < Number(cond.value);
             case 'in': return Array.isArray(cond.value) ? cond.value.includes(fieldValue) : false;
+            case 'not_in': return Array.isArray(cond.value) ? !cond.value.includes(fieldValue) : true;
+            case 'is_empty': return fieldValue === null || fieldValue === undefined || fieldValue === '';
+            case 'is_not_empty': return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
             default: return false;
         }
     });

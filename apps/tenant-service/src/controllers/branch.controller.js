@@ -1,5 +1,5 @@
 const Branch = require('../models/Branch');
-const { ApiResponse, ApiError, asyncHandler, computeChanges } = require('@sparkcrm/shared-utils');
+const { ApiResponse, ApiError, asyncHandler, cacheHelper } = require('@sparkcrm/shared-utils');
 const { auditLogger } = require('@sparkcrm/shared-middleware');
 
 const createBranch = asyncHandler(async (req, res) => {
@@ -26,13 +26,19 @@ const createBranch = asyncHandler(async (req, res) => {
         description: 'New branch created',
         req,
     });
+    await cacheHelper.deleteByPattern(`branches:${tenantId}:*`);
 
     ApiResponse.created(res, branch, 'Branch created');
 });
 
 const getBranches = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const branches = await Branch.find({ tenantId, isActive: true }).sort({ isDefault: -1, name: 1 });
+    const cacheKey = cacheHelper.generateKey(`branches:${tenantId}:list`, req.query);
+
+    const branches = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
+        return await Branch.find({ tenantId, isActive: true }).sort({ isDefault: -1, name: 1 });
+    });
+
     ApiResponse.success(res, branches);
 });
 
@@ -74,6 +80,8 @@ const updateBranch = asyncHandler(async (req, res) => {
         req,
     });
 
+    await cacheHelper.deleteByPattern(`branches:${tenantId}:*`);
+
     ApiResponse.success(res, branch, 'Branch updated');
 });
 
@@ -97,6 +105,8 @@ const deleteBranch = asyncHandler(async (req, res) => {
         description: 'Branch deactivated',
         req,
     });
+
+    await cacheHelper.deleteByPattern(`branches:${tenantId}:*`);
 
     ApiResponse.success(res, null, 'Branch deactivated');
 });

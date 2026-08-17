@@ -1,14 +1,12 @@
 import { useState } from 'react'
-import { useGetRulesQuery, useCreateRuleMutation, useUpdateRuleMutation, useToggleRuleMutation, useDeleteRuleMutation, useGetAutomationLogsQuery } from '../../features/automations/automationApi'
+import { useNavigate } from 'react-router-dom'
+import { useGetRulesQuery, useToggleRuleMutation, useDeleteRuleMutation, useGetAutomationLogsQuery } from '../../features/automations/automationApi'
 import Pagination from '../../components/ui/Pagination'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
-import Modal from '../../components/ui/Modal'
-import Input from '../../components/ui/Input'
 import Tabs from '../../components/ui/Tabs'
-import Select from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { Zap, Plus, Activity, Trash2, Pencil } from 'lucide-react'
@@ -20,19 +18,14 @@ const triggerLabels = {
 
 export default function Automations() {
   const toast = useToast()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('rules')
-  const [showCreate, setShowCreate] = useState(false)
-  const [newRule, setNewRule] = useState({ name: '', triggerEvent: 'lead_created', conditions: [], actions: [] })
-  const [showEdit, setShowEdit] = useState(false)
-  const [editRuleForm, setEditRuleForm] = useState(null)
   const [rulesPage, setRulesPage] = useState(1)
   const [logsPage] = useState(1)
   const PAGE_SIZE = 25
 
   const { data: rulesData, isLoading } = useGetRulesQuery({ page: rulesPage, limit: PAGE_SIZE })
   const { data: logsData } = useGetAutomationLogsQuery({ page: logsPage, limit: PAGE_SIZE })
-  const [createRule, { isLoading: creating }] = useCreateRuleMutation()
-  const [updateRule, { isLoading: updating }] = useUpdateRuleMutation()
   const [toggleRule] = useToggleRuleMutation()
   const [deleteRule] = useDeleteRuleMutation()
 
@@ -41,64 +34,8 @@ export default function Automations() {
   const logs = logsData?.data || []
   const logsPagination = logsData?.pagination || {}
 
-  const handleCreate = async () => {
-    try {
-      // Transform flat form into nested backend structure
-      const payload = {
-        name: newRule.name,
-        trigger: {
-          event: newRule.triggerEvent?.replace(/_/g, '.') || 'lead.created',
-          conditions: newRule.conditions || [],
-        },
-        actions: newRule.actions || [],
-      }
-      await createRule(payload).unwrap()
-      toast('Automation rule created', 'success')
-      setShowCreate(false)
-      setNewRule({ name: '', triggerEvent: 'lead_created', conditions: [], actions: [] })
-    } catch { toast('Failed to create rule', 'error') }
-  }
-
   const handleToggle = async (id) => {
     try { await toggleRule(id).unwrap() } catch { toast('Failed to toggle', 'error') }
-  }
-
-  const handleEditOpen = (rule) => {
-    setEditRuleForm({
-      id: rule._id,
-      name: rule.name,
-      description: rule.description || '',
-      triggerEvent: rule.trigger?.event?.replace(/\./g, '_') || rule.triggerEvent || 'lead_created',
-      conditions: rule.trigger?.conditions || [],
-      actions: rule.actions || [],
-    })
-    setShowEdit(true)
-  }
-
-  const handleUpdate = async () => {
-    try {
-      const payload = {
-        id: editRuleForm.id,
-        name: editRuleForm.name,
-        description: editRuleForm.description,
-        trigger: {
-          event: editRuleForm.triggerEvent?.replace(/_/g, '.') || 'lead.created',
-          conditions: (editRuleForm.conditions || []).map((condition) => ({
-            field: condition.field,
-            operator: condition.operator,
-            value: condition.value,
-          })),
-        },
-        actions: (editRuleForm.actions || []).map((action) => ({
-          type: action.type,
-          config: action.config || {},
-          delay: action.delay || 0,
-        })),
-      }
-      await updateRule(payload).unwrap()
-      toast('Automation rule updated', 'success')
-      setShowEdit(false)
-    } catch { toast('Failed to update rule', 'error') }
   }
 
   const handleDelete = async (id) => {
@@ -118,7 +55,7 @@ export default function Automations() {
       <div className="flex items-center justify-between mb-4">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
         {activeTab === 'rules' && (
-          <Button size="sm" onClick={() => setShowCreate(true)}><Plus size={14} /> Create Rule</Button>
+          <Button size="sm" onClick={() => navigate('/automations/builder')}><Plus size={14} /> Create Rule</Button>
         )}
       </div>
 
@@ -128,7 +65,7 @@ export default function Automations() {
         ) : rules.length === 0 ? (
           <Card>
             <EmptyState icon={Zap} title="No automation rules" description="Create rules to automate lead management tasks"
-              action={<Button size="sm" onClick={() => setShowCreate(true)}><Plus size={14} /> Create Rule</Button>} />
+              action={<Button size="sm" onClick={() => navigate('/automations/builder')}><Plus size={14} /> Create Rule</Button>} />
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -163,7 +100,7 @@ export default function Automations() {
                 </div>
 
                 <div className="flex items-center gap-2 pt-3 border-t border-[var(--vz-border)]">
-                  <Button variant="ghost" size="sm" onClick={() => handleEditOpen(rule)}>
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/automations/builder/${rule._id}`)}>
                     <Pencil size={12} /> Edit
                   </Button>
                   <Button variant="ghost" size="sm" className="text-danger" onClick={() => handleDelete(rule._id)}>
@@ -210,46 +147,6 @@ export default function Automations() {
           )}
         </Card>
       )}
-
-      {/* Create Rule Modal */}
-      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create Automation Rule" size="md">
-        <div className="space-y-3">
-          <Input label="Rule Name" placeholder="e.g. Auto-assign hot leads" value={newRule.name} onChange={(e) => setNewRule({ ...newRule, name: e.target.value })} />
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-[var(--vz-heading)]">Trigger Event</label>
-            <Select
-              value={newRule.triggerEvent}
-              onChange={(val) => setNewRule({ ...newRule, triggerEvent: val })}
-              options={Object.entries(triggerLabels).map(([k, v]) => ({ value: k, label: v }))}
-            />
-          </div>
-        </div>
-        <Modal.Footer>
-          <Button variant="ghost" size="sm" onClick={() => setShowCreate(false)}>Cancel</Button>
-          <Button size="sm" onClick={handleCreate} disabled={creating || !newRule.name}>{creating ? 'Creating...' : 'Create'}</Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Edit Rule Modal */}
-      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Edit Automation Rule" size="md">
-        {editRuleForm && (
-          <div className="space-y-3">
-            <Input label="Rule Name" value={editRuleForm.name} onChange={(e) => setEditRuleForm({ ...editRuleForm, name: e.target.value })} />
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Trigger Event</label>
-              <Select
-                value={editRuleForm.triggerEvent}
-                onChange={(val) => setEditRuleForm({ ...editRuleForm, triggerEvent: val })}
-                options={Object.entries(triggerLabels).map(([k, v]) => ({ value: k, label: v }))}
-              />
-            </div>
-            <Modal.Footer>
-              <Button variant="ghost" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleUpdate} disabled={updating || !editRuleForm.name}>{updating ? 'Updating...' : 'Save Changes'}</Button>
-            </Modal.Footer>
-          </div>
-        )}
-      </Modal>
     </>
   )
 }
