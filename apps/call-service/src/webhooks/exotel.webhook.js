@@ -259,6 +259,7 @@ router.post(
                 if (callLog.leadId) {
                     await publishEvent(EVENTS.LEAD_UPDATED, {
                         tenantId: callLog.tenantId,
+                        userId: callLog.userId,
                         leadId: callLog.leadId,
                         changes: { lastContactedAt: callLog.call.answeredAt || callLog.call.endedAt },
                     });

@@ -71,7 +71,7 @@ router.post('/voice', validateTwilioRequest, asyncHandler(async (req, res) => {
         const dial = response.dial({
             action: dialActionUrl,
             method: 'POST',
-            callerId: req.twilioConfig.twilioPhoneNumber
+            callerId: req.twilioConfig.phoneNumber
         });
         dial.number(callingApi.normalizeTwilioNumber(toNumber));
     }
@@ -83,7 +83,7 @@ router.post('/voice', validateTwilioRequest, asyncHandler(async (req, res) => {
 /**
  * Helper to process status and idempotently update CallLog
  */
-const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl, providerDataUpdates, twilioConfig) => {
+const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl, providerDataUpdates) => {
     const STATUS_PRIORITY = {
         initiated: 1,
         ringing: 2,
@@ -128,6 +128,7 @@ const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl,
         if (newStatus === 'completed') {
             await publishEvent(EVENTS.CALL_COMPLETED, {
                 tenantId: callLog.tenantId,
+                userId: callLog.userId,
                 callId: callLog._id,
                 leadId: callLog.leadId,
                 duration: callLog.call.duration,
@@ -135,6 +136,7 @@ const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl,
             if (callLog.leadId) {
                 await publishEvent(EVENTS.LEAD_UPDATED, {
                     tenantId: callLog.tenantId,
+                    userId: callLog.userId,
                     leadId: callLog.leadId,
                     changes: { lastContactedAt: callLog.call.answeredAt || callLog.call.endedAt },
                 });
@@ -142,6 +144,7 @@ const updateCallStatus = async (callLog, proposedStatus, duration, recordingUrl,
         } else if (newStatus === 'missed') {
             await publishEvent(EVENTS.CALL_MISSED, {
                 tenantId: callLog.tenantId,
+                userId: callLog.userId,
                 callId: callLog._id,
                 leadId: callLog.leadId,
             });

@@ -41,7 +41,7 @@ export default function LeadDetail() {
   const [noteText, setNoteText] = useState('')
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState(null)
-    const { canEdit } = usePermission('leads')
+  const { canEdit } = usePermission('leads')
 
   const { data, isLoading } = useGetLeadQuery(id)
   const { data: timelineData, isFetching: timelineFetching } = useGetLeadTimelineQuery({ id, limit: 100 }, { skip: activeTab !== 'timeline' })
