@@ -36,13 +36,13 @@ const DEFAULT_MODULES = [
 /**
  * All possible actions for permissions
  */
-const ALL_ACTIONS = { view: true, create: true, edit: true, delete: true, export: true, upload: true, isOwn: false, isGlobal: true };
-const VIEW_ONLY = { view: true, create: false, edit: false, delete: false, export: false, upload: false, isOwn: false, isGlobal: true };
-const NO_ACCESS = { view: false, create: false, edit: false, delete: false, export: false, upload: false, isOwn: true, isGlobal: false };
+const ALL_ACTIONS = { view: true, create: true, edit: true, delete: true, export: true, upload: true, import: true, isOwn: false, isBranch: false, isGlobal: true };
+const VIEW_ONLY = { view: true, create: false, edit: false, delete: false, export: false, upload: false, import: false, isOwn: false, isBranch: false, isGlobal: true };
+const NO_ACCESS = { view: false, create: false, edit: false, delete: false, export: false, upload: false, import: false, isOwn: true, isBranch: false, isGlobal: false };
 
 // Agent-level: can do CRUD but only on own data
-const AGENT_FULL = { view: true, create: true, edit: true, delete: false, export: false, upload: true, isOwn: true, isGlobal: false };
-const AGENT_VIEW = { view: true, create: false, edit: false, delete: false, export: false, upload: false, isOwn: true, isGlobal: false };
+const AGENT_FULL = { view: true, create: true, edit: true, delete: false, export: false, upload: true, import: true, isOwn: true, isBranch: false, isGlobal: false };
+const AGENT_VIEW = { view: true, create: false, edit: false, delete: false, export: false, upload: false, import: false, isOwn: true, isBranch: false, isGlobal: false };
 
 /**
  * Get all module keys (excluding children like whatsapp_inbox)
@@ -65,14 +65,14 @@ function getDefaultRoles(tenantId, createdBy) {
         actions: { ...ALL_ACTIONS },
     }));
 
-    // Branch Manager: full access except role/module management (isGlobal = true → sees all branch data)
+    // Branch Manager: full access except role/module management (isBranch = true → sees all branch data)
     const branchManagerPerms = allModuleKeys.map((key) => ({
         moduleKey: key,
         actions: ['roles', 'modules'].includes(key)
-            ? { ...VIEW_ONLY }
+            ? { view: true, create: false, edit: false, delete: false, export: false, upload: false, import: false, isOwn: false, isBranch: true, isGlobal: false }
             : ['billing'].includes(key)
                 ? { ...NO_ACCESS }
-                : { ...ALL_ACTIONS },
+                : { view: true, create: true, edit: true, delete: true, export: true, upload: true, import: true, isOwn: false, isBranch: true, isGlobal: false },
     }));
 
     // Sales Lead: full on leads/calls/meetings (isGlobal = true → sees all branch data)

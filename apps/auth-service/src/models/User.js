@@ -24,10 +24,6 @@ const userSchema = new mongoose.Schema(
             default: true,
             index: true,
         },
-        isBranchLeader: {
-            type: Boolean,
-            default: false,
-        },
         tokenVersion: {
             type: Number,
             default: 0,

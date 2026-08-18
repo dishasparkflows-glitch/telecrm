@@ -38,17 +38,26 @@ test('missing identity or verified module permissions deny by default', () => {
     }), { module: 'leads' }), /permissions/i);
 });
 
-test('global visibility remains tenant and branch scoped', () => {
+test('branch visibility remains tenant and branch scoped', () => {
     assert.deepEqual(buildScopeFilter(request({
-        'x-user-permissions': JSON.stringify({ leads: { isOwn: false, isGlobal: true } }),
+        'x-user-permissions': JSON.stringify({ leads: { isOwn: false, isBranch: true, isGlobal: false } }),
     }), { module: 'leads', ownerField: 'assignedTo' }), {
         tenantId: 'tenant-1', branchId: 'branch-1',
     });
 });
 
+test('global visibility is tenant scoped only', () => {
+    assert.deepEqual(buildScopeFilter(request({
+        'x-user-permissions': JSON.stringify({ leads: { isOwn: false, isBranch: false, isGlobal: true } }),
+    }), { module: 'leads', ownerField: 'assignedTo' }), {
+        tenantId: 'tenant-1',
+    });
+});
+
 test('superadmin visibility requires a tenant and honors a selected branch', () => {
+    const { ROLES } = require('../src/constants');
     const superadmin = request({
-        'x-user-role': 'superadmin',
+        'x-user-role': ROLES.SUPER_ADMIN,
         'x-user-id': '',
         'x-user-branch-id': '',
         'x-user-permissions': '',
@@ -58,7 +67,7 @@ test('superadmin visibility requires a tenant and honors a selected branch', () 
         tenantId: 'tenant-1', branchId: 'branch-2',
     });
     assert.throws(() => buildScopeFilter(request({
-        'x-user-role': 'superadmin', 'x-tenant-id': '',
+        'x-user-role': ROLES.SUPER_ADMIN, 'x-tenant-id': '',
     }), { module: 'leads' }), /tenant/i);
 });
 

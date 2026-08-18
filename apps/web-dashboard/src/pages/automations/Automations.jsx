@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Tabs from '../../components/ui/Tabs'
 import EmptyState from '../../components/ui/EmptyState'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 import { useToast } from '../../components/ui/Toast'
 import { Zap, Plus, Activity, Trash2, Pencil } from 'lucide-react'
 
@@ -22,12 +23,13 @@ export default function Automations() {
   const [activeTab, setActiveTab] = useState('rules')
   const [rulesPage, setRulesPage] = useState(1)
   const [logsPage] = useState(1)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
   const PAGE_SIZE = 25
 
   const { data: rulesData, isLoading } = useGetRulesQuery({ page: rulesPage, limit: PAGE_SIZE })
   const { data: logsData } = useGetAutomationLogsQuery({ page: logsPage, limit: PAGE_SIZE })
   const [toggleRule] = useToggleRuleMutation()
-  const [deleteRule] = useDeleteRuleMutation()
+  const [deleteRule, { isLoading: isDeleting }] = useDeleteRuleMutation()
 
   const rules = rulesData?.data || []
   const rulesPagination = rulesData?.pagination || {}
@@ -38,9 +40,13 @@ export default function Automations() {
     try { await toggleRule(id).unwrap() } catch { toast('Failed to toggle', 'error') }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this rule?')) return
-    try { await deleteRule(id).unwrap(); toast('Rule deleted', 'success') } catch { toast('Failed to delete', 'error') }
+  const handleDelete = async () => {
+    if (!deleteConfirm) return
+    try { 
+      await deleteRule(deleteConfirm).unwrap(); 
+      toast('Rule deleted', 'success') 
+      setDeleteConfirm(null)
+    } catch { toast('Failed to delete', 'error') }
   }
 
   const tabs = [
@@ -103,7 +109,7 @@ export default function Automations() {
                   <Button variant="ghost" size="sm" onClick={() => navigate(`/automations/builder/${rule._id}`)}>
                     <Pencil size={12} /> Edit
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-danger" onClick={() => handleDelete(rule._id)}>
+                  <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleteConfirm(rule._id)}>
                     <Trash2 size={12} /> Delete
                   </Button>
                 </div>
@@ -147,6 +153,18 @@ export default function Automations() {
           )}
         </Card>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        title="Delete Rule?"
+        message="Are you sure you want to delete this rule?"
+        confirmText="Delete"
+        variant="danger"
+        loading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </>
   )
 }

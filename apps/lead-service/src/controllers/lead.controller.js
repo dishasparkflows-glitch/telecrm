@@ -62,18 +62,19 @@ const createLead = asyncHandler(async (req, res) => {
  */
 const getLeads = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const cacheKey = cacheHelper.generateKey(`leads:${tenantId}:list`, req.query);
+    const {
+        search, stage, source, assignedTo, priority, tags,
+        sortBy = 'createdAt', sortOrder = 'desc', isArchived = 'false',
+    } = req.query;
+    const { page, limit, skip } = pagination(req.query);
+
+    // Build scope filter based on verified visibility; requested filters cannot widen it.
+    const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'leads' });
+    filter.isArchived = isArchived === 'true';
+
+    const cacheKey = cacheHelper.generateKey(`leads:${tenantId}:list`, { ...req.query, scope: JSON.stringify(filter) });
 
     const data = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
-        const {
-            search, stage, source, assignedTo, priority, tags,
-            sortBy = 'createdAt', sortOrder = 'desc', isArchived = 'false',
-        } = req.query;
-        const { page, limit, skip } = pagination(req.query);
-
-        // Build scope filter based on verified visibility; requested filters cannot widen it.
-        const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'leads' });
-        filter.isArchived = isArchived === 'true';
 
     if (assignedTo) {
         applyAssignedToFilter(filter, requireObjectId(assignedTo, 'assignedTo'));

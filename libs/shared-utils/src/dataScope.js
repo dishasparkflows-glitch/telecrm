@@ -61,11 +61,6 @@ function buildScopeFilter(req, options = {}) {
         return filter;
     }
 
-    if (useBranchId && (!userBranchId || userBranchId === 'all')) {
-        throw ApiError.forbidden('An assigned branch is required for data access');
-    }
-    if (useBranchId) filter.branchId = userBranchId;
-
     if (!module) {
         throw ApiError.forbidden('A module is required to determine data visibility');
     }
@@ -77,16 +72,37 @@ function buildScopeFilter(req, options = {}) {
     }
 
     const isGlobal = modulePermission.isGlobal === true;
+    const isBranch = modulePermission.isBranch === true;
     const isOwn = modulePermission.isOwn === true;
-    if (!isGlobal && !isOwn) {
+    if (!isGlobal && !isBranch && !isOwn) {
         throw ApiError.forbidden(`No data visibility granted for '${module}'`);
     }
 
-    if (!isGlobal && ownerField) {
-        if (!userId) {
-            throw ApiError.unauthorized('Authenticated user context is required for own-record visibility');
+    if (isBranch) {
+        if (useBranchId && (!userBranchId || userBranchId === 'all')) {
+            throw ApiError.forbidden('An assigned branch is required for data access');
         }
-        filter[ownerField] = userId;
+        if (useBranchId) {
+            filter.branchId = userBranchId;
+        }
+    } else if (isGlobal) {
+        if (selectedBranchId && selectedBranchId !== 'all' && useBranchId) {
+            filter.branchId = selectedBranchId;
+        }
+    } else if (isOwn) {
+        if (useBranchId && (!userBranchId || userBranchId === 'all')) {
+            throw ApiError.forbidden('An assigned branch is required for data access');
+        }
+        if (useBranchId) {
+            filter.branchId = userBranchId;
+        }
+        
+        if (ownerField) {
+            if (!userId) {
+                throw ApiError.unauthorized('Authenticated user context is required for own-record visibility');
+            }
+            filter[ownerField] = userId;
+        }
     }
 
     return filter;
@@ -109,21 +125,34 @@ function canAccessRecord(req, record, options = {}) {
     if (!tenantId || !record.tenantId || String(record.tenantId) !== String(tenantId)) return false;
     if (userRole === ROLES.SUPER_ADMIN) return true;
 
-    if (useBranchId) {
-        if (!userBranchId || userBranchId === 'all' || !record.branchId) return false;
-        if (String(record.branchId) !== String(userBranchId)) return false;
-    }
-
     if (!module) return false;
     const modulePermission = _getPermissions(req)?.[module];
     if (!modulePermission || typeof modulePermission !== 'object') return false;
 
     const isGlobal = modulePermission.isGlobal === true;
+    const isBranch = modulePermission.isBranch === true;
     const isOwn = modulePermission.isOwn === true;
-    if (isGlobal) return true;
-    if (!isOwn || !ownerField || !userId || !record[ownerField]) return false;
+    
+    if (isBranch) {
+        if (useBranchId) {
+            if (!userBranchId || userBranchId === 'all' || !record.branchId) return false;
+            if (String(record.branchId) !== String(userBranchId)) return false;
+        }
+        return true;
+    }
 
-    return String(record[ownerField]) === String(userId);
+    if (isGlobal) return true;
+
+    if (isOwn) {
+        if (useBranchId) {
+            if (!userBranchId || userBranchId === 'all' || !record.branchId) return false;
+            if (String(record.branchId) !== String(userBranchId)) return false;
+        }
+        if (!ownerField || !userId || !record[ownerField]) return false;
+        return String(record[ownerField]) === String(userId);
+    }
+    
+    return false;
 }
 
 module.exports = { buildScopeFilter, canAccessRecord };

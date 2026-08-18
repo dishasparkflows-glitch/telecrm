@@ -11,7 +11,9 @@ const permissionActionSchema = new mongoose.Schema(
         delete: { type: Boolean, default: false },
         export: { type: Boolean, default: false },
         upload: { type: Boolean, default: false },
+        import: { type: Boolean, default: false },
         isOwn: { type: Boolean, default: true },      // true = user sees only their own data
+        isBranch: { type: Boolean, default: false },  // true = user sees their branch data
         isGlobal: { type: Boolean, default: false },   // true = user sees all data in their branch
     },
     { _id: false }
@@ -142,7 +144,9 @@ roleSchema.methods.toPermissionMap = function () {
             delete: perm.actions.delete || false,
             export: perm.actions.export || false,
             upload: perm.actions.upload || false,
+            import: perm.actions.import || false,
             isOwn: perm.actions.isOwn !== false,       // default true
+            isBranch: perm.actions.isBranch || false,  // default false
             isGlobal: perm.actions.isGlobal || false,   // default false
         };
     }

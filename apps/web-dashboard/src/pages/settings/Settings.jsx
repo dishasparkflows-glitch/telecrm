@@ -680,7 +680,7 @@ export default function Settings() {
     }
 
     try {
-        const { id, name, email, phone, avatar, password, role, roleId, branchId, isBranchLeader, isActive, customFields } = editUserForm
+        const { id, name, email, phone, avatar, password, role, roleId, branchId, isActive, customFields } = editUserForm
         const payload = {
           contact: {
             name,
@@ -692,7 +692,6 @@ export default function Settings() {
           role,
           roleId,
           branchId,
-          isBranchLeader,
           isActive,
           customFields: customFields || {},
         }

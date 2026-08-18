@@ -150,7 +150,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
     const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
     const tenantId = req.headers['x-tenant-id'];
-    const cacheKey = cacheHelper.generateKey(`users:${tenantId}:list`, req.query);
+    const cacheKey = cacheHelper.generateKey(`users:${tenantId}:list`, { ...req.query, scope: JSON.stringify(filter) });
 
     const data = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
         if (search) {
@@ -217,7 +217,7 @@ const getAllUsersList = asyncHandler(async (req, res) => {
     const { branchId } = req.query;
     const filter = buildScopeFilter(req, { ownerField: null, module: 'users' });
     const tenantId = req.headers['x-tenant-id'];
-    const cacheKey = cacheHelper.generateKey(`users:${tenantId}:compact`, req.query);
+    const cacheKey = cacheHelper.generateKey(`users:${tenantId}:compact`, { ...req.query, scope: JSON.stringify(filter) });
 
     const formattedUsers = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
         filter.isActive = true;

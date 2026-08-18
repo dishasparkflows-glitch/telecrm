@@ -11,6 +11,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
@@ -45,12 +46,13 @@ export default function SmartForms() {
   const [viewingSubmissions, setViewingSubmissions] = useState(null) // Form ID
   const [editingForm, setEditingForm] = useState(null) // Full Form Object
   const [formName, setFormName] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   // Queries/Mutations
   const { data, isLoading } = useGetFormsQuery()
   const [createForm, { isLoading: creating }] = useCreateFormMutation()
   const [updateForm, { isLoading: updating }] = useUpdateFormMutation()
-  const [deleteForm] = useDeleteFormMutation()
+  const [deleteForm, { isLoading: isDeleting }] = useDeleteFormMutation()
   const { data: submissionsData, isLoading: subLoading } = useGetSubmissionsQuery(
     { id: viewingSubmissions }, 
     { skip: !viewingSubmissions }
@@ -103,11 +105,12 @@ export default function SmartForms() {
     }
   }
 
-  const handleDeleteForm = async (id) => {
-    if (!confirm('Are you sure you want to delete this form? All submissions will also be deleted.')) return
+  const handleDeleteForm = async () => {
+    if (!deleteConfirm) return
     try {
-      await deleteForm(id).unwrap()
+      await deleteForm(deleteConfirm).unwrap()
       toast('Form deleted', 'success')
+      setDeleteConfirm(null)
     } catch {
       toast('Failed to delete form', 'error')
     }
@@ -202,7 +205,7 @@ export default function SmartForms() {
                    <button onClick={() => setEditingForm(form)} className="p-1.5 rounded hover:bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:text-primary transition-colors" title="Settings">
                       <Settings size={14} />
                    </button>
-                   <button onClick={() => handleDeleteForm(form._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors" title="Delete">
+                   <button onClick={() => setDeleteConfirm(form._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors" title="Delete">
                       <Trash2 size={14} />
                    </button>
                 </div>
@@ -340,6 +343,18 @@ export default function SmartForms() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        title="Delete Form?"
+        message="Are you sure you want to delete this form? All submissions will also be deleted."
+        confirmText="Delete"
+        variant="danger"
+        loading={isDeleting}
+        onConfirm={handleDeleteForm}
+        onCancel={() => setDeleteConfirm(null)}
+      />
 
     </div>
   )

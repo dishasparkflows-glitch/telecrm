@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Shield, ArrowLeft, Save, Loader2, Check, X, Eye, Globe } from 'lucide-react'
+import { Shield, ArrowLeft, Save, Loader2, Check, X, Eye, Globe, Building2 } from 'lucide-react'
 import {
   useGetRoleQuery, useGetAvailableModulesQuery,
   useUpdateRolePermissionsMutation,
@@ -8,7 +8,7 @@ import {
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 
-const ACTIONS = ['view', 'create', 'edit', 'delete', 'export', 'upload']
+const ACTIONS = ['view', 'create', 'edit', 'delete', 'export', 'upload', 'import']
 
 export default function RolePermissions() {
   const toast = useToast()
@@ -36,8 +36,9 @@ export default function RolePermissions() {
       if (!map[key]) {
         map[key] = { view: false, create: false, edit: false, delete: false, export: false, upload: false, isOwn: true, isGlobal: false }
       } else {
-        // Ensure isOwn/isGlobal exist with defaults
+        // Ensure isOwn/isBranch/isGlobal exist with defaults
         if (map[key].isOwn === undefined) map[key].isOwn = true
+        if (map[key].isBranch === undefined) map[key].isBranch = false
         if (map[key].isGlobal === undefined) map[key].isGlobal = false
       }
     }
@@ -55,14 +56,18 @@ export default function RolePermissions() {
     setSaved(false)
   }
 
-  // Toggle visibility: isOwn and isGlobal are mutually exclusive
+  // Toggle visibility: isOwn, isBranch, and isGlobal are mutually exclusive
   const toggleVisibility = (moduleKey, field) => {
     setPermMatrix((prev) => {
       const current = prev[moduleKey] || {}
-      if (field === 'isGlobal') {
-        return { ...prev, [moduleKey]: { ...current, isGlobal: !current.isGlobal, isOwn: current.isGlobal ? true : false } }
-      } else {
-        return { ...prev, [moduleKey]: { ...current, isOwn: !current.isOwn, isGlobal: current.isOwn ? false : current.isGlobal } }
+      return {
+        ...prev,
+        [moduleKey]: {
+          ...current,
+          isOwn: field === 'isOwn' ? true : false,
+          isBranch: field === 'isBranch' ? true : false,
+          isGlobal: field === 'isGlobal' ? true : false,
+        }
       }
     })
     setSaved(false)
@@ -71,7 +76,7 @@ export default function RolePermissions() {
   const toggleAllForModule = (moduleKey) => {
     const current = permMatrix[moduleKey] || {}
     const allOn = ACTIONS.every((a) => current[a])
-    const newActions = { isOwn: current.isOwn, isGlobal: current.isGlobal }
+    const newActions = { isOwn: current.isOwn, isBranch: current.isBranch, isGlobal: current.isGlobal }
     ACTIONS.forEach((a) => (newActions[a] = !allOn))
     setPermMatrix((prev) => ({ ...prev, [moduleKey]: newActions }))
     setSaved(false)
@@ -161,7 +166,11 @@ export default function RolePermissions() {
           <span className="font-semibold text-[var(--vz-heading)]">Data Visibility:</span>
           <span className="flex items-center gap-1.5">
             <Globe size={13} className="text-emerald-500" />
-            <strong>All Branch Data</strong> — User sees all records in their branch
+            <strong>All Data</strong> — User sees all records in the tenant
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Building2 size={13} className="text-blue-500" />
+            <strong>Branch Data</strong> — User sees all records in their branch
           </span>
           <span className="flex items-center gap-1.5">
             <Eye size={13} className="text-amber-500" />
@@ -193,6 +202,11 @@ export default function RolePermissions() {
               <th className="text-center px-3 py-3 w-[100px]">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-500 flex items-center justify-center gap-1">
                   <Globe size={12} /> All Data
+                </span>
+              </th>
+              <th className="text-center px-3 py-3 w-[100px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-500 flex items-center justify-center gap-1">
+                  <Building2 size={12} /> Branch Data
                 </span>
               </th>
               <th className="text-center px-3 py-3 w-[100px]">
@@ -247,7 +261,7 @@ export default function RolePermissions() {
                   </td>
                   {/* Separator */}
                   <td className="w-[1px] bg-[var(--vz-border)]"></td>
-                  {/* isGlobal — All Branch Data */}
+                  {/* isGlobal — All Tenant Data */}
                   <td className="text-center px-3 py-3">
                     {isAdminModule ? (
                       <span className="text-[10px] text-[var(--vz-text-muted)]">—</span>
@@ -255,15 +269,35 @@ export default function RolePermissions() {
                       <button
                         onClick={() => !isSuperAdminRole && toggleVisibility(moduleKey, 'isGlobal')}
                         disabled={isSuperAdminRole}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all duration-200
+                        className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto transition-all duration-200
                           ${(isSuperAdminRole || perms.isGlobal)
                             ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
-                            : 'bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:bg-[var(--vz-border)]'
+                            : 'bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:bg-[var(--vz-border)] border border-[var(--vz-border)]'
                           }
                           ${isSuperAdminRole ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
                         `}
                       >
-                        {(isSuperAdminRole || perms.isGlobal) ? <Check size={12} /> : <X size={12} />}
+                        {(isSuperAdminRole || perms.isGlobal) && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                      </button>
+                    )}
+                  </td>
+                  {/* isBranch — Branch Data */}
+                  <td className="text-center px-3 py-3">
+                    {isAdminModule ? (
+                      <span className="text-[10px] text-[var(--vz-text-muted)]">—</span>
+                    ) : (
+                      <button
+                        onClick={() => !isSuperAdminRole && toggleVisibility(moduleKey, 'isBranch')}
+                        disabled={isSuperAdminRole}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto transition-all duration-200
+                          ${(perms.isBranch)
+                            ? 'bg-blue-500 text-white shadow-sm shadow-blue-500/30'
+                            : 'bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:bg-[var(--vz-border)] border border-[var(--vz-border)]'
+                          }
+                          ${isSuperAdminRole ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
+                        `}
+                      >
+                        {perms.isBranch && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                       </button>
                     )}
                   </td>
@@ -275,15 +309,15 @@ export default function RolePermissions() {
                       <button
                         onClick={() => !isSuperAdminRole && toggleVisibility(moduleKey, 'isOwn')}
                         disabled={isSuperAdminRole}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all duration-200
-                          ${perms.isOwn && !perms.isGlobal
+                        className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto transition-all duration-200
+                          ${perms.isOwn
                             ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
-                            : 'bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:bg-[var(--vz-border)]'
+                            : 'bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:bg-[var(--vz-border)] border border-[var(--vz-border)]'
                           }
                           ${isSuperAdminRole ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
                         `}
                       >
-                        {perms.isOwn && !perms.isGlobal ? <Check size={12} /> : <X size={12} />}
+                        {perms.isOwn && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                       </button>
                     )}
                   </td>

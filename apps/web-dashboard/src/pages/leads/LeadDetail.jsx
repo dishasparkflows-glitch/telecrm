@@ -8,6 +8,7 @@ import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFiel
 import { useGetProfileQuery } from '../../features/tenant/tenantApi'
 import { useGetChatQuery } from '../../features/whatsapp/whatsappApi'
 import { useGetCallLogsQuery } from '../../features/calls/callApi'
+import { usePermission } from '../../hooks/usePermission'
 
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
@@ -40,6 +41,7 @@ export default function LeadDetail() {
   const [noteText, setNoteText] = useState('')
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState(null)
+    const { canEdit } = usePermission('leads')
 
   const { data, isLoading } = useGetLeadQuery(id)
   const { data: timelineData, isFetching: timelineFetching } = useGetLeadTimelineQuery({ id, limit: 100 }, { skip: activeTab !== 'timeline' })
@@ -98,6 +100,10 @@ export default function LeadDetail() {
   }
 
   const handleEditOpen = () => {
+    if (!canEdit) {
+      toast("You don't have 'edit' permission for leads", 'error')
+      return
+    }
     setEditForm({
       contact: {
         firstName: lead.contact?.firstName || '',
@@ -403,21 +409,27 @@ export default function LeadDetail() {
             {activeTab === 'notes' && (
               <div>
                 {/* Add Note */}
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    placeholder="Add a note..."
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                    className="flex-1 px-3 py-2 rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)]
-                      text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] outline-none
-                      focus:border-primary focus:ring-1 focus:ring-primary/30"
-                  />
-                  <Button size="sm" onClick={handleAddNote} disabled={addingNote || !noteText.trim()}>
-                    <Send size={14} />
-                  </Button>
-                </div>
+                {canEdit ? (
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      placeholder="Add a note..."
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                      className="flex-1 px-3 py-2 rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)]
+                        text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] outline-none
+                        focus:border-primary focus:ring-1 focus:ring-primary/30"
+                    />
+                    <Button size="sm" onClick={handleAddNote} disabled={addingNote || !noteText.trim()}>
+                      <Send size={14} />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+                    <p className="text-xs text-amber-600">You don't have edit permission to add notes.</p>
+                  </div>
+                )}
 
                 {/* Notes List */}
                 {(!lead.notes || lead.notes.length === 0) ? (

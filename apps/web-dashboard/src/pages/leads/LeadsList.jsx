@@ -7,6 +7,7 @@ import { useGetAllUsersListQuery } from '../../features/users/userApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
 import { useGetProfileQuery } from '../../features/tenant/tenantApi'
 import { useDebounce } from '../../hooks/useDebounce'
+import { usePermission } from '../../hooks/usePermission'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -56,6 +57,7 @@ export default function LeadsList() {
   const dispatch = useDispatch()
   const toast = useToast()
   const activeBranchId = useSelector((s) => s.auth.activeBranchId)
+  const { canCreate, canImport } = usePermission('leads')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
@@ -346,13 +348,19 @@ export default function LeadsList() {
             <Button variant="soft-primary" size="sm" onClick={handleExport} disabled={isExporting}>
               <Download size={14} /> {isExporting ? 'Exporting...' : 'Export'}
             </Button>
-            <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={handleImportFile} />
-            <Button variant="soft-primary" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
-              <Upload size={14} /> {importing ? 'Importing...' : 'Import'}
-            </Button>
-            <Button size="sm" onClick={() => setShowAdd(true)}>
-              <Plus size={14} /> Add Lead
-            </Button>
+            {canImport && (
+              <>
+                <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={handleImportFile} />
+                <Button variant="soft-primary" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+                  <Upload size={14} /> {importing ? 'Importing...' : 'Import'}
+                </Button>
+              </>
+            )}
+            {canCreate && (
+              <Button size="sm" onClick={() => setShowAdd(true)}>
+                <Plus size={14} /> Add Lead
+              </Button>
+            )}
           </div>
         </div>
 
@@ -419,7 +427,7 @@ export default function LeadsList() {
             icon={Users}
             title="No leads found"
             description={search ? 'Try adjusting your search or filters' : 'Create your first lead to get started'}
-            action={!search && <Button size="sm" onClick={() => setShowAdd(true)}><Plus size={14} /> Add Lead</Button>}
+            action={(!search && canCreate) && <Button size="sm" onClick={() => setShowAdd(true)}><Plus size={14} /> Add Lead</Button>}
           />
         ) : (
           <>

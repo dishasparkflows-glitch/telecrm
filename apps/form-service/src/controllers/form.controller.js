@@ -86,7 +86,7 @@ const getForms = asyncHandler(async (req, res) => {
     const { page, limit, skip } = pagination(req.query);
     const filter = buildScopeFilter(req, { ownerField: null, module: 'forms' });
     
-    const cacheKey = cacheHelper.generateKey(`forms:${filter.tenantId}:list`, req.query);
+    const cacheKey = cacheHelper.generateKey(`forms:${filter.tenantId}:list`, { ...req.query, scope: JSON.stringify(filter) });
 
     const data = await cacheHelper.getOrSet(cacheKey, 3600, async () => {
         const [forms, total] = await Promise.all([

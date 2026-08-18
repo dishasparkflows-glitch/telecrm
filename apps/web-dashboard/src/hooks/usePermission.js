@@ -30,6 +30,7 @@ export function usePermission(moduleKey) {
         canDelete: isSuperAdmin || modulePerm.delete === true,
         canExport: isSuperAdmin || modulePerm.export === true,
         canUpload: isSuperAdmin || modulePerm.upload === true,
+        canImport: isSuperAdmin || modulePerm.import === true,
         isSuperAdmin,
         permissions: modulePerm,
     }

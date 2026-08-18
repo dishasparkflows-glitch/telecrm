@@ -12,6 +12,7 @@ import Badge from '../../components/ui/Badge'
 import Tabs from '../../components/ui/Tabs'
 import EmptyState from '../../components/ui/EmptyState'
 import Modal from '../../components/ui/Modal'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 import Input from '../../components/ui/Input'
 import { useToast } from '../../components/ui/Toast'
 import ChatComposer from '../../components/whatsapp/ChatComposer'
@@ -38,6 +39,7 @@ function QRConnectPanel() {
   })
   const [qrConnect, { isLoading: connecting }] = useQrConnectMutation()
   const [qrDisconnect, { isLoading: disconnecting }] = useQrDisconnectMutation()
+  const [disconnectConfirm, setDisconnectConfirm] = useState(false)
 
   const serverStatus = statusResp?.data?.status
   const serverPhone  = statusResp?.data?.phone
@@ -128,7 +130,7 @@ function QRConnectPanel() {
   }
 
   const handleDisconnect = async () => {
-    if (!confirm('Disconnect your WhatsApp from this CRM?')) return
+    if (!disconnectConfirm) return
     try {
       await qrDisconnect().unwrap()
       setQrImage(null)
@@ -138,6 +140,7 @@ function QRConnectPanel() {
       socketRef.current = null
       toast('WhatsApp disconnected', 'success')
       refetchStatus()
+      setDisconnectConfirm(false)
     } catch {
       toast('Failed to disconnect', 'error')
     }
@@ -192,7 +195,7 @@ function QRConnectPanel() {
 
           {/* Right: action button */}
           {isConnected
-            ? <Button size="sm" variant="ghost" onClick={handleDisconnect} disabled={disconnecting}
+            ? <Button size="sm" variant="ghost" onClick={() => setDisconnectConfirm(true)} disabled={disconnecting}
                 className="text-danger hover:bg-danger/10">
                 {disconnecting ? <Loader2 size={13} className="animate-spin mr-1" /> : <LogOut size={13} className="mr-1" />}
                 Disconnect
@@ -236,6 +239,17 @@ function QRConnectPanel() {
             <p className="text-sm text-[var(--vz-text-muted)]">Preparing QR code, please wait...</p>
           </div>
         )}
+
+        <ConfirmModal
+          isOpen={disconnectConfirm}
+          title="Disconnect WhatsApp?"
+          message="Are you sure you want to disconnect your WhatsApp from this CRM?"
+          confirmText="Disconnect"
+          variant="danger"
+          loading={disconnecting}
+          onConfirm={handleDisconnect}
+          onCancel={() => setDisconnectConfirm(false)}
+        />
       </Card>
     </div>
   )
@@ -425,6 +439,8 @@ export default function WhatsApp() {
   const [ruleForm, setRuleForm] = useState({ rule: { triggerKeyword: '', responseContent: '' }, isActive: true })
   const [editRuleForm, setEditRuleForm] = useState(null)
   const [syncing, setSyncing] = useState(false)
+  const [deleteTemplateId, setDeleteTemplateId] = useState(null)
+  const [deleteRuleId, setDeleteRuleId] = useState(null)
   
   // Broadcasts
   const [selectedTemplate, setSelectedTemplate] = useState(null)
@@ -454,10 +470,10 @@ export default function WhatsApp() {
   const [replyToMessage, { isLoading: replying }] = useReplyToMessageMutation()
   const [createTemplate] = useCreateTemplateMutation()
   const [updateTemplate] = useUpdateTemplateMutation()
-  const [deleteTemplate] = useDeleteTemplateMutation()
+  const [deleteTemplate, { isLoading: isDeletingTemplate }] = useDeleteTemplateMutation()
   const [createRule] = useCreateChatbotRuleMutation()
   const [updateRule] = useUpdateChatbotRuleMutation()
-  const [deleteRule] = useDeleteChatbotRuleMutation()
+  const [deleteRule, { isLoading: isDeletingRule }] = useDeleteChatbotRuleMutation()
   const [sendBroadcast] = useBroadcastMutation()
   const [syncTemplates] = useSyncTemplatesMutation()
 
@@ -628,12 +644,13 @@ export default function WhatsApp() {
     } catch (e) { toast(e?.data?.message || 'Failed to update template', 'error') }
   }
 
-  const handleDeleteTemplate = async (id) => {
+  const handleDeleteTemplate = async () => {
+    if (!deleteTemplateId) return
     if (!isSuperAdmin) return toast('Only administrators can delete templates', 'error')
-    if (!confirm('Delete this template?')) return
     try {
-      await deleteTemplate(id).unwrap()
+      await deleteTemplate(deleteTemplateId).unwrap()
       toast('Template deleted', 'success')
+      setDeleteTemplateId(null)
     } catch { toast('Failed to delete template', 'error') }
   }
 
@@ -670,11 +687,12 @@ export default function WhatsApp() {
     } catch { toast('Failed to update rule', 'error') }
   }
 
-  const handleDeleteRule = async (id) => {
-    if (!confirm('Delete this rule?')) return
+  const handleDeleteRule = async () => {
+    if (!deleteRuleId) return
     try {
-      await deleteRule(id).unwrap()
+      await deleteRule(deleteRuleId).unwrap()
       toast('Rule deleted', 'success')
+      setDeleteRuleId(null)
     } catch { toast('Failed to delete rule', 'error') }
   }
 
@@ -997,7 +1015,7 @@ export default function WhatsApp() {
                         {isSuperAdmin && (
                           <>
                             <button onClick={() => handleEditTemplateOpen(t)} className="p-1 rounded hover:bg-primary/10 text-primary opacity-0 group-hover:opacity-100 transition-all"><Pencil size={12}/></button>
-                            <button onClick={() => handleDeleteTemplate(t._id)} className="p-1 rounded hover:bg-danger/10 text-danger opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={12}/></button>
+                            <button onClick={() => setDeleteTemplateId(t._id)} className="p-1 rounded hover:bg-danger/10 text-danger opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={12}/></button>
                           </>
                         )}
                       </div>
@@ -1050,7 +1068,7 @@ export default function WhatsApp() {
                     {isSuperAdmin && (
                       <>
                         <button onClick={() => handleEditRuleOpen(rule)} className="p-1.5 rounded hover:bg-primary/10 text-primary transition-all" title="Edit rule"><Pencil size={14}/></button>
-                        <button onClick={() => handleDeleteRule(rule._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger transition-all" title="Delete rule"><Trash2 size={14}/></button>
+                        <button onClick={() => setDeleteRuleId(rule._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger transition-all" title="Delete rule"><Trash2 size={14}/></button>
                       </>
                     )}
                   </div>
@@ -1273,6 +1291,29 @@ export default function WhatsApp() {
           </div>
         )}
       </Modal>
+
+      {/* Delete Confirmation Modals */}
+      <ConfirmModal
+        isOpen={!!deleteTemplateId}
+        title="Delete Template?"
+        message="Are you sure you want to delete this template?"
+        confirmText="Delete"
+        variant="danger"
+        loading={isDeletingTemplate}
+        onConfirm={handleDeleteTemplate}
+        onCancel={() => setDeleteTemplateId(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!deleteRuleId}
+        title="Delete Rule?"
+        message="Are you sure you want to delete this rule?"
+        confirmText="Delete"
+        variant="danger"
+        loading={isDeletingRule}
+        onConfirm={handleDeleteRule}
+        onCancel={() => setDeleteRuleId(null)}
+      />
     </>
   )
 }
