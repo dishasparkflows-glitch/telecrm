@@ -3,8 +3,8 @@ const { ApiError } = require('@sparkcrm/shared-utils');
 
 const RULE_WRITE_FIELDS = Object.freeze(['name', 'description', 'trigger', 'actions']);
 const TRIGGER_FIELDS = Object.freeze(['event', 'conditions']);
-const CONDITION_FIELDS = Object.freeze(['field', 'operator', 'value']);
-const ACTION_FIELDS = Object.freeze(['type', 'config', 'delay', 'conditions']);
+const CONDITION_FIELDS = Object.freeze(['_id', 'field', 'operator', 'value']);
+const ACTION_FIELDS = Object.freeze(['_id', 'type', 'config', 'delay', 'conditions']);
 
 function isPlainObject(value) {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;

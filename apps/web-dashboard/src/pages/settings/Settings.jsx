@@ -64,6 +64,7 @@ import {
 } from '../../features/auth/authApi'
 import { meetingApi } from '../../features/meetings/meetingApi'
 import TwoFactorSetupModal from './TwoFactorSetupModal'
+import EmailTemplates from './EmailTemplates'
 
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -786,6 +787,7 @@ export default function Settings() {
                 <TabItem icon={Megaphone} label="Lead Sources" active={activeTab === 'lead_sources'} onClick={() => setActiveTab('lead_sources')} count={leadSourceMappingsResp?.data?.length} />
                 <TabItem icon={Shuffle} label="Lead Assignment" active={activeTab === 'assignment'} onClick={() => setActiveTab('assignment')} />
                 <TabItem icon={Database} label="Custom Fields" active={activeTab === 'fields'} onClick={() => setActiveTab('fields')} count={customFieldsResp?.data?.length} />
+                <TabItem icon={Mail} label="Email Templates" active={activeTab === 'email_templates'} onClick={() => setActiveTab('email_templates')} />
                 <TabItem icon={Plug} label="Integrations" active={activeTab === 'integrations'} onClick={() => setActiveTab('integrations')} />
                 <TabItem icon={Lock} label="Security" active={activeTab === 'security'} onClick={() => setActiveTab('security')} />
                 {currentUser?.role === ROLES.SUPER_ADMIN && (
@@ -848,6 +850,9 @@ export default function Settings() {
                 </div>
               </Card>
             )}
+
+            {/* Email Templates */}
+            {activeTab === 'email_templates' && <EmailTemplates />}
 
             {/* Integrations */}
             {activeTab === 'integrations' && (

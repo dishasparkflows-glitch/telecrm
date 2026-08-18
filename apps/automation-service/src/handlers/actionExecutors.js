@@ -1,7 +1,9 @@
 const axios = require('axios');
 const { env } = require('@sparkcrm/shared-config');
 const { createServiceHeaders } = require('@sparkcrm/shared-middleware');
-
+const EmailTemplate = require('../models/EmailTemplate');
+const { resolveTemplateContext } = require('../services/templateFieldResolver.service');
+const { renderEmailTemplate } = require('../services/templateRenderer.service');
 /**
  * Helper to build internal request configurations
  */
@@ -75,13 +77,44 @@ const addTag = async (tenantId, action, triggerData) => {
 const sendEmail = async (tenantId, action, triggerData) => {
     if (!action.config.templateId) throw new Error('Missing email templateId in action config');
     
+    // Load template
+    const template = await EmailTemplate.findOne({ _id: action.config.templateId, tenantId });
+    if (!template) throw new Error('Email template not found');
+    if (template.status !== 'active') throw new Error(`Email template ${template.name} is not active`);
+
+    const recordId = triggerData._id || triggerData.leadId;
+    const module = template.module || 'Lead'; // Fallback to Lead if missing
+    
+    // Resolve context
+    const context = await resolveTemplateContext({ tenantId, module, recordId });
+    
+    // Determine recipient email based on recipientType
+    const recipientType = action.config.recipientType || 'lead';
+    let to = '';
+    
+    if (recipientType === 'lead') {
+        to = context.lead?.email;
+    } else if (recipientType === 'assigned_user') {
+        to = context.user?.email;
+    } else if (recipientType === 'custom') {
+        to = action.config.customEmail;
+    }
+    
+    if (!to) {
+        console.warn(`[Automation] No email found for recipient type ${recipientType}. Skipping sendEmail.`);
+        return;
+    }
+
+    // Render email content
+    const rendered = renderEmailTemplate({ template, context });
+
     const reqConfig = buildInternalRequest('POST', `/api/emails/send`, 'NOTIFICATION', tenantId);
     
     await axios.post(reqConfig.url, {
-        templateId: action.config.templateId,
-        recipientId: triggerData._id || triggerData.leadId,
-        recipientType: 'Lead',
-        variables: triggerData // pass lead data as variables
+        to,
+        subject: rendered.subject,
+        html: rendered.bodyHtml,
+        text: rendered.bodyText
     }, {
         headers: reqConfig.headers,
     });

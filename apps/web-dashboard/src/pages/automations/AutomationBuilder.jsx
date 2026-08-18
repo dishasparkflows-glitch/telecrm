@@ -4,6 +4,7 @@ import { useGetAllUsersListQuery } from '../../features/users/userApi';
 import { useListRolesCompactQuery } from '../../features/roles/roleApi';
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi';
 import { useCreateRuleMutation, useUpdateRuleMutation, useGetRulesQuery } from '../../features/automations/automationApi';
+import { useGetEmailTemplatesQuery } from '../../features/automations/emailTemplateApi';
 import PageHeader from '../../components/layout/PageHeader';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -39,6 +40,7 @@ export default function AutomationBuilder() {
     const { data: rolesData } = useListRolesCompactQuery();
     const { data: customFieldsData } = useGetCustomFieldsQuery({ module: 'leads' });
     const { data: existingRules } = useGetRulesQuery({ limit: 100 }, { skip: !id });
+    const { data: emailTemplatesResp } = useGetEmailTemplatesQuery();
     
     const [createRule, { isLoading: creating }] = useCreateRuleMutation();
     const [updateRule, { isLoading: updating }] = useUpdateRuleMutation();
@@ -46,6 +48,7 @@ export default function AutomationBuilder() {
     const users = usersData?.data || [];
     const roles = rolesData?.data || [];
     const customFields = customFieldsData?.data || [];
+    const emailTemplates = emailTemplatesResp?.data || [];
 
     const standardLeadFields = [
         { value: 'source', label: 'Lead Source' },
@@ -352,9 +355,16 @@ export default function AutomationBuilder() {
                     {selectedNode.actionType === 'send_email' && (
                         <div className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium">Template ID</label>
-                                <Input placeholder="Template ID from provider" value={selectedNode.config.templateId || ''} onChange={e => updateSelectedNode({ config: { ...selectedNode.config, templateId: e.target.value } })} />
-                                <p className="text-[11px] text-[var(--vz-text-muted)] mt-1">This ID comes from your email provider (e.g., SendGrid, Mailchimp) where the actual email content is designed.</p>
+                                <label className="text-sm font-medium">Email Template</label>
+                                <Select 
+                                    value={selectedNode.config.templateId || ''}
+                                    onChange={v => updateSelectedNode({ config: { ...selectedNode.config, templateId: v } })}
+                                    options={[
+                                        { value: '', label: 'Select an Email Template' },
+                                        ...emailTemplates.filter(t => t.status === 'active').map(t => ({ value: t._id, label: t.name }))
+                                    ]}
+                                />
+                                <p className="text-[11px] text-[var(--vz-text-muted)] mt-1">Select an active email template created in Settings.</p>
                             </div>
                         </div>
                     )}
