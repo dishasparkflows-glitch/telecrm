@@ -6,30 +6,47 @@ const automationRuleSchema = new mongoose.Schema(
         branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
         name: { type: String, required: true, trim: true },
         description: { type: String, default: '' },
-        isActive: { type: Boolean, default: true },
+        type: { type: String, enum: ['workflow', 'schedule'], default: 'workflow', index: true },
+        status: { type: String, enum: ['draft', 'active', 'inactive'], default: 'draft', index: true },
         trigger: {
-            event: { type: String, required: true }, // e.g., 'lead.created', 'lead.stage_changed', 'form.submitted'
-            conditions: [
-                {
-                    field: { type: String, required: true }, // e.g., 'source', 'stage', 'score'
-                    operator: { type: String, enum: ['equals', 'not_equals', 'contains', 'greater_than', 'less_than', 'in', 'not_in', 'is_empty', 'is_not_empty'], required: true },
-                    value: { type: mongoose.Schema.Types.Mixed },
-                },
-            ],
+            event: { type: String }, // e.g., 'lead.created'
+            schedule: {
+                frequency: { type: String, enum: ['once', 'daily', 'weekly', 'monthly'] },
+                timezone: { type: String },
+                time: { type: String },
+                startDate: { type: Date },
+                endDate: { type: Date }
+            },
+            audience: {
+                filters: [{ type: mongoose.Schema.Types.Mixed }]
+            }
         },
-        actions: [
+        nodes: [
             {
-                type: { type: String, enum: ['assign_lead', 'send_email', 'send_whatsapp', 'change_stage', 'change_status', 'add_tag', 'create_task', 'create_follow_up', 'send_notification', 'webhook'], required: true },
+                id: { type: String, required: true }, // UI generated node ID
+                type: { type: String, enum: ['trigger', 'condition', 'action', 'wait'], required: true },
+                actionType: { type: String }, // For 'action' nodes (e.g. 'assign_lead')
                 config: { type: mongoose.Schema.Types.Mixed, default: {} },
-                delay: { type: Number, default: 0 }, // minutes
                 conditions: [
                     {
                         field: { type: String, required: true },
-                        operator: { type: String, enum: ['equals', 'not_equals', 'contains', 'greater_than', 'less_than', 'in', 'not_in', 'is_empty', 'is_not_empty'], required: true },
+                        operator: { type: String, enum: ['equals', 'not_equals', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'is_empty', 'is_not_empty', 'is_true', 'is_false', 'in', 'not_in', 'before', 'after', 'on', 'before_or_equal', 'after_or_equal'], required: true },
                         value: { type: mongoose.Schema.Types.Mixed },
                     }
-                ]
-            },
+                ],
+                delay: {
+                    value: { type: Number },
+                    unit: { type: String, enum: ['minutes', 'hours', 'days'] }
+                }
+            }
+        ],
+        edges: [
+            {
+                id: { type: String, required: true },
+                source: { type: String, required: true },
+                target: { type: String, required: true },
+                sourceHandle: { type: String } // e.g., 'true', 'false' for condition branching
+            }
         ],
         executionCount: { type: Number, default: 0 },
         lastExecutedAt: { type: Date, default: null },
@@ -49,7 +66,7 @@ const automationRuleSchema = new mongoose.Schema(
     }
 );
 
-automationRuleSchema.index({ tenantId: 1, isActive: 1, 'trigger.event': 1 });
+automationRuleSchema.index({ tenantId: 1, status: 1, 'trigger.event': 1 });
 
 const automationLogSchema = new mongoose.Schema(
     {
@@ -59,15 +76,17 @@ const automationLogSchema = new mongoose.Schema(
         ruleName: { type: String },
         triggerEvent: { type: String },
         triggerData: { type: mongoose.Schema.Types.Mixed },
-        actionsExecuted: [
+        currentNodeId: { type: String },
+        nodeExecutions: [
             {
+                nodeId: { type: String, required: true },
                 type: { type: String },
-                status: { type: String, enum: ['pending', 'success', 'failed', 'skipped'] },
+                status: { type: String, enum: ['pending', 'success', 'failed', 'skipped', 'waiting', 'exited'] },
                 result: { type: mongoose.Schema.Types.Mixed },
                 executedAt: { type: Date, default: Date.now },
             },
         ],
-        status: { type: String, enum: ['pending', 'success', 'partial', 'failed'], default: 'pending' },
+        status: { type: String, enum: ['running', 'waiting', 'completed', 'failed', 'exited'], default: 'running' },
     
         meta: {
             createdBy: { type: mongoose.Schema.Types.ObjectId },

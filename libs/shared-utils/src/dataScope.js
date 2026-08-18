@@ -124,6 +124,7 @@ function canAccessRecord(req, record, options = {}) {
 
     if (!tenantId || !record.tenantId || String(record.tenantId) !== String(tenantId)) return false;
     if (userRole === ROLES.SUPER_ADMIN) return true;
+    if (req?.serviceIdentity && req.serviceIdentity.issuer) return true;
 
     if (!module) return false;
     const modulePermission = _getPermissions(req)?.[module];

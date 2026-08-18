@@ -29,10 +29,10 @@ const registerEventListeners = async () => {
                 const branchId = data.branchId;
 
                 // Find matching active rules for this event
-                // Rule must match tenant AND (be global OR match specific branch)
                 const rules = await AutomationRule.find({
                     tenantId,
-                    isActive: true,
+                    status: 'active',
+                    type: 'workflow',
                     'trigger.event': eventName,
                     $or: [
                         { branchId: null },
@@ -56,33 +56,24 @@ const registerEventListeners = async () => {
                         await connection.set(lockKey, '1', 'EX', 60); // 60 seconds cooldown
                     }
 
-                    // Check rule trigger conditions
-                    const conditionsMet = evaluateConditions(rule.trigger.conditions, data);
+                    // Check rule trigger conditions (if any remain at the root level)
+                    // Note: with nodes, conditions might be explicit condition nodes, but root filters can still apply
+                    const conditionsMet = evaluateConditions(rule.trigger.conditions || [], data);
                     if (!conditionsMet) continue;
 
-                    // Filter actions based on action conditions (Branch evaluation)
-                    const validActions = [];
-                    const actionsExecuted = [];
-                    for (const action of rule.actions) {
-                        const actionConditionsMet = evaluateConditions(action.conditions, data);
-                        if (actionConditionsMet) {
-                            validActions.push(action);
-                            actionsExecuted.push({
-                                _id: action._id,
-                                type: action.type,
-                                status: 'pending',
-                                result: null,
-                                executedAt: new Date(),
-                            });
-                        } else {
-                            actionsExecuted.push({
-                                _id: action._id,
-                                type: action.type,
-                                status: 'skipped',
-                                result: 'Branch condition not met',
-                                executedAt: new Date(),
-                            });
-                        }
+                    // Find trigger node
+                    const triggerNode = rule.nodes.find(n => n.type === 'trigger');
+                    if (!triggerNode) {
+                        console.warn(`⚠️ Automation "${rule.name}" has no trigger node. Skipping.`);
+                        continue;
+                    }
+
+                    const { findNextNode } = require('../engine/workflowEngine');
+                    const nextNode = findNextNode(rule, triggerNode.id);
+
+                    if (!nextNode) {
+                        console.log(`⚙️ Automation "${rule.name}" triggered, but no subsequent nodes found.`);
+                        continue;
                     }
 
                     // Create pending log
@@ -93,18 +84,17 @@ const registerEventListeners = async () => {
                         ruleName: rule.name,
                         triggerEvent: eventName,
                         triggerData: data,
-                        actionsExecuted,
-                        status: validActions.length > 0 ? 'pending' : 'success', // If all skipped, it's a success
+                        currentNodeId: nextNode.id,
+                        nodeExecutions: [],
+                        status: 'running',
                     });
 
                     // Dispatch to queue
                     const { enqueueAction } = require('../queue/automationQueue');
-                    for (const action of validActions) {
-                        try {
-                            await enqueueAction(log._id, tenantId, action, data);
-                        } catch (err) {
-                            console.error(`❌ Failed to enqueue action ${action.type}:`, err.message);
-                        }
+                    try {
+                        await enqueueAction(log._id, tenantId, nextNode, data);
+                    } catch (err) {
+                        console.error(`❌ Failed to enqueue node ${nextNode.type}:`, err.message);
                     }
 
                     // Update rule stats
@@ -112,7 +102,7 @@ const registerEventListeners = async () => {
                     rule.lastExecutedAt = new Date();
                     await rule.save();
 
-                    console.log(`⚙️ Automation "${rule.name}" triggered by ${eventName}. Queued ${validActions.length} actions.`);
+                    console.log(`⚙️ Automation "${rule.name}" triggered by ${eventName}. Queued first node: ${nextNode.type}.`);
                 }
             } catch (err) {
                 console.error(`❌ automation ${eventName} handler error:`, err.message);
@@ -130,17 +120,36 @@ const evaluateConditions = (conditions, data) => {
     if (!conditions || conditions.length === 0) return true;
 
     return conditions.every((cond) => {
-        const fieldValue = data[cond.field];
+        // Resolve dot-notation for nested fields like customData.budget
+        const resolveField = (obj, path) => path.split('.').reduce((o, i) => (o ? o[i] : undefined), obj);
+        const fieldValue = resolveField(data, cond.field);
+
+        const valA = fieldValue !== undefined && fieldValue !== null ? String(fieldValue).toLowerCase() : '';
+        const valB = cond.value !== undefined && cond.value !== null ? String(cond.value).toLowerCase() : '';
+
         switch (cond.operator) {
-            case 'equals': return fieldValue === cond.value;
-            case 'not_equals': return fieldValue !== cond.value;
-            case 'contains': return String(fieldValue || '').includes(cond.value);
+            case 'equals': return valA === valB;
+            case 'not_equals': return valA !== valB;
+            case 'contains': return valA.includes(valB);
+            case 'does_not_contain': return !valA.includes(valB);
+            case 'starts_with': return valA.startsWith(valB);
+            case 'ends_with': return valA.endsWith(valB);
             case 'greater_than': return Number(fieldValue) > Number(cond.value);
             case 'less_than': return Number(fieldValue) < Number(cond.value);
-            case 'in': return Array.isArray(cond.value) ? cond.value.includes(fieldValue) : false;
-            case 'not_in': return Array.isArray(cond.value) ? !cond.value.includes(fieldValue) : true;
+            case 'greater_than_or_equal': return Number(fieldValue) >= Number(cond.value);
+            case 'less_than_or_equal': return Number(fieldValue) <= Number(cond.value);
+            case 'in': return Array.isArray(cond.value) ? cond.value.some(v => String(v).toLowerCase() === valA) : false;
+            case 'not_in': return Array.isArray(cond.value) ? !cond.value.some(v => String(v).toLowerCase() === valA) : true;
             case 'is_empty': return fieldValue === null || fieldValue === undefined || fieldValue === '';
             case 'is_not_empty': return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
+            case 'is_true': return Boolean(fieldValue) === true;
+            case 'is_false': return Boolean(fieldValue) === false;
+            // Dates (simplified string comparison, assuming ISO formats)
+            case 'before': return new Date(fieldValue) < new Date(cond.value);
+            case 'after': return new Date(fieldValue) > new Date(cond.value);
+            case 'on': return new Date(fieldValue).toDateString() === new Date(cond.value).toDateString();
+            case 'before_or_equal': return new Date(fieldValue) <= new Date(cond.value);
+            case 'after_or_equal': return new Date(fieldValue) >= new Date(cond.value);
             default: return false;
         }
     });

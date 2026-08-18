@@ -31,13 +31,32 @@ const buildInternalRequest = (method, path, targetServiceKey, tenantId) => {
 const assignLead = async (tenantId, action, triggerData) => {
     const leadId = triggerData._id || triggerData.leadId;
     if (!leadId) throw new Error('Missing lead ID in trigger data');
-    if (!action.config.userId) throw new Error('Missing assignedTo userId in action config');
-
-    const reqConfig = buildInternalRequest('PUT', `/api/leads/${leadId}`, 'LEAD', tenantId);
     
-    await axios.put(reqConfig.url, { assignedTo: action.config.userId }, {
-        headers: reqConfig.headers,
-    });
+    // Legacy support for boolean useAssignmentPolicy
+    const strategy = action.config.strategy || (action.config.useAssignmentPolicy ? 'policy' : 'manual');
+
+    if (strategy === 'policy') {
+        const reqConfig = buildInternalRequest('PUT', `/api/leads/${leadId}/assign-policy`, 'LEAD', tenantId);
+        const res = await axios.put(reqConfig.url, {}, { headers: reqConfig.headers });
+        return res.data;
+    } else if (strategy === 'round_robin' || strategy === 'least_loaded') {
+        if (!action.config.userIds || action.config.userIds.length === 0) throw new Error(`Missing userIds for ${strategy} strategy`);
+        
+        const reqConfig = buildInternalRequest('PUT', `/api/leads/${leadId}/assign-dynamic`, 'LEAD', tenantId);
+        const res = await axios.put(reqConfig.url, { 
+            strategy, 
+            userIds: action.config.userIds,
+            automationRuleId: action.id // Pass node/action id as context for round robin cursor
+        }, { headers: reqConfig.headers });
+        return res.data;
+    } else {
+        if (!action.config.userId) throw new Error('Missing assignedTo userId in action config');
+        const reqConfig = buildInternalRequest('PUT', `/api/leads/${leadId}/assign`, 'LEAD', tenantId);
+        const res = await axios.put(reqConfig.url, { assignedTo: action.config.userId }, {
+            headers: reqConfig.headers,
+        });
+        return res.data;
+    }
 };
 
 const changeStage = async (tenantId, action, triggerData) => {
@@ -93,9 +112,9 @@ const sendEmail = async (tenantId, action, triggerData) => {
     let to = '';
     
     if (recipientType === 'lead') {
-        to = context.lead?.email;
+        to = context.lead?.contact?.email || context.lead?.email;
     } else if (recipientType === 'assigned_user') {
-        to = context.user?.email;
+        to = context.user?.contact?.email || context.user?.email;
     } else if (recipientType === 'custom') {
         to = action.config.customEmail;
     }
@@ -108,7 +127,7 @@ const sendEmail = async (tenantId, action, triggerData) => {
     // Render email content
     const rendered = renderEmailTemplate({ template, context });
 
-    const reqConfig = buildInternalRequest('POST', `/api/emails/send`, 'NOTIFICATION', tenantId);
+    const reqConfig = buildInternalRequest('POST', `/internal/emails/send`, 'NOTIFICATION', tenantId);
     
     await axios.post(reqConfig.url, {
         to,

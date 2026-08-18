@@ -20,19 +20,26 @@ const automationQueue = new Queue('AutomationActionQueue', {
 });
 
 /**
- * Add an action to the execution queue
+ * Add a node to the execution queue
  * @param {string} logId - The ID of the AutomationLog tracking this execution
  * @param {string} tenantId
- * @param {object} action - The action configuration { type, config, delay }
+ * @param {object} node - The node configuration to execute
  * @param {object} triggerData - The payload that triggered the event (e.g. lead data)
  */
-const enqueueAction = async (logId, tenantId, action, triggerData) => {
-    const delayMs = (action.delay || 0) * 60 * 1000;
+const enqueueAction = async (logId, tenantId, node, triggerData) => {
+    let delayMs = 0;
     
-    await automationQueue.add(action.type, {
+    if (node.type === 'wait' && node.delay) {
+        const value = Number(node.delay.value) || 0;
+        if (node.delay.unit === 'minutes') delayMs = value * 60 * 1000;
+        else if (node.delay.unit === 'hours') delayMs = value * 60 * 60 * 1000;
+        else if (node.delay.unit === 'days') delayMs = value * 24 * 60 * 60 * 1000;
+    }
+    
+    await automationQueue.add(node.type, {
         logId,
         tenantId,
-        action,
+        node,
         triggerData,
     }, {
         delay: delayMs,

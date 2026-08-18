@@ -74,48 +74,57 @@ export default function Automations() {
               action={<Button size="sm" onClick={() => navigate('/automations/builder')}><Plus size={14} /> Create Rule</Button>} />
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {rules.map((rule) => (
-              <Card key={rule._id} className="hover:border-primary/30 transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
-                      <Zap size={16} className="text-warning" />
-                    </div>
-                    <div>
-                      <h5 className="text-sm font-semibold text-[var(--vz-heading)]">{rule.name}</h5>
-                      <p className="text-xs text-[var(--vz-text-muted)]">
-                        Trigger: {triggerLabels[rule.trigger?.event?.replace(/\./g, '_')] || rule.trigger?.event || rule.triggerEvent || 'Unknown'}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleToggle(rule._id)}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${rule.isActive ? 'bg-secondary' : 'bg-[var(--vz-input-border)]'}`}
-                  >
-                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${rule.isActive ? 'left-5' : 'left-0.5'}`} />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3 text-xs text-[var(--vz-text-muted)] mb-3">
-                  <span>{rule.trigger?.conditions?.length || 0} conditions</span>
-                  <span>·</span>
-                  <span>{rule.actions?.length || 0} actions</span>
-                  <span>·</span>
-                  <span>{rule.executionCount || 0} executions</span>
-                </div>
-
-                <div className="flex items-center gap-2 pt-3 border-t border-[var(--vz-border)]">
-                  <Button variant="ghost" size="sm" onClick={() => navigate(`/automations/builder/${rule._id}`)}>
-                    <Pencil size={12} /> Edit
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleteConfirm(rule._id)}>
-                    <Trash2 size={12} /> Delete
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <Card noPadding>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm whitespace-nowrap">
+                <thead>
+                  <tr className="bg-[var(--vz-table-header-bg)]">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">Trigger</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">Performance</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rules.map((rule) => (
+                    <tr key={rule._id} className="border-t border-[var(--vz-border)] hover:bg-[var(--vz-table-hover-bg)]">
+                      <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{rule.name}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text-muted)] capitalize">{rule.type || 'workflow'}</td>
+                      <td className="px-4 py-3 text-[var(--vz-text-muted)]">
+                        {triggerLabels[rule.trigger?.event?.replace(/\./g, '_')] || rule.trigger?.event || rule.triggerEvent || 'Unknown'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggle(rule._id)}
+                            className={`relative w-10 h-5 rounded-full transition-colors ${rule.status === 'active' ? 'bg-secondary' : 'bg-[var(--vz-input-border)]'}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${rule.status === 'active' ? 'left-5' : 'left-0.5'}`} />
+                          </button>
+                          <Badge color={rule.status === 'active' ? 'success' : rule.status === 'draft' ? 'warning' : 'secondary'}>{rule.status}</Badge>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">
+                         {rule.stats?.totalRuns || 0} runs · {rule.stats?.successRate || 0}% success
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/automations/builder/${rule._id}`)}>
+                            <Pencil size={12} /> Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleteConfirm(rule._id)}>
+                            <Trash2 size={12} /> Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         )
       )}
 
@@ -132,7 +141,7 @@ export default function Automations() {
               <table className="w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr className="bg-[var(--vz-table-header-bg)]">
-                    {['Rule', 'Trigger', 'Status', 'Actions', 'Date'].map((h) => (
+                    {['Rule', 'Trigger', 'Status', 'Nodes Executed', 'Date'].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -142,8 +151,8 @@ export default function Automations() {
                     <tr key={log._id} className="border-t border-[var(--vz-border)] hover:bg-[var(--vz-table-hover-bg)]">
                       <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{log.ruleName}</td>
                       <td className="px-4 py-3 text-[var(--vz-text)]">{triggerLabels[log.triggerEvent?.replace(/\./g, '_')] || log.triggerEvent || '—'}</td>
-                      <td className="px-4 py-3"><Badge color={log.status === 'success' ? 'success' : 'danger'}>{log.status}</Badge></td>
-                      <td className="px-4 py-3 text-[var(--vz-text)]">{Array.isArray(log.actionsExecuted) ? log.actionsExecuted.length : (log.actionsExecuted || 0)}</td>
+                      <td className="px-4 py-3"><Badge color={['completed', 'success'].includes(log.status) ? 'success' : log.status === 'exited' ? 'secondary' : log.status === 'running' ? 'warning' : 'danger'}>{log.status}</Badge></td>
+                      <td className="px-4 py-3 text-[var(--vz-text)]">{Array.isArray(log.nodeExecutions) ? log.nodeExecutions.length : (log.actionsExecuted?.length || 0)}</td>
                       <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{new Date(log.meta?.createdAt).toLocaleString()}</td>
                     </tr>
                   ))}

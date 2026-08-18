@@ -8,10 +8,11 @@ const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = re
 const { env } = require('@sparkcrm/shared-config');
 const notificationRoutes = require('./routes/notification.routes');
 const emailRoutes = require('./routes/email.routes');
-const { requireVerifiedUser } = require('./middleware/security');
+const { requireVerifiedUser, requireInternalService } = require('./middleware/security');
 const realtimeService = require('./services/realtime.service');
 
 const requireGatewayUser = requireVerifiedUser('notification-service');
+const requireInternalCaller = requireInternalService('notification-service');
 
 const app = express();
 app.use(helmet());
@@ -27,6 +28,10 @@ app.get('/health', (req, res) => {
 
 app.use('/api/notifications', requireGatewayUser, notificationRoutes);
 app.use('/api/emails', requireGatewayUser, emailRoutes);
+
+// Internal routes
+app.use('/internal/emails', requireInternalCaller, emailRoutes);
+
 app.use(errorHandler);
 
 const server = http.createServer(app);

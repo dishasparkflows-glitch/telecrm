@@ -446,6 +446,58 @@ const assignLead = asyncHandler(async (req, res) => {
 });
 
 /**
+ * PUT /api/leads/:id/assign-policy
+ * Assign a lead using the active assignment policy
+ */
+const assignLeadFromPolicyEndpoint = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const leadId = requireObjectId(req.params.id, 'lead ID');
+
+    const lead = await Lead.findOne({ _id: leadId, tenantId });
+    if (!lead) throw ApiError.notFound('Lead not found');
+
+    const { assignLeadFromPolicy } = require('../services/assignment.service');
+    
+    const assignment = await assignLeadFromPolicy({
+        tenantId,
+        branchId: lead.branchId,
+        source: lead.source,
+        priority: lead.priority || 'Medium',
+    });
+
+    if (assignment.assignedTo) {
+        lead.assignedTo = assignment.assignedTo;
+        lead.assignedAt = new Date();
+        if (!lead.lifecycle) lead.lifecycle = {};
+        lead.lifecycle.lastActivityAt = new Date();
+        await lead.save();
+
+        await publishEvent(EVENTS.LEAD_ASSIGNED, {
+            tenantId,
+            branchId: lead.branchId,
+            leadId: lead._id,
+            assignedTo: assignment.assignedTo,
+        });
+
+        await recordLeadActivity({
+            tenantId,
+            branchId: lead.branchId,
+            leadId: lead._id,
+            actorId: req.headers['x-user-id'] || 'system',
+            actorType: 'system',
+            type: ACTIVITY_TYPES.LEAD_ASSIGNED,
+            title: 'Lead assigned via Policy',
+            description: `Assigned using policy (${assignment.strategy})`,
+            metadata: { assignedTo: assignment.assignedTo },
+        });
+        
+        await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
+    }
+
+    ApiResponse.success(res, { assignedTo: assignment.assignedTo }, 'Lead assignment policy evaluated');
+});
+
+/**
  * POST /api/leads/import
  * Bulk import leads from CSV data
  */
@@ -505,6 +557,90 @@ const importLeads = asyncHandler(async (req, res) => {
     await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
 
     ApiResponse.success(res, results, `Import complete: ${results.created} created, ${results.duplicates} duplicates`);
+});
+
+/**
+ * PUT /api/leads/:id/assign-dynamic
+ * Assign lead dynamically (ad-hoc) for automation rules using round robin or least loaded
+ */
+const assignLeadDynamicEndpoint = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const { strategy, userIds, automationRuleId } = req.body;
+    
+    if (!strategy || !userIds || !userIds.length) {
+        throw ApiError.badRequest('Missing strategy or userIds');
+    }
+
+    const lead = await Lead.findOne({ _id: req.params.id, tenantId });
+    if (!lead) throw ApiError.notFound('Lead not found');
+
+    let assignedTo = null;
+
+    if (strategy === 'least_loaded') {
+        const activeStages = ['new', 'contacted', 'qualified', 'negotiation'];
+        const loads = await Lead.aggregate([
+            {
+                $match: {
+                    tenantId: new (require('mongoose').Types.ObjectId)(tenantId),
+                    isArchived: false,
+                    'pipeline.stage': { $in: activeStages },
+                    assignedTo: { $in: userIds.map(id => new (require('mongoose').Types.ObjectId)(id)) },
+                },
+            },
+            { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
+        ]);
+
+        const loadMap = new Map(loads.map((item) => [String(item._id), item.count]));
+        assignedTo = userIds.reduce((best, agentId) => {
+            const bestCount = loadMap.get(String(best)) || 0;
+            const currentCount = loadMap.get(String(agentId)) || 0;
+            return currentCount < bestCount ? agentId : best;
+        }, userIds[0]);
+    } else if (strategy === 'round_robin') {
+        const redis = cacheHelper.getClient();
+        let index = 0;
+        
+        if (redis && automationRuleId) {
+            const cursorKey = `automation_cursor:${tenantId}:${automationRuleId}`;
+            const counter = await redis.incr(cursorKey);
+            index = Math.max(0, counter - 1) % userIds.length;
+        } else {
+            // Fallback to random if Redis is unavailable
+            index = Math.floor(Math.random() * userIds.length);
+        }
+        
+        assignedTo = userIds[index];
+    }
+
+    if (assignedTo && String(lead.assignedTo) !== String(assignedTo)) {
+        lead.assignedTo = assignedTo;
+        const assignedBy = req.headers['x-user-id'] || 'system';
+        
+        const updateResult = await Lead.updateOne(
+            { _id: lead._id, tenantId },
+            { $set: { assignedTo } }
+        );
+
+        if (updateResult.modifiedCount > 0) {
+            await recordLeadActivity(tenantId, lead._id, ACTIVITY_TYPES.ASSIGNED, {
+                assignedTo,
+                strategy,
+                source: 'automation_dynamic'
+            }, assignedBy);
+
+            await cacheHelper.deleteByPattern(`leads:${tenantId}:*`);
+
+            await publishEvent(EVENTS.LEAD_ASSIGNED, {
+                tenantId,
+                leadId: lead._id,
+                assignedTo,
+                assignedBy,
+                source: 'automation_dynamic'
+            });
+        }
+    }
+
+    ApiResponse.success(res, { assignedTo }, 'Lead assigned via dynamic strategy');
 });
 
 /**
@@ -971,15 +1107,32 @@ const ingestLeadInternal = asyncHandler(async (req, res) => {
     ApiResponse.success(res, result, 'Lead ingested internally');
 });
 
+/**
+ * GET /internal/leads/:id
+ * Used by other microservices to fetch a lead directly by ID, bypassing user-based data scoping
+ */
+const getLeadInternal = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const leadId = requireObjectId(req.params.id, 'lead ID');
+    
+    const lead = await Lead.findOne({ _id: leadId, tenantId }).lean();
+    if (!lead) throw ApiError.notFound('Lead not found');
+
+    ApiResponse.success(res, lead, 'Lead fetched internally');
+});
+
 module.exports = {
     bulkUpdateLeads,
     createLead,
     getLeads,
     getActiveLeads,
     getLead,
+    getLeadInternal,
     updateLead,
     addNote,
     assignLead,
+    assignLeadFromPolicyEndpoint,
+    assignLeadDynamicEndpoint,
     importLeads,
     archiveLead,
     getStats,

@@ -23,6 +23,10 @@ const requireProtectedLeadRequest = (req, res, next) => {
     req.method === method && pattern.test(requestPath)
   ));
   if (isPublic) return next();
+  
+  if (req.headers['x-service-context']) {
+      return requireInternalCaller(req, res, next);
+  }
   return requireGatewayUser(req, res, next);
 };
 
@@ -47,13 +51,14 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/leads', requireProtectedLeadRequest, leadRoutes);
-app.use('/api/follow-ups', requireGatewayUser, followupRoutes);
+app.use('/api/follow-ups', requireProtectedLeadRequest, followupRoutes);
 
 // Internal endpoints (service-to-service, no auth)
 const Lead = require('./models/Lead');
 const mongoose = require('mongoose');
 app.get('/internal/leads/by-phone/:phone', requireInternalCaller, leadController.getLeadByPhone);
 app.get('/internal/leads/bulk', requireInternalCaller, leadController.getLeadsBulk);
+app.get('/internal/leads/:id', requireInternalCaller, leadController.getLeadInternal);
 app.get('/internal/leads/count', requireInternalCaller, async (req, res) => {
   try {
     const { tenantId } = req.query;

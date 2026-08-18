@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 const { ApiError } = require('@sparkcrm/shared-utils');
 
-const RULE_WRITE_FIELDS = Object.freeze(['name', 'description', 'trigger', 'actions']);
-const TRIGGER_FIELDS = Object.freeze(['event', 'conditions']);
+const RULE_WRITE_FIELDS = Object.freeze(['name', 'description', 'trigger', 'nodes', 'edges', 'type', 'status']);
+const TRIGGER_FIELDS = Object.freeze(['event', 'conditions', 'schedule', 'audience']);
 const CONDITION_FIELDS = Object.freeze(['_id', 'field', 'operator', 'value']);
-const ACTION_FIELDS = Object.freeze(['_id', 'type', 'config', 'delay', 'conditions']);
+const NODE_FIELDS = Object.freeze(['_id', 'id', 'type', 'actionType', 'config', 'delay', 'conditions']);
+const EDGE_FIELDS = Object.freeze(['_id', 'id', 'source', 'target', 'sourceHandle']);
 
 function isPlainObject(value) {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -34,16 +35,19 @@ function pickRuleWriteInput(input) {
             rule.trigger.conditions = sanitizeArray(rule.trigger.conditions, CONDITION_FIELDS, 'conditions');
         }
     }
-    if (rule.actions !== undefined) {
-        rule.actions = sanitizeArray(rule.actions, ACTION_FIELDS, 'actions');
-        for (const [index, action] of rule.actions.entries()) {
-            if (action.config !== undefined && !isPlainObject(action.config)) {
-                throw ApiError.badRequest(`actions[${index}].config must be an object`);
+    if (rule.nodes !== undefined) {
+        rule.nodes = sanitizeArray(rule.nodes, NODE_FIELDS, 'nodes');
+        for (const [index, node] of rule.nodes.entries()) {
+            if (node.config !== undefined && !isPlainObject(node.config)) {
+                throw ApiError.badRequest(`nodes[${index}].config must be an object`);
             }
-            if (action.conditions !== undefined) {
-                action.conditions = sanitizeArray(action.conditions, CONDITION_FIELDS, `actions[${index}].conditions`);
+            if (node.conditions !== undefined) {
+                node.conditions = sanitizeArray(node.conditions, CONDITION_FIELDS, `nodes[${index}].conditions`);
             }
         }
+    }
+    if (rule.edges !== undefined) {
+        rule.edges = sanitizeArray(rule.edges, EDGE_FIELDS, 'edges');
     }
     return rule;
 }

@@ -39,6 +39,8 @@ router.patch('/bulk', leadCtrl.bulkUpdateLeads);
 router.put('/:id', leadCtrl.updateLead);
 router.post('/:id/notes', leadCtrl.addNote);
 router.put('/:id/assign', leadCtrl.assignLead);
+router.put('/:id/assign-policy', leadCtrl.assignLeadFromPolicyEndpoint);
+router.put('/:id/assign-dynamic', leadCtrl.assignLeadDynamicEndpoint);
 router.delete('/:id', leadCtrl.archiveLead);
 
 module.exports = router;

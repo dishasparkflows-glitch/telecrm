@@ -38,16 +38,17 @@ const resolveTemplateContext = async ({ tenantId, module, recordId }) => {
     // 1. Fetch Primary Record
     if (module === 'Lead') {
         try {
-            const req = buildInternalRequest('GET', `/api/leads/${recordId}`, 'LEAD', tenantId);
+            const req = buildInternalRequest('GET', `/internal/leads/${recordId}`, 'LEAD', tenantId);
             const res = await axios.get(req.url, { headers: req.headers });
             context.lead = res.data?.data || {};
             
             // 2. Fetch Assigned User if exists
             if (context.lead.assignedTo) {
                 try {
-                    const userReq = buildInternalRequest('GET', `/api/users/${context.lead.assignedTo}`, 'AUTH', tenantId);
+                    const userReq = buildInternalRequest('GET', `/internal/users/bulk?ids=${context.lead.assignedTo}`, 'AUTH', tenantId);
                     const userRes = await axios.get(userReq.url, { headers: userReq.headers });
-                    context.user = userRes.data?.data || {};
+                    const users = userRes.data?.data || [];
+                    context.user = users.length > 0 ? users[0] : {};
                 } catch (e) {
                     console.warn(`Could not resolve user ${context.lead.assignedTo} for email template`);
                     context.user = {};
@@ -57,9 +58,10 @@ const resolveTemplateContext = async ({ tenantId, module, recordId }) => {
             // 3. Fetch Branch if exists
             if (context.lead.branchId) {
                 try {
-                    const branchReq = buildInternalRequest('GET', `/api/branches/${context.lead.branchId}`, 'TENANT', tenantId);
+                    const branchReq = buildInternalRequest('GET', `/internal/branches/bulk?ids=${context.lead.branchId}`, 'TENANT', tenantId);
                     const branchRes = await axios.get(branchReq.url, { headers: branchReq.headers });
-                    context.branch = branchRes.data?.data || {};
+                    const branches = branchRes.data?.data || [];
+                    context.branch = branches.length > 0 ? branches[0] : {};
                 } catch (e) {
                     console.warn(`Could not resolve branch ${context.lead.branchId} for email template`);
                     context.branch = {};

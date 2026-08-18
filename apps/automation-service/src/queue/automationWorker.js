@@ -1,40 +1,57 @@
 const { Worker } = require('bullmq');
 const { connection } = require('./automationQueue');
 const executors = require('../handlers/actionExecutors');
-const { AutomationLog } = require('../models/AutomationRule');
+const { AutomationRule, AutomationLog } = require('../models/AutomationRule');
+const { findNextNode, evaluateNodeBranch } = require('../engine/workflowEngine');
 
 const automationWorker = new Worker('AutomationActionQueue', async (job) => {
-    const { logId, tenantId, action, triggerData } = job.data;
+    const { logId, tenantId, node, triggerData } = job.data;
     
-    console.log(`👷 Processing automation action: ${action.type} for log ${logId}`);
+    console.log(`👷 Processing node: ${node.type} (${node.id}) for log ${logId}`);
     
+    let result = null;
+    let edgeHandle = null;
+
     try {
-        switch (action.type) {
-            case 'assign_lead':
-                await executors.assignLead(tenantId, action, triggerData);
-                break;
-            case 'change_stage':
-                await executors.changeStage(tenantId, action, triggerData);
-                break;
-            case 'add_tag':
-                await executors.addTag(tenantId, action, triggerData);
-                break;
-            case 'send_email':
-                await executors.sendEmail(tenantId, action, triggerData);
-                break;
-            case 'send_whatsapp':
-                await executors.sendWhatsapp(tenantId, action, triggerData);
-                break;
-            case 'webhook':
-                await executors.webhook(tenantId, action, triggerData);
-                break;
-            default:
-                throw new Error(`Unsupported action type: ${action.type}`);
+        if (node.type === 'action') {
+            switch (node.actionType) {
+                case 'assign_lead':
+                    result = await executors.assignLead(tenantId, node, triggerData);
+                    break;
+                case 'change_stage':
+                    result = await executors.changeStage(tenantId, node, triggerData);
+                    break;
+                case 'add_tag':
+                    result = await executors.addTag(tenantId, node, triggerData);
+                    break;
+                case 'send_email':
+                    result = await executors.sendEmail(tenantId, node, triggerData);
+                    break;
+                case 'send_whatsapp':
+                    result = await executors.sendWhatsapp(tenantId, node, triggerData);
+                    break;
+                case 'webhook':
+                    result = await executors.webhook(tenantId, node, triggerData);
+                    break;
+                case 'change_status':
+                    result = await executors.changeStatus(tenantId, node, triggerData);
+                    break;
+                case 'create_follow_up':
+                    result = await executors.createFollowUp(tenantId, node, triggerData);
+                    break;
+                default:
+                    throw new Error(`Unsupported action type: ${node.actionType}`);
+            }
+        } else if (node.type === 'condition') {
+            edgeHandle = evaluateNodeBranch(node, triggerData);
+            result = { conditionMet: edgeHandle === 'true' };
+        } else if (node.type === 'wait') {
+            result = { waited: true };
         }
         
-        return { success: true };
+        return { success: true, edgeHandle, result };
     } catch (error) {
-        console.error(`❌ Action ${action.type} failed:`, error.message);
+        console.error(`❌ Node ${node.type} failed:`, error.message);
         throw error; // Let BullMQ handle retries
     }
 }, { connection });
@@ -42,28 +59,47 @@ const automationWorker = new Worker('AutomationActionQueue', async (job) => {
 // Update AutomationLog on completion
 automationWorker.on('completed', async (job, returnvalue) => {
     try {
-        const { logId, action } = job.data;
+        const { logId, tenantId, node, triggerData } = job.data;
+        const { edgeHandle, result } = returnvalue;
         
         await AutomationLog.updateOne(
-            { _id: logId, 'actionsExecuted._id': action._id },
+            { _id: logId },
             { 
-                $set: { 
-                    'actionsExecuted.$.status': 'success',
-                    'actionsExecuted.$.result': returnvalue
+                $push: { 
+                    nodeExecutions: {
+                        nodeId: node.id,
+                        type: node.type,
+                        status: 'success',
+                        result,
+                        executedAt: new Date()
+                    }
                 } 
             }
         );
         
-        // Check if all actions are complete to update overall status
+        // Find next node
         const log = await AutomationLog.findById(logId);
-        if (log) {
-            const allComplete = log.actionsExecuted.every(a => a.status === 'success' || a.status === 'failed');
-            if (allComplete) {
-                log.status = log.actionsExecuted.every(a => a.status === 'success') ? 'success' : 
-                             log.actionsExecuted.some(a => a.status === 'success') ? 'partial' : 'failed';
-                await log.save();
-            }
+        if (!log) return;
+        
+        const rule = await AutomationRule.findById(log.ruleId);
+        if (!rule) return;
+
+        const nextNode = findNextNode(rule, node.id, edgeHandle);
+
+        if (nextNode) {
+            log.currentNodeId = nextNode.id;
+            await log.save();
+
+            const { enqueueAction } = require('./automationQueue');
+            await enqueueAction(logId, tenantId, nextNode, triggerData);
+        } else {
+            // Workflow complete or exited
+            log.status = edgeHandle === 'false' ? 'exited' : 'completed';
+            log.currentNodeId = null;
+            await log.save();
+            console.log(`✅ Workflow ${log.ruleName} ${log.status}.`);
         }
+
     } catch (err) {
         console.error('Failed to update AutomationLog on complete:', err.message);
     }
@@ -71,30 +107,27 @@ automationWorker.on('completed', async (job, returnvalue) => {
 
 // Update AutomationLog on failure
 automationWorker.on('failed', async (job, err) => {
-    // Only mark failed in DB if we are completely out of retries (or if we want to log every attempt)
-    // BullMQ job.attemptsMade tells us the current attempt
     if (job.attemptsMade >= job.opts.attempts) {
         try {
-            const { logId, action } = job.data;
+            const { logId, node } = job.data;
             await AutomationLog.updateOne(
-                { _id: logId, 'actionsExecuted._id': action._id },
+                { _id: logId },
                 { 
-                    $set: { 
-                        'actionsExecuted.$.status': 'failed',
-                        'actionsExecuted.$.result': { error: err.message }
-                    } 
+                    $push: { 
+                        nodeExecutions: {
+                            nodeId: node.id,
+                            type: node.type,
+                            status: 'failed',
+                            result: { error: err.message },
+                            executedAt: new Date()
+                        }
+                    },
+                    $set: {
+                        status: 'failed'
+                    }
                 }
             );
-            
-            const log = await AutomationLog.findById(logId);
-            if (log) {
-                const allComplete = log.actionsExecuted.every(a => a.status === 'success' || a.status === 'failed');
-                if (allComplete) {
-                    log.status = log.actionsExecuted.every(a => a.status === 'success') ? 'success' : 
-                                 log.actionsExecuted.some(a => a.status === 'success') ? 'partial' : 'failed';
-                    await log.save();
-                }
-            }
+            console.error(`❌ Workflow failed on node ${node.id}`);
         } catch (dbErr) {
             console.error('Failed to update AutomationLog on failure:', dbErr.message);
         }

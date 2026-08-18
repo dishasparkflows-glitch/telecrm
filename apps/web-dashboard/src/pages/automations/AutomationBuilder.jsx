@@ -10,7 +10,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import { useToast } from '../../components/ui/Toast';
-import { Zap, Clock, GitBranch, Play, Plus, Settings, ArrowLeft, Trash2, ChevronRight, X } from 'lucide-react';
+import { Zap, Clock, GitBranch, Play, Plus, Settings, ArrowLeft, Trash2, ChevronRight, X, AlertTriangle } from 'lucide-react';
 
 const triggerLabels = {
     'lead.created': 'Lead Created', 'lead.stage_changed': 'Lead Stage Changed', 'lead.assigned': 'Lead Assigned',
@@ -73,8 +73,9 @@ export default function AutomationBuilder() {
     const [triggerEvent, setTriggerEvent] = useState('lead.created');
     const [triggerConditions, setTriggerConditions] = useState([]);
     
-    // Nodes tree (recursive for branches)
-    const [nodes, setNodes] = useState([]);
+    // Nodes tree state for UI rendering
+    // Root node is just an array of children that come after the trigger.
+    const [rootNodes, setRootNodes] = useState([]);
     const [selectedNode, setSelectedNode] = useState(null); // 'trigger' or node object
 
     // Sidebar resize state
@@ -100,24 +101,114 @@ export default function AutomationBuilder() {
         document.addEventListener('mouseup', handleMouseUp);
     };
 
+    // Tree to Flat Graph Conversion helpers
+    const buildTreeFromGraph = (flatNodes, flatEdges, currentId) => {
+        const outEdges = flatEdges.filter(e => e.source === currentId);
+        
+        // standard single-path sequence
+        const stdEdge = outEdges.find(e => !e.sourceHandle);
+        const children = [];
+        
+        let ptrEdge = stdEdge;
+        while(ptrEdge) {
+            const targetNode = flatNodes.find(n => n.id === ptrEdge.target);
+            if (!targetNode) break;
+
+            const nObj = { ...targetNode };
+            
+            if (targetNode.type === 'condition') {
+                // Condition nodes have true/false paths instead of a standard sequence
+                const tEdge = flatEdges.find(e => e.source === targetNode.id && e.sourceHandle === 'true');
+                const fEdge = flatEdges.find(e => e.source === targetNode.id && e.sourceHandle === 'false');
+                
+                nObj.trueNodes = tEdge ? buildTreeFromGraph(flatNodes, flatEdges, targetNode.id + '_true_placeholder') : []; // We need a way to represent the branch roots. Let's just do a recursive approach that fetches the first node in that branch and follows it.
+                // Actually, if we just find the target node, we can treat it as the root of a sub-array.
+                
+                const buildSequence = (startEdge) => {
+                    if (!startEdge) return [];
+                    const seq = [];
+                    let currEdge = startEdge;
+                    while(currEdge) {
+                        const tNode = flatNodes.find(n => n.id === currEdge.target);
+                        if (!tNode) break;
+                        const subN = { ...tNode };
+                        if (tNode.type === 'condition') {
+                            const ctEdge = flatEdges.find(e => e.source === tNode.id && e.sourceHandle === 'true');
+                            const cfEdge = flatEdges.find(e => e.source === tNode.id && e.sourceHandle === 'false');
+                            subN.trueNodes = buildSequence(ctEdge);
+                            subN.falseNodes = buildSequence(cfEdge);
+                            seq.push(subN);
+                            break; // Condition nodes end the linear sequence
+                        }
+                        seq.push(subN);
+                        currEdge = flatEdges.find(e => e.source === tNode.id && !e.sourceHandle);
+                    }
+                    return seq;
+                };
+
+                nObj.trueNodes = buildSequence(tEdge);
+                nObj.falseNodes = buildSequence(fEdge);
+                
+                children.push(nObj);
+                break; // A condition node ends the current linear array. The paths continue inside it.
+            }
+
+            children.push(nObj);
+            ptrEdge = flatEdges.find(e => e.source === targetNode.id && !e.sourceHandle);
+        }
+        
+        return children;
+    };
+
+    // Simplified for V1: we just have one trigger node in the graph, we find its outgoing edge
     useEffect(() => {
         if (id && existingRules?.data) {
             const rule = existingRules.data.find(r => r._id === id);
             if (rule) {
                 setName(rule.name);
-                setTriggerEvent(rule.trigger.event);
-                setTriggerConditions(rule.trigger.conditions || []);
-                // Simple linear mapping for now (if they have branches, it gets complex to reconstruct)
-                // For V1, we map flat actions to a flat node list.
-                const mappedNodes = (rule.actions || []).map(act => ({
-                    id: generateId(),
-                    type: 'action',
-                    actionType: act.type,
-                    config: act.config || {},
-                    delay: act.delay || 0,
-                    conditions: act.conditions || []
-                }));
-                setNodes(mappedNodes);
+                setTriggerEvent(rule.trigger?.event || 'lead.created');
+                setTriggerConditions(rule.trigger?.conditions || []);
+                
+                if (rule.nodes && rule.edges) {
+                    const triggerNode = rule.nodes.find(n => n.type === 'trigger');
+                    if (triggerNode) {
+                        const buildSequence = (startEdge) => {
+                            if (!startEdge) return [];
+                            const seq = [];
+                            let currEdge = startEdge;
+                            while(currEdge) {
+                                const tNode = rule.nodes.find(n => n.id === currEdge.target);
+                                if (!tNode) break;
+                                const subN = { ...tNode };
+                                if (tNode.type === 'condition') {
+                                    const ctEdge = rule.edges.find(e => e.source === tNode.id && e.sourceHandle === 'true');
+                                    const cfEdge = rule.edges.find(e => e.source === tNode.id && e.sourceHandle === 'false');
+                                    subN.trueNodes = buildSequence(ctEdge);
+                                    subN.falseNodes = buildSequence(cfEdge);
+                                    seq.push(subN);
+                                    break; 
+                                }
+                                seq.push(subN);
+                                currEdge = rule.edges.find(e => e.source === tNode.id && !e.sourceHandle);
+                            }
+                            return seq;
+                        };
+                        
+                        const rootEdge = rule.edges.find(e => e.source === triggerNode.id);
+                        setRootNodes(buildSequence(rootEdge));
+                    }
+                } else if (rule.actions) {
+                    // Legacy migration
+                    const mappedNodes = rule.actions.map(act => ({
+                        id: generateId(),
+                        type: 'action',
+                        actionType: act.type,
+                        config: act.config || {},
+                        delay: { value: act.delay || 0, unit: 'minutes' },
+                        conditions: act.conditions || []
+                    }));
+                    setRootNodes(mappedNodes);
+                }
             }
         }
     }, [id, existingRules]);
@@ -125,35 +216,50 @@ export default function AutomationBuilder() {
     const handleSave = async () => {
         if (!name.trim()) return toast('Please enter an automation name', 'error');
 
-        // Compile tree to flat actions array
-        const compiledActions = [];
-        let currentDelay = 0;
+        // Compile tree to flat graph
+        const flatNodes = [];
+        const flatEdges = [];
+        
+        const triggerNodeId = 'trigger_' + generateId();
+        flatNodes.push({ id: triggerNodeId, type: 'trigger' });
 
-        const traverse = (nodeList, inheritedConditions = []) => {
-            for (const node of nodeList) {
-                if (node.type === 'wait') {
-                    currentDelay += Number(node.delayMinutes || 0);
-                } else if (node.type === 'action') {
-                    compiledActions.push({
-                        type: node.actionType,
-                        config: node.config,
-                        delay: currentDelay,
-                        conditions: [...inheritedConditions, ...(node.conditions || [])]
-                    });
-                } else if (node.type === 'branch') {
-                    // Branch doesn't execute itself, it just splits logic
-                    traverse(node.trueNodes || [], [...inheritedConditions, ...node.branchConditions]);
-                    traverse(node.falseNodes || [], [...inheritedConditions, ...invertConditions(node.branchConditions)]);
+        const processSequence = (sequence, sourceId, sourceHandle = null) => {
+            let lastId = sourceId;
+            let lastHandle = sourceHandle;
+
+            for (const node of sequence) {
+                const nodeCopy = { ...node };
+                delete nodeCopy.trueNodes;
+                delete nodeCopy.falseNodes;
+                flatNodes.push(nodeCopy);
+
+                flatEdges.push({
+                    id: 'edge_' + generateId(),
+                    source: lastId,
+                    target: node.id,
+                    ...(lastHandle && { sourceHandle: lastHandle })
+                });
+
+                if (node.type === 'condition') {
+                    processSequence(node.trueNodes || [], node.id, 'true');
+                    processSequence(node.falseNodes || [], node.id, 'false');
+                    lastId = null; // conditions break the main sequence
+                    break; 
+                } else {
+                    lastId = node.id;
+                    lastHandle = null;
                 }
             }
         };
 
-        traverse(nodes);
+        processSequence(rootNodes, triggerNodeId, null);
 
         const payload = {
             name,
             trigger: { event: triggerEvent, conditions: triggerConditions },
-            actions: compiledActions
+            nodes: flatNodes,
+            edges: flatEdges,
+            type: 'workflow'
         };
 
         try {
@@ -170,107 +276,130 @@ export default function AutomationBuilder() {
         }
     };
 
-    const invertConditions = (conditions) => {
-        // Simplified inversion for branch 'False' path
-        return conditions.map(c => ({
-            field: c.field,
-            operator: c.operator === 'equals' ? 'not_equals' : c.operator === 'not_equals' ? 'equals' : 'not_equals', // simplified
-            value: c.value
-        }));
-    };
-
-    const addNode = (type, actionType = null) => {
+    const addNodeToSequence = (type, actionType = null, targetArray, setTargetArray) => {
         const newNode = {
             id: generateId(),
             type,
-            ...(type === 'action' && { actionType, config: {}, conditions: [] }),
-            ...(type === 'wait' && { delayMinutes: 60 }),
-            ...(type === 'branch' && { branchConditions: [], trueNodes: [], falseNodes: [] })
+            ...(type === 'action' && { actionType, config: { useAssignmentPolicy: false }, conditions: [] }),
+            ...(type === 'wait' && { delay: { value: 1, unit: 'hours' } }),
+            ...(type === 'condition' && { conditions: [], trueNodes: [], falseNodes: [] })
         };
-        setNodes([...nodes, newNode]);
+        setTargetArray([...targetArray, newNode]);
         setSelectedNode(newNode);
+    };
+
+    // Extremely simplified tree updater for V1
+    const updateTreeState = (updater) => {
+        const process = (nodes) => {
+            return nodes.map(n => {
+                const updatedN = updater(n);
+                if (updatedN.type === 'condition') {
+                    return {
+                        ...updatedN,
+                        trueNodes: process(updatedN.trueNodes || []),
+                        falseNodes: process(updatedN.falseNodes || [])
+                    };
+                }
+                return updatedN;
+            });
+        };
+        setRootNodes(process(rootNodes));
     };
 
     const updateSelectedNode = (updates) => {
         if (!selectedNode || selectedNode === 'trigger') return;
         
-        const updateTree = (list) => list.map(n => {
-            if (n.id === selectedNode.id) return { ...n, ...updates };
-            if (n.type === 'branch') {
-                return { ...n, trueNodes: updateTree(n.trueNodes || []), falseNodes: updateTree(n.falseNodes || []) };
-            }
-            return n;
-        });
-        
-        const updatedNodes = updateTree(nodes);
-        setNodes(updatedNodes);
-        
-        // Also update the selected node reference so UI doesn't lag
+        updateTreeState(n => n.id === selectedNode.id ? { ...n, ...updates } : n);
         setSelectedNode({ ...selectedNode, ...updates });
     };
 
-    const removeNode = (nodeId) => {
-        const filterTree = (list) => list.filter(n => n.id !== nodeId).map(n => {
-            if (n.type === 'branch') return { ...n, trueNodes: filterTree(n.trueNodes || []), falseNodes: filterTree(n.falseNodes || []) };
-            return n;
-        });
-        setNodes(filterTree(nodes));
+    const removeNodeFromSequence = (nodeId) => {
+        const filterProcess = (nodes) => {
+            const filtered = nodes.filter(n => n.id !== nodeId);
+            return filtered.map(n => {
+                if (n.type === 'condition') {
+                    return {
+                        ...n,
+                        trueNodes: filterProcess(n.trueNodes || []),
+                        falseNodes: filterProcess(n.falseNodes || [])
+                    };
+                }
+                return n;
+            });
+        };
+        setRootNodes(filterProcess(rootNodes));
         if (selectedNode?.id === nodeId) setSelectedNode(null);
     };
 
     // --- RENDERERS ---
 
-    const renderNodeTree = (nodeList) => {
-        return nodeList.map((node, index) => (
-            <div key={node.id} className="relative flex flex-col items-center">
-                {/* Connector Line */}
-                <div className="w-px h-6 bg-[var(--vz-border)]"></div>
-                
-                {/* Node Card */}
-                <div 
-                    onClick={() => setSelectedNode(node)}
-                    className={`w-72 bg-[var(--vz-bg-secondary)] border rounded-lg p-3 cursor-pointer transition-all hover:border-primary shadow-sm flex items-center gap-3 ${selectedNode?.id === node.id ? 'border-primary ring-1 ring-primary/20' : 'border-[var(--vz-border)]'}`}
-                >
-                    <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${
-                        node.type === 'action' ? 'bg-primary/10 text-primary' : 
-                        node.type === 'wait' ? 'bg-warning/10 text-warning' : 'bg-info/10 text-info'
-                    }`}>
-                        {node.type === 'action' ? <Play size={18} /> : node.type === 'wait' ? <Clock size={18} /> : <GitBranch size={18} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-[var(--vz-heading)] truncate">
-                            {node.type === 'action' ? actionLabels[node.actionType] : node.type === 'wait' ? `Wait ${node.delayMinutes} mins` : 'Condition Branch'}
-                        </h4>
-                        <p className="text-xs text-[var(--vz-text-muted)] truncate">
-                            {node.type === 'action' ? 'Executes action' : node.type === 'wait' ? 'Pauses automation' : 'Splits workflow'}
-                        </p>
-                    </div>
-                    <button onClick={(e) => { e.stopPropagation(); removeNode(node.id); }} className="text-[var(--vz-text-muted)] hover:text-danger p-1">
-                        <Trash2 size={14} />
-                    </button>
-                </div>
+    const renderNodeTree = (nodeList, parentArray, setParentArray) => {
+        return (
+            <div className="flex flex-col items-center">
+                {nodeList.map((node, index) => (
+                    <div key={node.id} className="relative flex flex-col items-center">
+                        {/* Connector Line */}
+                        <div className="w-px h-6 bg-[var(--vz-border)]"></div>
+                        
+                        {/* Node Card */}
+                        <div 
+                            onClick={(e) => { e.stopPropagation(); setSelectedNode(node); }}
+                            className={`w-72 bg-[var(--vz-bg-secondary)] border rounded-lg p-3 cursor-pointer transition-all hover:border-primary shadow-sm flex items-center gap-3 ${selectedNode?.id === node.id ? 'border-primary ring-1 ring-primary/20' : 'border-[var(--vz-border)]'}`}
+                        >
+                            <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${
+                                node.type === 'action' ? 'bg-primary/10 text-primary' : 
+                                node.type === 'wait' ? 'bg-warning/10 text-warning' : 'bg-info/10 text-info'
+                            }`}>
+                                {node.type === 'action' ? <Play size={18} /> : node.type === 'wait' ? <Clock size={18} /> : <GitBranch size={18} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-semibold text-[var(--vz-heading)] truncate">
+                                    {node.type === 'action' ? actionLabels[node.actionType] : node.type === 'wait' ? `Wait ${node.delay?.value || 0} ${node.delay?.unit || 'minutes'}` : 'Condition'}
+                                </h4>
+                                <p className="text-xs text-[var(--vz-text-muted)] truncate">
+                                    {node.type === 'action' ? 'Executes action' : node.type === 'wait' ? 'Pauses automation' : 'Splits workflow'}
+                                </p>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); removeNodeFromSequence(node.id); }} className="text-[var(--vz-text-muted)] hover:text-danger p-1 z-10">
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
 
-                {/* Branch Paths */}
-                {node.type === 'branch' && (
-                    <div className="flex w-full mt-4 border-t border-[var(--vz-border)] pt-4 relative">
-                        {/* True Path */}
-                        <div className="flex-1 flex flex-col items-center border-r border-[var(--vz-border)] relative">
-                            <span className="absolute -top-3 bg-[var(--vz-bg-secondary)] px-2 text-xs font-semibold text-success">TRUE</span>
-                            {renderNodeTree(node.trueNodes || [])}
-                            <div className="w-px h-6 bg-[var(--vz-border)] mt-2"></div>
-                            <Button size="xs" variant="outline" onClick={() => {/* Handle add to branch - complex for V1, keeping it flat mostly */}}>+ Add</Button>
-                        </div>
-                        {/* False Path */}
-                        <div className="flex-1 flex flex-col items-center relative">
-                            <span className="absolute -top-3 bg-[var(--vz-bg-secondary)] px-2 text-xs font-semibold text-danger">FALSE</span>
-                            {renderNodeTree(node.falseNodes || [])}
-                            <div className="w-px h-6 bg-[var(--vz-border)] mt-2"></div>
-                            <Button size="xs" variant="outline">+ Add</Button>
-                        </div>
+                        {/* Branch Paths */}
+                        {node.type === 'condition' && (
+                            <div className="flex w-full mt-4 border-t-2 border-[var(--vz-border)] pt-4 relative min-w-[500px]">
+                                {/* True Path */}
+                                <div className="flex-1 flex flex-col items-center border-r-2 border-[var(--vz-border)] relative px-4">
+                                    <span className="absolute -top-3 bg-[var(--vz-bg-secondary)] px-2 text-xs font-semibold text-success border border-[var(--vz-border)] rounded-full shadow-sm">TRUE</span>
+                                    {renderNodeTree(node.trueNodes || [], node.trueNodes || [], (newArr) => {
+                                        updateSelectedNode({ trueNodes: newArr });
+                                    })}
+                                </div>
+                                {/* False Path */}
+                                <div className="flex-1 flex flex-col items-center relative px-4">
+                                    <span className="absolute -top-3 bg-[var(--vz-bg-secondary)] px-2 text-xs font-semibold text-danger border border-[var(--vz-border)] rounded-full shadow-sm">FALSE</span>
+                                    {renderNodeTree(node.falseNodes || [], node.falseNodes || [], (newArr) => {
+                                        updateSelectedNode({ falseNodes: newArr });
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ))}
+
+                {/* Add Node Button for this sequence (only if the last node isn't a branch, since branches split the sequence forever in this UI) */}
+                {(!nodeList.length || nodeList[nodeList.length - 1].type !== 'condition') && (
+                    <div className="flex flex-col items-center">
+                        <div className="w-px h-6 bg-[var(--vz-border)]"></div>
+                        <Button size="xs" variant="outline" className="rounded-full shadow-sm" onClick={() => {
+                            // If they click here, we just add a placeholder or we can use a popover. 
+                            // For simplicity, we just prompt to use the sidebar.
+                            toast('Select an action from the left sidebar', 'info');
+                        }}><Plus size={14} /> Add Step</Button>
                     </div>
                 )}
             </div>
-        ));
+        );
     };
 
     const renderConfigPanel = () => {
@@ -331,13 +460,56 @@ export default function AutomationBuilder() {
                     {selectedNode.actionType === 'assign_lead' && (
                         <div className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium">Assign To User</label>
+                                <label className="text-sm font-medium">Assignment Method</label>
                                 <Select 
-                                    value={selectedNode.config.userId || ''} 
-                                    onChange={v => updateSelectedNode({ config: { ...selectedNode.config, userId: v } })}
-                                    options={[{value: '', label: 'Select User...'}, ...users.map(u => ({ value: u._id, label: u.name }))]}
+                                    value={selectedNode.config.strategy || 'manual'} 
+                                    onChange={v => updateSelectedNode({ config: { ...selectedNode.config, strategy: v, userId: '', userIds: [] } })}
+                                    options={[
+                                        {value: 'manual', label: 'Assign to Specific User'},
+                                        {value: 'round_robin', label: 'Round Robin (Distribute Evenly)'},
+                                        {value: 'least_loaded', label: 'Least Busy (Load Based)'},
+                                        {value: 'policy', label: 'Use Global Assignment Policy'},
+                                    ]}
                                 />
                             </div>
+                            
+                            {selectedNode.config.strategy === 'manual' && (
+                                <div className="space-y-1.5 opacity-100 transition-opacity">
+                                    <label className="text-sm font-medium">Assign To User</label>
+                                    <Select 
+                                        value={selectedNode.config.userId || ''} 
+                                        onChange={v => updateSelectedNode({ config: { ...selectedNode.config, userId: v } })}
+                                        options={[{value: '', label: 'Select User...'}, ...users.map(u => ({ value: u._id, label: u.name }))]}
+                                    />
+                                </div>
+                            )}
+
+                            {(selectedNode.config.strategy === 'round_robin' || selectedNode.config.strategy === 'least_loaded') && (
+                                <div className="space-y-1.5 opacity-100 transition-opacity">
+                                    <label className="text-sm font-medium">Select Users to Distribute Among</label>
+                                    <div className="bg-[var(--vz-bg)] border border-[var(--vz-border)] rounded-md max-h-40 overflow-y-auto p-2 space-y-1">
+                                        {users.map(u => {
+                                            const isChecked = (selectedNode.config.userIds || []).includes(u._id);
+                                            return (
+                                                <label key={u._id} className="flex items-center gap-2 text-sm p-1 hover:bg-[var(--vz-bg-secondary)] rounded cursor-pointer">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={isChecked}
+                                                        onChange={(e) => {
+                                                            let newUserIds = [...(selectedNode.config.userIds || [])];
+                                                            if (e.target.checked) newUserIds.push(u._id);
+                                                            else newUserIds = newUserIds.filter(id => id !== u._id);
+                                                            updateSelectedNode({ config: { ...selectedNode.config, userIds: newUserIds } });
+                                                        }}
+                                                    />
+                                                    {u.name}
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-xs text-[var(--vz-text-muted)] mt-1">Select multiple users to rotate assignment.</p>
+                                </div>
+                            )}
                         </div>
                     )}
                     {selectedNode.actionType === 'change_stage' && (
@@ -383,31 +555,6 @@ export default function AutomationBuilder() {
                             <Input placeholder="https://..." value={selectedNode.config.url || ''} onChange={e => updateSelectedNode({ config: { ...selectedNode.config, url: e.target.value } })} />
                         </div>
                     )}
-
-                    <div className="pt-4 border-t border-[var(--vz-border)]">
-                        <label className="text-sm font-medium flex items-center justify-between">
-                            Specific Action Conditions
-                            <Button size="xs" variant="outline" onClick={() => updateSelectedNode({ conditions: [...(selectedNode.conditions || []), { field: '', operator: 'equals', value: '' }] })}>+ Add</Button>
-                        </label>
-                        <div className="space-y-3 mt-3">
-                            {(selectedNode.conditions || []).map((cond, i) => (
-                                <div key={i} className="flex gap-2 p-3 bg-[var(--vz-bg-secondary)] rounded border border-[var(--vz-border)] items-start">
-                                    <div className="flex-1 space-y-2">
-                                        <Select size="sm" value={cond.field} onChange={v => {
-                                            const newC = [...selectedNode.conditions]; newC[i].field = v; updateSelectedNode({ conditions: newC });
-                                        }} options={fieldOptions} />
-                                        <Select size="sm" value={cond.operator} onChange={v => {
-                                            const newC = [...selectedNode.conditions]; newC[i].operator = v; updateSelectedNode({ conditions: newC });
-                                        }} options={Object.entries(operatorLabels).map(([k,v]) => ({value:k, label:v}))} />
-                                        <Input size="sm" placeholder="Value" value={cond.value} onChange={e => {
-                                            const newC = [...selectedNode.conditions]; newC[i].value = e.target.value; updateSelectedNode({ conditions: newC });
-                                        }} />
-                                    </div>
-                                    <button onClick={() => updateSelectedNode({ conditions: selectedNode.conditions.filter((_, idx) => idx !== i) })} className="text-danger p-1 mt-1 hover:bg-danger/10 rounded"><X size={14}/></button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
                 </div>
             );
         }
@@ -419,11 +566,66 @@ export default function AutomationBuilder() {
                         <h3 className="text-lg font-semibold text-[var(--vz-heading)] flex items-center gap-2">
                             <Clock size={20} className="text-warning" /> Wait Configuration
                         </h3>
-                        <p className="text-sm text-[var(--vz-text-muted)]">Pause the automation for a period of time before continuing.</p>
+                        <p className="text-sm text-[var(--vz-text-muted)]">Pause the automation for a period of time.</p>
                     </div>
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Delay (Minutes)</label>
-                        <Input type="number" min="0" value={selectedNode.delayMinutes} onChange={e => updateSelectedNode({ delayMinutes: parseInt(e.target.value) || 0 })} />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium">Duration</label>
+                            <Input type="number" min="0" value={selectedNode.delay?.value || 0} onChange={e => updateSelectedNode({ delay: { ...selectedNode.delay, value: parseInt(e.target.value) || 0 } })} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium">Unit</label>
+                            <Select 
+                                value={selectedNode.delay?.unit || 'minutes'} 
+                                onChange={v => updateSelectedNode({ delay: { ...selectedNode.delay, unit: v } })}
+                                options={[
+                                    { value: 'minutes', label: 'Minutes' },
+                                    { value: 'hours', label: 'Hours' },
+                                    { value: 'days', label: 'Days' }
+                                ]}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        if (selectedNode.type === 'condition') {
+            return (
+                <div className="p-6 space-y-6">
+                    <div>
+                        <h3 className="text-lg font-semibold text-[var(--vz-heading)] flex items-center gap-2">
+                            <GitBranch size={20} className="text-info" /> Condition Configuration
+                        </h3>
+                        <p className="text-sm text-[var(--vz-text-muted)]">Split the workflow based on data conditions.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium">Conditions</h4>
+                            <Button size="xs" variant="outline" onClick={() => updateSelectedNode({ conditions: [...(selectedNode.conditions || []), { field: 'source', operator: 'equals', value: '' }] })}>+ Add Condition</Button>
+                        </div>
+                        {(selectedNode.conditions || []).map((cond, i) => (
+                            <div key={i} className="flex gap-2 p-3 bg-[var(--vz-bg-secondary)] rounded border border-[var(--vz-border)]">
+                                <div className="flex-1 space-y-2">
+                                    <Select value={cond.field} onChange={val => {
+                                        const newC = [...selectedNode.conditions]; newC[i].field = val; updateSelectedNode({ conditions: newC });
+                                    }} options={fieldOptions} />
+                                    <Select value={cond.operator} onChange={val => {
+                                        const newC = [...selectedNode.conditions]; newC[i].operator = val; updateSelectedNode({ conditions: newC });
+                                    }} options={Object.entries(operatorLabels).map(([k,v]) => ({value:k, label:v}))} />
+                                    <Input placeholder="Value" value={cond.value} onChange={e => {
+                                        const newC = [...selectedNode.conditions]; newC[i].value = e.target.value; updateSelectedNode({ conditions: newC });
+                                    }} />
+                                </div>
+                                <button onClick={() => updateSelectedNode({ conditions: selectedNode.conditions.filter((_, idx) => idx !== i) })} className="text-danger p-1"><X size={16}/></button>
+                            </div>
+                        ))}
+                        {(!selectedNode.conditions || selectedNode.conditions.length === 0) && (
+                            <div className="text-sm text-warning flex items-center gap-2 p-3 bg-warning/10 rounded">
+                                <AlertTriangle size={16} /> Add at least one condition.
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -455,13 +657,18 @@ export default function AutomationBuilder() {
             <div className="flex flex-1 overflow-hidden">
                 {/* Left Panel: Toolbox */}
                 <div className="w-64 bg-[var(--vz-bg)] border-r border-[var(--vz-border)] flex flex-col">
-                    <div className="p-4 border-b border-[var(--vz-border)] font-semibold text-sm">Add Node</div>
+                    <div className="p-4 border-b border-[var(--vz-border)] font-semibold text-sm text-[var(--vz-text-muted)]">
+                        Add a node to the main sequence
+                    </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-6">
                         
                         <div>
                             <h5 className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase tracking-wider mb-3">Logic</h5>
                             <div className="space-y-2">
-                                <div onClick={() => addNode('wait')} className="flex items-center gap-3 p-2.5 rounded-lg border border-[var(--vz-border)] hover:border-warning hover:bg-warning/5 cursor-pointer bg-[var(--vz-bg-secondary)] transition-all">
+                                <div onClick={() => addNodeToSequence('condition', null, rootNodes, setRootNodes)} className="flex items-center gap-3 p-2.5 rounded-lg border border-[var(--vz-border)] hover:border-info hover:bg-info/5 cursor-pointer bg-[var(--vz-bg-secondary)] transition-all">
+                                    <GitBranch size={16} className="text-info" /> <span className="text-sm font-medium">Condition Branch</span>
+                                </div>
+                                <div onClick={() => addNodeToSequence('wait', null, rootNodes, setRootNodes)} className="flex items-center gap-3 p-2.5 rounded-lg border border-[var(--vz-border)] hover:border-warning hover:bg-warning/5 cursor-pointer bg-[var(--vz-bg-secondary)] transition-all">
                                     <Clock size={16} className="text-warning" /> <span className="text-sm font-medium">Wait / Delay</span>
                                 </div>
                             </div>
@@ -471,7 +678,7 @@ export default function AutomationBuilder() {
                             <h5 className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase tracking-wider mb-3">Actions</h5>
                             <div className="space-y-2">
                                 {Object.entries(actionLabels).map(([key, label]) => (
-                                    <div key={key} onClick={() => addNode('action', key)} className="flex items-center gap-3 p-2.5 rounded-lg border border-[var(--vz-border)] hover:border-primary hover:bg-primary/5 cursor-pointer bg-[var(--vz-bg-secondary)] transition-all">
+                                    <div key={key} onClick={() => addNodeToSequence('action', key, rootNodes, setRootNodes)} className="flex items-center gap-3 p-2.5 rounded-lg border border-[var(--vz-border)] hover:border-primary hover:bg-primary/5 cursor-pointer bg-[var(--vz-bg-secondary)] transition-all">
                                         <Play size={16} className="text-primary" /> <span className="text-sm font-medium">{label}</span>
                                     </div>
                                 ))}
@@ -487,7 +694,7 @@ export default function AutomationBuilder() {
                     {/* Trigger Root */}
                     <div 
                         onClick={() => setSelectedNode('trigger')}
-                        className={`w-72 bg-[var(--vz-bg)] border-2 rounded-xl p-4 cursor-pointer transition-all shadow-md flex items-center gap-4 ${selectedNode === 'trigger' ? 'border-primary ring-2 ring-primary/20' : 'border-warning'}`}
+                        className={`w-72 bg-[var(--vz-bg)] border-2 rounded-xl p-4 cursor-pointer transition-all shadow-md flex items-center gap-4 z-10 ${selectedNode === 'trigger' ? 'border-primary ring-2 ring-primary/20' : 'border-warning'}`}
                     >
                         <div className="w-12 h-12 rounded-full bg-warning/15 flex items-center justify-center shrink-0">
                             <Zap size={24} className="text-warning" />
@@ -499,10 +706,10 @@ export default function AutomationBuilder() {
                         </div>
                     </div>
 
-                    {renderNodeTree(nodes)}
+                    {renderNodeTree(rootNodes, rootNodes, setRootNodes)}
 
                     {/* End Marker */}
-                    <div className="mt-8 flex flex-col items-center opacity-50">
+                    <div className="mt-8 flex flex-col items-center opacity-50 pb-20">
                         <div className="w-2 h-2 rounded-full bg-[var(--vz-border)] mb-1"></div>
                         <div className="w-1 h-1 rounded-full bg-[var(--vz-border)] mb-1"></div>
                         <span className="text-xs font-semibold tracking-widest text-[var(--vz-text-muted)] uppercase">End of Flow</span>
