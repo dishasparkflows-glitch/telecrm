@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { io as socketIO } from 'socket.io-client'
+import { useSocketEvent } from '../../hooks/useSocketEvent'
 import { whatsappApi, useGetTeamInboxQuery, useGetInboxChatQuery, useSendMessageMutation, useReplyToMessageMutation, useMarkInboxReadMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
 import PageHeader from '../../components/layout/PageHeader'
 import { useToast } from '../../components/ui/Toast'
@@ -148,30 +148,19 @@ export default function TeamInbox() {
   const [replyToMessage, { isLoading: replying }] = useReplyToMessageMutation()
   const [markRead] = useMarkInboxReadMutation()
 
-  useEffect(() => {
-    if (!token) return undefined
-    const socket = socketIO(WA_SOCKET_URL, {
-      auth: { token },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-    })
-
-    socket.on('wa:message', ({ message }) => {
-      if (!message?._id) return
-      const flatMsg = flattenMessage(message)
-      const phone = flatMsg.direction === 'inbound' ? flatMsg.from : flatMsg.to
-      dispatch(whatsappApi.util.updateQueryData('getInboxChat', phone, (draft) => {
-        if (!Array.isArray(draft?.data)) return
-        const index = draft.data.findIndex((item) => item._id === flatMsg._id)
-        if (index >= 0) draft.data[index] = flatMsg
-        else draft.data.push(flatMsg)
-        draft.data.sort((a, b) => new Date(a.meta?.createdAt) - new Date(b.meta?.createdAt))
-      }))
-      dispatch(whatsappApi.util.invalidateTags([{ type: 'WhatsApp', id: 'INBOX' }]))
-    })
-
-    return () => socket.disconnect()
-  }, [dispatch, token])
+  useSocketEvent('wa:message', ({ message }) => {
+    if (!message?._id) return
+    const flatMsg = flattenMessage(message)
+    const phone = flatMsg.direction === 'inbound' ? flatMsg.from : flatMsg.to
+    dispatch(whatsappApi.util.updateQueryData('getInboxChat', phone, (draft) => {
+      if (!Array.isArray(draft?.data)) return
+      const index = draft.data.findIndex((item) => item._id === flatMsg._id)
+      if (index >= 0) draft.data[index] = flatMsg
+      else draft.data.push(flatMsg)
+      draft.data.sort((a, b) => new Date(a.meta?.createdAt) - new Date(b.meta?.createdAt))
+    }))
+    dispatch(whatsappApi.util.invalidateTags([{ type: 'WhatsApp', id: 'INBOX' }]))
+  });
 
   // Auto-scroll to bottom when messages load
   useEffect(() => {

@@ -22,6 +22,7 @@ const EVENTS = {
     CALL_INITIATED: 'call.initiated',
     CALL_COMPLETED: 'call.completed',
     CALL_MISSED: 'call.missed',
+    CALL_RECORDING_READY: 'call.recording.ready',
 
     // WhatsApp events
     WHATSAPP_MESSAGE_SENT: 'whatsapp.message.sent',

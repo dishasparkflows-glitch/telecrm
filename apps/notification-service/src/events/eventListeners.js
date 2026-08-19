@@ -231,7 +231,7 @@ const registerEventListeners = async () => {
     });
 
     // ─── Call recording ready → notify UI via socket ───
-    await subscribeToEvents('CALL_RECORDING_READY', async (_channel, data) => {
+    await subscribeToEvents(EVENTS.CALL_RECORDING_READY, async (_channel, data) => {
         try {
             const { callId, userId, recordingUrl } = data;
             if (userId) {

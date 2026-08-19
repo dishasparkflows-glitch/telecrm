@@ -8,10 +8,6 @@ const requireValidIdentity = (tenantId, userId) => {
     }
 };
 
-// The Socket.IO instance is set by app.js after it is created
-let _io = null;
-const setIo = (io) => { _io = io; };
-
 // ── GET /api/whatsapp/qr/status ─────────────────────────────────────────────
 // Returns the current connection status for the requesting agent
 const getStatus = asyncHandler(async (req, res) => {
@@ -30,20 +26,19 @@ const getStatus = asyncHandler(async (req, res) => {
 
 // ── POST /api/whatsapp/qr/connect ───────────────────────────────────────────
 // Starts or restarts a Baileys session for the agent.
-// The QR image is pushed to the browser via Socket.IO event 'wa:qr'.
+// The QR image is published to Redis and pushed to the browser.
 const connect = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const userId   = req.headers['x-user-id'];
 
     if (!tenantId || !userId) throw ApiError.badRequest('tenantId and userId required');
     requireValidIdentity(tenantId, userId);
-    if (!_io) throw ApiError.internal('Socket.IO not initialised');
 
     // An explicit Connect/Refresh action requests a new pairing session. Clear
     // stale credentials so protocol failures cannot reconnect forever without
-    // producing a QR. The generated QR is available through both Socket.IO and
+    // producing a QR. The generated QR is available through both Redis Pub/Sub and
     // the status endpoint, so a browser cannot miss it due to a connection race.
-    await baileysService.createSession(tenantId, userId, _io, { fresh: true });
+    await baileysService.createSession(tenantId, userId, { fresh: true });
 
     ApiResponse.success(res, { message: 'Session starting — QR will appear momentarily' }, 'QR session initiated');
 });
@@ -61,4 +56,4 @@ const disconnect = asyncHandler(async (req, res) => {
     ApiResponse.success(res, null, 'WhatsApp disconnected');
 });
 
-module.exports = { getStatus, connect, disconnect, setIo };
+module.exports = { getStatus, connect, disconnect };

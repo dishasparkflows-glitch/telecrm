@@ -1,14 +1,27 @@
 const { Worker } = require('bullmq');
-const { connection } = require('./automationQueue');
+const IORedis = require('ioredis');
+const { env } = require('@sparkcrm/shared-config');
 const executors = require('../handlers/actionExecutors');
 const { AutomationRule, AutomationLog } = require('../models/AutomationRule');
 const { findNextNode, evaluateNodeBranch } = require('../engine/workflowEngine');
 
+// Dedicated worker connection — BullMQ requires Queue and Worker to use
+// SEPARATE IORedis instances. Sharing a connection causes stalls when one
+// side enters blocking mode.
+const workerConnection = new IORedis(env.REDIS_URL, {
+    maxRetriesPerRequest: null,
+    retryStrategy: (times) => Math.min(times * 500, 10000),
+    reconnectOnError: (err) => {
+        const transientErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT'];
+        return transientErrors.some((e) => err.message.includes(e)) ? 2 : false;
+    },
+});
+
 const automationWorker = new Worker('AutomationActionQueue', async (job) => {
     const { logId, tenantId, node, triggerData } = job.data;
-    
+
     console.log(`👷 Processing node: ${node.type} (${node.id}) for log ${logId}`);
-    
+
     let result = null;
     let edgeHandle = null;
 
@@ -48,24 +61,24 @@ const automationWorker = new Worker('AutomationActionQueue', async (job) => {
         } else if (node.type === 'wait') {
             result = { waited: true };
         }
-        
+
         return { success: true, edgeHandle, result };
     } catch (error) {
         console.error(`❌ Node ${node.type} failed:`, error.message);
         throw error; // Let BullMQ handle retries
     }
-}, { connection });
+}, { connection: workerConnection });
 
 // Update AutomationLog on completion
 automationWorker.on('completed', async (job, returnvalue) => {
     try {
-        const { logId, tenantId, node, triggerData } = job.data;
+        const { logId, tenantId, node, triggerData, ruleGraph } = job.data;
         const { edgeHandle, result } = returnvalue;
-        
+
         await AutomationLog.updateOne(
             { _id: logId },
-            { 
-                $push: { 
+            {
+                $push: {
                     nodeExecutions: {
                         nodeId: node.id,
                         type: node.type,
@@ -73,31 +86,44 @@ automationWorker.on('completed', async (job, returnvalue) => {
                         result,
                         executedAt: new Date()
                     }
-                } 
+                }
             }
         );
-        
-        // Find next node
-        const log = await AutomationLog.findById(logId);
-        if (!log) return;
-        
-        const rule = await AutomationRule.findById(log.ruleId);
-        if (!rule) return;
 
-        const nextNode = findNextNode(rule, node.id, edgeHandle);
+        // Use embedded ruleGraph to find next node — avoids 2 DB queries per node.
+        // Falls back to DB fetch only if ruleGraph was not provided (legacy jobs).
+        let nodes, edges, ruleId;
+        if (ruleGraph && ruleGraph.nodes && ruleGraph.edges) {
+            nodes = ruleGraph.nodes;
+            edges = ruleGraph.edges;
+            ruleId = ruleGraph.ruleId;
+        } else {
+            // Fallback: fetch from DB (old jobs without ruleGraph in payload)
+            const log = await AutomationLog.findById(logId).lean();
+            if (!log) return;
+            const rule = await AutomationRule.findById(log.ruleId).lean();
+            if (!rule) return;
+            nodes = rule.nodes;
+            edges = rule.edges;
+            ruleId = rule._id;
+        }
+
+        // Build a minimal rule-like object for findNextNode
+        const ruleProxy = { nodes, edges };
+        const nextNode = findNextNode(ruleProxy, node.id, edgeHandle);
 
         if (nextNode) {
-            log.currentNodeId = nextNode.id;
-            await log.save();
+            await AutomationLog.updateOne({ _id: logId }, { $set: { currentNodeId: nextNode.id } });
 
             const { enqueueAction } = require('./automationQueue');
-            await enqueueAction(logId, tenantId, nextNode, triggerData);
+            await enqueueAction(logId, tenantId, nextNode, triggerData, ruleGraph);
         } else {
-            // Workflow complete or exited
-            log.status = edgeHandle === 'false' ? 'exited' : 'completed';
-            log.currentNodeId = null;
-            await log.save();
-            console.log(`✅ Workflow ${log.ruleName} ${log.status}.`);
+            const finalStatus = edgeHandle === 'false' ? 'exited' : 'completed';
+            await AutomationLog.updateOne(
+                { _id: logId },
+                { $set: { status: finalStatus, currentNodeId: null } }
+            );
+            console.log(`✅ Workflow ${logId} ${finalStatus}.`);
         }
 
     } catch (err) {
@@ -105,15 +131,15 @@ automationWorker.on('completed', async (job, returnvalue) => {
     }
 });
 
-// Update AutomationLog on failure
+// Update AutomationLog on failure (only after all retries exhausted)
 automationWorker.on('failed', async (job, err) => {
     if (job.attemptsMade >= job.opts.attempts) {
         try {
             const { logId, node } = job.data;
             await AutomationLog.updateOne(
                 { _id: logId },
-                { 
-                    $push: { 
+                {
+                    $push: {
                         nodeExecutions: {
                             nodeId: node.id,
                             type: node.type,
@@ -122,12 +148,10 @@ automationWorker.on('failed', async (job, err) => {
                             executedAt: new Date()
                         }
                     },
-                    $set: {
-                        status: 'failed'
-                    }
+                    $set: { status: 'failed' }
                 }
             );
-            console.error(`❌ Workflow failed on node ${node.id}`);
+            console.error(`❌ Workflow failed on node ${node.id}: ${err.message}`);
         } catch (dbErr) {
             console.error('Failed to update AutomationLog on failure:', dbErr.message);
         }

@@ -28,6 +28,28 @@ const dispatchMessage = async (channel, message) => {
 };
 
 /**
+ * Wait for Redis subscriber to be ready, with a maximum timeout.
+ * Uses event-driven approach instead of a fixed sleep.
+ */
+const waitForSubscriber = (subscriber, timeoutMs = 8000) => {
+    if (isSubscriberReady()) return Promise.resolve(true);
+
+    return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+            subscriber.removeListener('ready', onReady);
+            resolve(false);
+        }, timeoutMs);
+
+        const onReady = () => {
+            clearTimeout(timer);
+            resolve(true);
+        };
+
+        subscriber.once('ready', onReady);
+    });
+};
+
+/**
  * Subscribe to one or more Redis Pub/Sub events.
  * The established handler contract is (eventName, data, timestamp).
  *
@@ -43,13 +65,11 @@ const subscribeToEvents = async (events, handler) => {
             dispatcherRegistered = true;
         }
 
-        // Wait briefly for the initial connection attempt without preventing
-        // the rest of the service from starting when Redis is unavailable.
-        if (!isSubscriberReady()) {
-            await new Promise((resolve) => setTimeout(resolve, 8000));
-        }
+        // Wait for connection using event-driven approach (max 8s),
+        // avoiding the fixed blocking sleep that delayed service startup.
+        const ready = await waitForSubscriber(subscriber, 8000);
 
-        if (!isSubscriberReady()) {
+        if (!ready) {
             console.warn('⚠️  Redis Pub/Sub unavailable — event subscriptions skipped');
             return;
         }

@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { io as socketIO } from 'socket.io-client'
+import { useSocketEvent } from '../../hooks/useSocketEvent'
+import { useSocket } from '../../contexts/SocketContext'
 import { ROLES } from '../../utils/constants'
 import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useGetApprovedTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
 import { useGetActiveLeadsQuery, useGetLeadQuery } from '../../features/leads/leadApi'
@@ -45,57 +46,38 @@ function QRConnectPanel() {
   const serverPhone  = statusResp?.data?.phone
   const serverQR     = statusResp?.data?.qr
 
-  // Connect to Socket.IO room to receive QR events in real time
-  const connectSocket = () => {
-    if (socketRef.current?.connected) return
+  const { socket, isConnected: isGlobalConnected } = useSocket()
+  
+  // Use global socket event hooks
+  useSocketEvent('connect_error', (error) => {
+    setWsStatus('idle')
+    toast(error.message || 'Unable to connect to WhatsApp updates', 'error')
+  })
 
-    const socket = socketIO(WA_SOCKET_URL, {
-      auth: { token },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-    })
+  useSocketEvent('wa:qr', ({ qr }) => {
+    setQrImage(qr)
+    setWsStatus('qr_pending')
+  })
 
-    socket.on('connect', () => {
-      console.log('🔌 [QR] Socket connected')
-    })
+  useSocketEvent('wa:connected', ({ phone }) => {
+    setQrImage(null)
+    setWsStatus('connected')
+    setConnectedPhone(phone)
+    toast(`WhatsApp connected! Number: ${phone}`, 'success')
+    refetchStatus()
+  })
 
-    socket.on('connect_error', (error) => {
-      setWsStatus('idle')
-      toast(error.message || 'Unable to connect to WhatsApp updates', 'error')
-    })
+  useSocketEvent('wa:reconnecting', () => {
+    setWsStatus('reconnecting')
+  })
 
-    socket.on('wa:qr', ({ qr }) => {
-      setQrImage(qr)
-      setWsStatus('qr_pending')
-    })
-
-    socket.on('wa:connected', ({ phone }) => {
-      setQrImage(null)
-      setWsStatus('connected')
-      setConnectedPhone(phone)
-      toast(`WhatsApp connected! Number: ${phone}`, 'success')
-      refetchStatus()
-    })
-
-    socket.on('wa:reconnecting', () => {
-      setWsStatus('reconnecting')
-    })
-
-    socket.on('wa:disconnected', ({ reason }) => {
-      setQrImage(null)
-      setWsStatus('idle')
-      setConnectedPhone(null)
-      toast(reason === 'logged_out' ? 'WhatsApp logged out from your phone' : 'WhatsApp disconnected', 'warning')
-      refetchStatus()
-    })
-
-    socketRef.current = socket
-  }
-
-  // Disconnect socket on unmount
-  useEffect(() => {
-    return () => { socketRef.current?.disconnect() }
-  }, [])
+  useSocketEvent('wa:disconnected', ({ reason }) => {
+    setQrImage(null)
+    setWsStatus('idle')
+    setConnectedPhone(null)
+    toast(reason === 'logged_out' ? 'WhatsApp logged out from your phone' : 'WhatsApp disconnected', 'warning')
+    refetchStatus()
+  })
 
   // If server already has an active session, reflect that
   useEffect(() => {
@@ -485,39 +467,28 @@ export default function WhatsApp() {
 
   // Message events use the same authenticated per-agent Socket.IO room as QR
   // updates. Polling remains enabled above as a consistency fallback.
-  useEffect(() => {
-    if (!token) return undefined
-    const socket = socketIO(WA_SOCKET_URL, {
-      auth: { token },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-    })
+  useSocketEvent('wa:message', ({ message: incoming }) => {
+    if (!incoming?._id) return
+    const flatMsg = flattenMessage(incoming)
+    const incomingPhone = String(flatMsg.direction === 'inbound' ? flatMsg.from : flatMsg.to).replace(/\D/g, '')
+    const matchedLead = flatMsg.leadId
+      ? String(flatMsg.leadId)
+      : leads.find((lead) => {
+          const leadPhone = String(lead.contact?.phone || '').replace(/\D/g, '')
+          return leadPhone && (leadPhone === incomingPhone || leadPhone.endsWith(incomingPhone) || incomingPhone.endsWith(leadPhone))
+        })?._id
 
-    socket.on('wa:message', ({ message: incoming }) => {
-      if (!incoming?._id) return
-      const flatMsg = flattenMessage(incoming)
-      const incomingPhone = String(flatMsg.direction === 'inbound' ? flatMsg.from : flatMsg.to).replace(/\D/g, '')
-      const matchedLead = flatMsg.leadId
-        ? String(flatMsg.leadId)
-        : leads.find((lead) => {
-            const leadPhone = String(lead.contact?.phone || '').replace(/\D/g, '')
-            return leadPhone && (leadPhone === incomingPhone || leadPhone.endsWith(incomingPhone) || incomingPhone.endsWith(leadPhone))
-          })?._id
-
-      if (matchedLead) {
-        dispatch(whatsappApi.util.updateQueryData('getChat', matchedLead, (draft) => {
-          if (!Array.isArray(draft?.data)) return
-          const index = draft.data.findIndex((item) => item._id === flatMsg._id)
-          if (index >= 0) draft.data[index] = flatMsg
-          else draft.data.push(flatMsg)
-          draft.data.sort((a, b) => new Date(a.meta?.createdAt) - new Date(b.meta?.createdAt))
-        }))
-      }
-      dispatch(whatsappApi.util.invalidateTags([{ type: 'WhatsApp', id: 'INBOX' }]))
-    })
-
-    return () => socket.disconnect()
-  }, [dispatch, leads, token])
+    if (matchedLead) {
+      dispatch(whatsappApi.util.updateQueryData('getChat', matchedLead, (draft) => {
+        if (!Array.isArray(draft?.data)) return
+        const index = draft.data.findIndex((item) => item._id === flatMsg._id)
+        if (index >= 0) draft.data[index] = flatMsg
+        else draft.data.push(flatMsg)
+        draft.data.sort((a, b) => new Date(a.meta?.createdAt) - new Date(b.meta?.createdAt))
+      }))
+    }
+    dispatch(whatsappApi.util.invalidateTags([{ type: 'WhatsApp', id: 'INBOX' }]))
+  });
 
   // Auto-scroll to newest message when chat opens or new message arrives
   const messagesEndRef = useRef(null)

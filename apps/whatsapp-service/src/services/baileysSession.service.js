@@ -60,6 +60,28 @@ const {
 // key: `${tenantId}:${userId}` → { sock, status, phone, connectedAt, retryCount }
 const sessions = new Map();
 
+// ── Mock IO for Redis Pub/Sub ──────────────────────────────────────────────────
+const { publishRealtimeEvent } = require('@sparkcrm/shared-config');
+const io = {
+    to: (room) => ({
+        emit: (event, data) => {
+            // room format: 'qr:tenantId:userId'
+            const parts = room.split(':');
+            const tenantId = parts.length > 1 ? parts[1] : 'unknown';
+            const userId = parts.length > 2 ? parts[2] : 'unknown';
+            
+            let type = 'WHATSAPP_EVENT';
+            if (event === 'wa:qr') type = 'WHATSAPP_QR_UPDATED';
+            if (event === 'wa:message') type = 'WHATSAPP_MESSAGE_RECEIVED';
+            if (event === 'wa:connected') type = 'WHATSAPP_CONNECTED';
+            if (event === 'wa:disconnected') type = 'WHATSAPP_DISCONNECTED';
+            if (event === 'wa:reconnecting') type = 'WHATSAPP_RECONNECTING';
+
+            publishRealtimeEvent({ type, tenantId, userId, event, data });
+        }
+    })
+};
+
 // ── Auth files storage ─────────────────────────────────────────────────────────
 const SESSIONS_DIR = path.join(__dirname, '../../sessions');
 
@@ -86,7 +108,7 @@ const sessionDir = (tenantId, userId) => {
     return resolved;
 };
 
-const applyBaileysReaction = async ({ tenantId, userId, actorPhone, direction, reaction, io, room }) => {
+const applyBaileysReaction = async ({ tenantId, userId, actorPhone, direction, reaction, room }) => {
     if (!reaction?.key?.id) return null;
     const source = await WhatsappMessage.findOne({ tenantId, 'provider.waMessageId': reaction.key.id });
     if (!source) return null;
@@ -111,7 +133,7 @@ const applyBaileysReaction = async ({ tenantId, userId, actorPhone, direction, r
 };
 
 // ── Create / restart a session ─────────────────────────────────────────────────
-const createSession = async (tenantId, userId, io, options = {}) => {
+const createSession = async (tenantId, userId, options = {}) => {
     await loadBaileys();
 
     const { fresh = false, retryCount = 0 } = options;
@@ -242,7 +264,7 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                 if (msg.message?.reactionMessage) {
                     await applyBaileysReaction({
                         tenantId, userId, actorPhone: sessions.get(key)?.phone || null,
-                        direction: 'outbound', reaction: msg.message.reactionMessage, io, room,
+                        direction: 'outbound', reaction: msg.message.reactionMessage, room
                     });
                     continue;
                 }
@@ -277,7 +299,7 @@ const createSession = async (tenantId, userId, io, options = {}) => {
                 try {
                     await applyBaileysReaction({
                         tenantId, userId, actorPhone: from, direction: 'inbound',
-                        reaction: msg.message.reactionMessage, io, room,
+                        reaction: msg.message.reactionMessage, room,
                     });
                 } catch (error) {
                     console.error('❌ [Baileys] Failed to persist inbound reaction:', error.message);

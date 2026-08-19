@@ -1,14 +1,18 @@
-let io = null;
-
-function setIo(socketIo) {
-    io = socketIo;
-}
+const { publishRealtimeEvent } = require('@sparkcrm/shared-config');
 
 function emitMessage(tenantId, userId, message) {
-    if (!io || !tenantId || !userId || !message) return false;
+    if (!tenantId || !userId || !message) return false;
     const payload = typeof message.toJSON === 'function' ? message.toJSON() : message;
-    io.to(`qr:${tenantId}:${userId}`).emit('wa:message', { message: payload });
+
+    publishRealtimeEvent({
+        type: 'WHATSAPP_MESSAGE_RECEIVED',
+        tenantId,
+        userId,
+        event: 'wa:message',
+        data: { message: payload }
+    });
+    
     return true;
 }
 
-module.exports = { setIo, emitMessage };
+module.exports = { emitMessage };

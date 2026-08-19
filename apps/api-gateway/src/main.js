@@ -1,6 +1,6 @@
 const app = require('./app');
 const { env } = require('@sparkcrm/shared-config');
-const { attachWebSocketUpgrades } = require('./proxy/serviceProxy');
+const { initializeSocket } = require('./socket/socket.server');
 
 const PORT = env.PORTS.GATEWAY;
 
@@ -12,4 +12,4 @@ const server = app.listen(PORT, () => {
     console.log(`═══════════════════════════════════════════════\n`);
 });
 
-attachWebSocketUpgrades(server);
+initializeSocket(server);

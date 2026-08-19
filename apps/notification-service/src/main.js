@@ -9,7 +9,7 @@ const MONGO_URI = env.MONGO.NOTIFICATION;
 const startServer = async () => {
   await connectDB(MONGO_URI, 'notification-service');
   try { await registerEventListeners(); } catch (e) { console.warn('⚠️  Event listeners skipped (Redis unavailable):', e.message); }
-  registerCronJobs();
+  try { await registerCronJobs(); } catch (e) { console.warn('⚠️  Cron jobs skipped:', e.message); }
 
   server.listen(PORT, () => {
     console.log('🚀 notification-service running on port ' + PORT);

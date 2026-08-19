@@ -4,7 +4,7 @@ const { env } = require('./env');
 module.exports.env = env;
 
 const { connectDB } = require('./database');
-const { getRedisClient, getRedisSubscriber, isRedisReady, isSubscriberReady } = require('./redis');
+const { getRedisClient, getRedisSubscriber, isRedisReady, isSubscriberReady, publishRealtimeEvent } = require('./redis');
 
 Object.assign(module.exports, {
     connectDB,
@@ -12,4 +12,5 @@ Object.assign(module.exports, {
     getRedisSubscriber,
     isRedisReady,
     isSubscriberReady,
+    publishRealtimeEvent,
 });

@@ -123,11 +123,6 @@ const createOrUpdateLeadFromSource = async ({
         resolvedAssignedTo = assignment.assignedTo || null;
         assignmentPolicy = assignment.policy;
         assignmentStrategy = assignment.strategy;
-
-        // Fallback to creator if no assignment policy took effect and it was manually created or imported
-        if (!resolvedAssignedTo && ['manual', 'csv'].includes(source) && createdBy) {
-            resolvedAssignedTo = createdBy;
-        }
     }
 
     const pipeline = {

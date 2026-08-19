@@ -182,17 +182,35 @@ const changeStatus = async (tenantId, action, triggerData) => {
 const createFollowUp = async (tenantId, action, triggerData) => {
     const leadId = triggerData._id || triggerData.leadId;
     if (!leadId) throw new Error('Missing lead ID in trigger data');
-    
-    // Follow-ups would typically go to a follow-up or lead service endpoint
-    // Assuming POST /api/leads/:id/follow-ups or POST /api/follow-ups
-    const reqConfig = buildInternalRequest('POST', `/api/follow-ups`, 'LEAD', tenantId); // Guessed target
-    
+
+    const reqConfig = buildInternalRequest('POST', `/api/follow-ups`, 'LEAD', tenantId);
+
+    // Calculate scheduledAt
+    let scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Default to tomorrow
+    if (action.config.dueDate) {
+        // Simple logic for relative days: e.g. "+1", "+2" or absolute ISO
+        if (typeof action.config.dueDate === 'number' || (typeof action.config.dueDate === 'string' && action.config.dueDate.startsWith('+'))) {
+            const days = parseInt(action.config.dueDate.toString().replace('+', '')) || 1;
+            scheduledAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        } else {
+            scheduledAt = new Date(action.config.dueDate);
+            if (isNaN(scheduledAt.getTime())) scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        }
+    }
+
+    // Resolve a valid ObjectId for assignedUserId — fallback chain: action config → lead's current owner
+    const assignedUserId = action.config.assignedTo || triggerData.assignedTo;
+    if (!assignedUserId) throw new Error('Cannot create follow-up: no assignedUserId found in action config or trigger data');
+
+    // Use assignedUserId as the actor so lead-service gets a valid ObjectId for createdBy
+    reqConfig.headers['x-user-id'] = String(assignedUserId);
+
     await axios.post(reqConfig.url, {
         leadId,
         type: action.config.type || 'call',
-        notes: action.config.notes || '',
-        dueDate: action.config.dueDate, // Will need dynamic calculation or explicit
-        assignedTo: action.config.assignedTo || triggerData.assignedTo,
+        note: action.config.notes || '',
+        scheduledAt,
+        assignedUserId,
     }, {
         headers: reqConfig.headers,
     });

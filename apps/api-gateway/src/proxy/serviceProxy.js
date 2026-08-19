@@ -171,16 +171,6 @@ const SERVICE_ROUTES = {
         target: env.SERVICES.BILLING,
         public: true,
     },
-    '/socket.io': {
-        target: env.SERVICES.WHATSAPP,
-        public: true,
-        websocket: true,
-    },
-    '/socket.io-notifications': {
-        target: env.SERVICES.NOTIFICATION,
-        public: true,
-        websocket: true,
-    },
 };
 
 const TARGET_AUDIENCES = new Map([
@@ -375,8 +365,6 @@ const runMiddlewareChain = (middlewares, req, res, done) => {
  * Middleware (auth, tenant, RBAC, etc.) runs INSIDE the pathFilter function
  * before allowing the proxy to forward the request.
  */
-const websocketProxies = [];
-
 const setupProxies = (app) => {
     // Apply abuse protection before replacing untrusted identity context.
     app.use(globalLimiter);
@@ -391,7 +379,6 @@ const setupProxies = (app) => {
         const proxy = createProxyMiddleware({
             target: config.target,
             changeOrigin: true,
-            ws: config.websocket === true,
             // pathFilter matches requests that start with this prefix exactly or as sub-path
             pathFilter: (reqPath) => isPathMatch(reqPath, path),
             on: {
@@ -435,8 +422,6 @@ const setupProxies = (app) => {
             },
         });
 
-        if (config.websocket) websocketProxies.push({ path, proxy });
-
         // Wrap: run middleware chain first, then proxy
         app.use((req, res, next) => {
             // Only handle requests matching this route's path prefix
@@ -462,17 +447,8 @@ const setupProxies = (app) => {
     });
 };
 
-const attachWebSocketUpgrades = (server) => {
-    server.on('upgrade', (req, socket, head) => {
-        const entry = websocketProxies.find(({ path }) => isPathMatch(req.url, path));
-        if (entry) entry.proxy.upgrade(req, socket, head);
-        else socket.destroy();
-    });
-};
-
 module.exports = {
     setupProxies,
-    attachWebSocketUpgrades,
     SERVICE_ROUTES,
     createGatewayServiceHeaders,
     isPublicRequest,

@@ -2,7 +2,6 @@ const http    = require('http');
 const express = require('express');
 const cors    = require('cors');
 const helmet  = require('helmet');
-const { Server: SocketIO } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const { createCorsOptions, errorHandler, requestLogger } = require('@sparkcrm/shared-middleware');
 const { env } = require('@sparkcrm/shared-config');
@@ -51,47 +50,7 @@ app.use('/api/whatsapp/qr',      requireGatewayUser, baileysQRRoutes);
 app.use('/api/whatsapp',         requireGatewayUser, whatsappRoutes);
 app.use(errorHandler);
 
-// ── HTTP server + Socket.IO ────────────────────────────────────────────────────
+// ── HTTP server ────────────────────────────────────────────────────
 const server = http.createServer(app);
 
-const io = new SocketIO(server, {
-    cors: createCorsOptions(process.env, { methods: ['GET', 'POST'] }),
-    // Allow long-polling fallback for networks that block WebSockets
-    transports: ['websocket', 'polling'],
-});
-
-// Give the QR controller a reference to io so it can emit QR events
-qrCtrl.setIo(io);
-realtime.setIo(io);
-
-io.use((socket, next) => {
-    try {
-        const token = socket.handshake.auth?.token;
-        if (!token) return next(new Error('Authentication required'));
-
-        const decoded = jwt.verify(token, env.JWT_SECRET);
-        if (!decoded.tenantId || !decoded.userId) {
-            return next(new Error('Tenant user identity required'));
-        }
-
-        socket.data.tenantId = decoded.tenantId.toString();
-        socket.data.userId = decoded.userId.toString();
-        next();
-    } catch {
-        next(new Error('Invalid or expired authentication token'));
-    }
-});
-
-// Each authenticated agent browser tab joins its existing identity room.
-io.on('connection', (socket) => {
-    const { tenantId, userId } = socket.data;
-    const room = `qr:${tenantId}:${userId}`;
-    socket.join(room);
-    console.log(`🔌 [Socket.IO] Agent ${userId} joined room ${room}`);
-
-    socket.on('disconnect', () => {
-        console.log(`🔌 [Socket.IO] Agent ${userId} disconnected`);
-    });
-});
-
-module.exports = { app, server, io };
+module.exports = { app, server };
