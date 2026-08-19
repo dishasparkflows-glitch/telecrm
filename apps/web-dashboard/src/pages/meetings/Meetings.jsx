@@ -12,6 +12,7 @@ import Select from '../../components/ui/Select'
 import Tabs from '../../components/ui/Tabs'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
+import DynamicCustomFieldInput from '../../components/ui/DynamicCustomFieldInput'
 import MeetingDetail from '../../components/meetings/MeetingDetail'
 import { Calendar, Plus, Clock, Video, Link2, Copy, Pencil, Trash2, X } from 'lucide-react'
 import Pagination from '../../components/ui/Pagination'
@@ -332,11 +333,10 @@ export default function Meetings() {
                 {fieldsData.data.map(field => (
                   <div key={field._id} className={field.type === 'textarea' ? 'col-span-2' : ''}>
                     <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1.5">{field.name} {field.required && <span className="text-danger">*</span>}</label>
-                    <Input 
-                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                      placeholder={field.name}
-                      value={meetingData.customFields[field.name] || ''}
-                      onChange={(e) => setMeetingData({ ...meetingData, customFields: { ...meetingData.customFields, [field.name]: e.target.value } })}
+                    <DynamicCustomFieldInput
+                      field={field}
+                      value={meetingData.customFields[field.name]}
+                      onChange={(val) => setMeetingData({ ...meetingData, customFields: { ...meetingData.customFields, [field.name]: val } })}
                     />
                   </div>
                 ))}

@@ -17,6 +17,7 @@ const DEFAULT_MODULES = [
     { key: 'whatsapp_broadcasts', label: 'Broadcasts', icon: 'Megaphone', path: '/whatsapp/broadcasts', parentKey: 'whatsapp', section: 'MENU', order: 5, isSystem: true, requiredFeature: 'whatsapp_session' },
     { key: 'forms', label: 'Smart Forms', icon: 'FileText', path: '/forms', section: 'MENU', order: 6, isSystem: true, requiredFeature: 'smart_forms' },
     { key: 'meetings', label: 'Meetings', icon: 'Calendar', path: '/meetings', section: 'MENU', order: 7, isSystem: true, requiredFeature: 'meeting_scheduler' },
+    { key: 'tasks', label: 'Tasks', icon: 'CheckSquare', path: '/tasks', section: 'MENU', order: 7.5, isSystem: true, requiredFeature: 'task_management' },
     { key: 'automations', label: 'Automations', icon: 'Zap', path: '/automations', section: 'MENU', order: 8, isSystem: true, requiredFeature: 'automation_basic' },
     { key: 'analytics', label: 'Analytics', icon: 'BarChart3', path: '/analytics', section: 'MENU', order: 9, isSystem: true, requiredFeature: 'analytics_basic' },
 
@@ -77,21 +78,21 @@ function getDefaultRoles(tenantId, createdBy) {
 
     // Sales Lead: full on leads/calls/meetings (isGlobal = true → sees all branch data)
     const salesLeadPerms = allModuleKeys.map((key) => {
-        if (['leads', 'calls', 'meetings'].includes(key)) return { moduleKey: key, actions: { ...ALL_ACTIONS } };
+        if (['leads', 'calls', 'meetings', 'tasks'].includes(key)) return { moduleKey: key, actions: { ...ALL_ACTIONS } };
         if (['dashboard', 'whatsapp', 'forms', 'analytics'].includes(key)) return { moduleKey: key, actions: { view: true, create: true, edit: true, delete: false, export: true, upload: false, isOwn: false, isGlobal: true } };
         return { moduleKey: key, actions: { ...NO_ACCESS } };
     });
 
     // Senior Agent: CRUD on leads/calls/whatsapp/meetings — own data only (isOwn = true, isGlobal = false)
     const seniorAgentPerms = allModuleKeys.map((key) => {
-        if (['leads', 'calls', 'whatsapp', 'meetings'].includes(key)) return { moduleKey: key, actions: { ...AGENT_FULL } };
+        if (['leads', 'calls', 'whatsapp', 'meetings', 'tasks'].includes(key)) return { moduleKey: key, actions: { ...AGENT_FULL } };
         if (['dashboard', 'forms', 'notifications'].includes(key)) return { moduleKey: key, actions: { ...AGENT_VIEW } };
         return { moduleKey: key, actions: { ...NO_ACCESS } };
     });
 
     // Junior Agent: basic access — own data only
     const juniorAgentPerms = allModuleKeys.map((key) => {
-        if (['leads', 'calls'].includes(key)) return { moduleKey: key, actions: { ...AGENT_FULL } };
+        if (['leads', 'calls', 'tasks'].includes(key)) return { moduleKey: key, actions: { ...AGENT_FULL } };
         if (['dashboard', 'whatsapp', 'forms', 'meetings', 'notifications'].includes(key)) return { moduleKey: key, actions: { ...AGENT_VIEW } };
         return { moduleKey: key, actions: { ...NO_ACCESS } };
     });
@@ -99,7 +100,7 @@ function getDefaultRoles(tenantId, createdBy) {
     // Support Agent: CRUD on calls/whatsapp (own data), view leads/meetings
     const supportAgentPerms = allModuleKeys.map((key) => {
         if (['calls', 'whatsapp'].includes(key)) return { moduleKey: key, actions: { view: true, create: true, edit: true, delete: false, export: false, upload: false, isOwn: true, isGlobal: false } };
-        if (['leads', 'meetings', 'dashboard', 'notifications'].includes(key)) return { moduleKey: key, actions: { ...AGENT_VIEW } };
+        if (['leads', 'meetings', 'tasks', 'dashboard', 'notifications'].includes(key)) return { moduleKey: key, actions: { ...AGENT_VIEW } };
         return { moduleKey: key, actions: { ...NO_ACCESS } };
     });
 

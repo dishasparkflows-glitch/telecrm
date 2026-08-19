@@ -18,6 +18,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal'
 import Select from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
+import DynamicCustomFieldInput from '../../components/ui/DynamicCustomFieldInput'
 import {
   Search, Plus, Upload, Download, Filter, Phone, Mail as MailIcon,
   Users, Trash2, Eye, X, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
@@ -451,7 +452,7 @@ export default function LeadsList() {
                         className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer"
                       />
                     </th>
-                    {['Name', 'Contact', 'Company', 'Stage', 'Source', 'Score', 'Assigned To', 'Actions'].map((h) => (
+                    {['Lead No.', 'Name', 'Contact', 'Company', 'Stage', 'Source', 'Score', 'Assigned To', 'Actions'].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase text-[var(--vz-text-muted)] tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -473,6 +474,11 @@ export default function LeadsList() {
                           }}
                           className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4 cursor-pointer"
                         />
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-[13px] font-semibold text-[var(--vz-text-muted)]">
+                          {lead.leadNumber || '-'}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -736,20 +742,11 @@ export default function LeadsList() {
                 {fieldsData.data.map(field => (
                   <div key={field._id} className={field.type === 'textarea' ? 'col-span-2' : ''}>
                     <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1.5">{field.name} {field.required && <span className="text-danger">*</span>}</label>
-                    {field.type === 'textarea' ? (
-                      <textarea 
-                        className="w-full px-3 py-2 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary min-h-[80px]"
-                        value={newLead.customFields[field.name] || ''}
-                        onChange={(e) => setNewLead({ ...newLead, customFields: { ...newLead.customFields, [field.name]: e.target.value } })}
-                      />
-                    ) : (
-                      <Input 
-                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                        placeholder={field.name}
-                        value={newLead.customFields[field.name] || ''}
-                        onChange={(e) => setNewLead({ ...newLead, customFields: { ...newLead.customFields, [field.name]: e.target.value } })}
-                      />
-                    )}
+                    <DynamicCustomFieldInput
+                      field={field}
+                      value={newLead.customFields[field.name]}
+                      onChange={(val) => setNewLead({ ...newLead, customFields: { ...newLead.customFields, [field.name]: val } })}
+                    />
                   </div>
                 ))}
               </div>

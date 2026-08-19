@@ -44,11 +44,32 @@ const createDefinition = asyncHandler(async (req, res) => {
     // Accept both frontend format (targetEntity, name as label) and proper format
     const entity = req.body.entity || req.body.targetEntity;
     const label = req.body.label || req.body.name;
-    const name = req.body.name ? req.body.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : '';
-    const { type, options, placeholder, defaultValue } = req.body;
+    const name = req.body.apiName ? req.body.apiName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : 
+                 (req.body.name ? req.body.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : '');
+    const { type, options, placeholder, defaultValue, helpText } = req.body;
     const isRequired = req.body.isRequired || req.body.required || false;
 
-    if (!entity || !label) throw ApiError.badRequest('Entity and label/name are required');
+    if (!entity || !label) throw ApiError.badRequest('Target Module and Display Label are required');
+    if (!name) throw ApiError.badRequest('API Name is required');
+
+    // Duplicate check
+    const existing = await CustomFieldDefinition.findOne({ tenantId, entity, name });
+    if (existing) throw ApiError.badRequest(`A field with API name '${name}' already exists in the ${entity} module.`);
+
+    // Options validation
+    const selectableTypes = ['dropdown', 'multiselect', 'radio'];
+    if (selectableTypes.includes(type)) {
+        if (!options || !Array.isArray(options) || options.length === 0) {
+            throw ApiError.badRequest(`Type ${type} requires at least one option.`);
+        }
+        const values = options.map(o => o.value);
+        if (new Set(values).size !== values.length) {
+            throw ApiError.badRequest('Options must have unique values.');
+        }
+        if (options.some(o => !o.id || !o.label || !o.value)) {
+            throw ApiError.badRequest('All options must contain a label and value.');
+        }
+    }
 
     const definition = await CustomFieldDefinition.create({
         tenantId,
@@ -56,9 +77,10 @@ const createDefinition = asyncHandler(async (req, res) => {
         label,
         name,
         type,
-        options,
+        options: selectableTypes.includes(type) ? options : [],
         isRequired,
         placeholder,
+        helpText,
         defaultValue,
         order: (await CustomFieldDefinition.countDocuments({ tenantId, entity })) + 1
     });
@@ -72,6 +94,25 @@ const createDefinition = asyncHandler(async (req, res) => {
  */
 const updateDefinition = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
+    const { type, options } = req.body;
+    
+    // Options validation
+    const selectableTypes = ['dropdown', 'multiselect', 'radio'];
+    if (selectableTypes.includes(type)) {
+        if (!options || !Array.isArray(options) || options.length === 0) {
+            throw ApiError.badRequest(`Type ${type} requires at least one option.`);
+        }
+        const values = options.map(o => o.value);
+        if (new Set(values).size !== values.length) {
+            throw ApiError.badRequest('Options must have unique values.');
+        }
+        if (options.some(o => !o.id || !o.label || !o.value)) {
+            throw ApiError.badRequest('All options must contain a label and value.');
+        }
+    } else if (type) {
+        req.body.options = [];
+    }
+
     const definition = await CustomFieldDefinition.findOneAndUpdate(
         { _id: req.params.id, tenantId },
         req.body,
@@ -84,15 +125,14 @@ const updateDefinition = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/tenants/custom-fields/:id
- * Deactivate a field definition
+ * Hard delete a field definition
  */
 const deleteDefinition = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
-    const definition = await CustomFieldDefinition.findOneAndUpdate(
-        { _id: req.params.id, tenantId },
-        { isActive: false },
-        { new: true }
-    );
+    const definition = await CustomFieldDefinition.findOneAndDelete({
+        _id: req.params.id,
+        tenantId
+    });
 
     if (!definition) throw ApiError.notFound('Field definition not found');
     ApiResponse.success(res, null, 'Field deleted');

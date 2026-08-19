@@ -74,6 +74,7 @@ import Modal from '../../components/ui/Modal'
 import Select from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
+import DynamicCustomFieldInput from '../../components/ui/DynamicCustomFieldInput'
 import {
   Building2,
   GitBranch,
@@ -251,7 +252,7 @@ export default function Settings() {
   const [showEditUser, setShowEditUser] = useState(false)
   const [editUserForm, setEditUserForm] = useState(null)
   const [showAddField, setShowAddField] = useState(false)
-  const [fieldForm, setFieldForm] = useState({ name: '', type: 'text', required: false, entity: 'Lead' })
+  const [fieldForm, setFieldForm] = useState({ name: '', apiName: '', type: 'text', required: false, entity: 'Lead', options: [{ id: Date.now().toString(), label: '', value: '' }], defaultValue: '', helpText: '', placeholder: '' })
   const [fieldFilter, setFieldFilter] = useState('Lead')
   const [pipelineDraft, setPipelineDraft] = useState([])
   const [dispositionsDraft, setDispositionsDraft] = useState([])
@@ -707,12 +708,22 @@ export default function Settings() {
 
   const handleAddField = async () => {
     try {
-      await createCustomField({ entity: fieldForm.entity, label: fieldForm.name, name: fieldForm.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''), type: fieldForm.type, isRequired: fieldForm.required }).unwrap()
+      await createCustomField({ 
+        entity: fieldForm.entity, 
+        label: fieldForm.name, 
+        apiName: fieldForm.apiName || fieldForm.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''), 
+        type: fieldForm.type, 
+        isRequired: fieldForm.required,
+        options: fieldForm.options,
+        defaultValue: fieldForm.defaultValue,
+        helpText: fieldForm.helpText,
+        placeholder: fieldForm.placeholder
+      }).unwrap()
       toast('Custom field added', 'success')
       setShowAddField(false)
-      setFieldForm({ name: '', type: 'text', required: false, entity: fieldFilter })
-    } catch {
-      toast('Failed to add field', 'error')
+      setFieldForm({ name: '', apiName: '', type: 'text', required: false, entity: fieldFilter, options: [{ id: Date.now().toString(), label: '', value: '' }], defaultValue: '', helpText: '', placeholder: '' })
+    } catch (err) {
+      toast(err.data?.message || 'Failed to add field', 'error')
     }
   }
 
@@ -1646,11 +1657,10 @@ export default function Settings() {
                 {customFieldsResp.data.filter(f => f.entity === 'User').map(field => (
                   <div key={field._id}>
                     <label className="block text-xs font-semibold text-[var(--vz-heading)] mb-1">{field.name}</label>
-                    <Input 
-                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                      placeholder={field.name}
-                      value={inviteForm.customFields[field.name] || ''}
-                      onChange={(e) => setInviteForm({ ...inviteForm, customFields: { ...inviteForm.customFields, [field.name]: e.target.value } })}
+                    <DynamicCustomFieldInput
+                      field={field}
+                      value={inviteForm.customFields[field.name]}
+                      onChange={(val) => setInviteForm({ ...inviteForm, customFields: { ...inviteForm.customFields, [field.name]: val } })}
                     />
                   </div>
                 ))}
@@ -1714,11 +1724,10 @@ export default function Settings() {
                   {customFieldsResp.data.filter(f => f.entity === 'User').map(field => (
                     <div key={field._id}>
                       <label className="block text-xs font-semibold text-[var(--vz-heading)] mb-1">{field.name}</label>
-                      <Input 
-                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                        placeholder={field.name}
-                        value={editUserForm.customFields[field.name] || ''}
-                        onChange={(e) => setEditUserForm({ ...editUserForm, customFields: { ...editUserForm.customFields, [field.name]: e.target.value } })}
+                      <DynamicCustomFieldInput
+                        field={field}
+                        value={editUserForm.customFields[field.name]}
+                        onChange={(val) => setEditUserForm({ ...editUserForm, customFields: { ...editUserForm.customFields, [field.name]: val } })}
                       />
                     </div>
                   ))}
@@ -1739,12 +1748,15 @@ export default function Settings() {
         </Modal.Footer>
       </Modal>
 
-      <Modal isOpen={showAddField} onClose={() => setShowAddField(false)} title="Add Custom Field" size="sm">
-        <div className="space-y-4 py-2">
-          <Input label="Display Label" placeholder="e.g. GST Number" value={fieldForm.name} onChange={(e) => setFieldForm({ ...fieldForm, name: e.target.value })} />
+      <Modal isOpen={showAddField} onClose={() => setShowAddField(false)} title="Add Custom Field" size="md">
+        <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto px-1">
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Display Label *" placeholder="e.g. GST Number" value={fieldForm.name} onChange={(e) => setFieldForm({ ...fieldForm, name: e.target.value })} />
+            <Input label="API Name" placeholder="Auto-generated" value={fieldForm.apiName || fieldForm.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')} onChange={(e) => setFieldForm({ ...fieldForm, apiName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })} />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Target Module</label>
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Target Module *</label>
               <Select
                 value={fieldForm.entity}
                 onChange={(val) => setFieldForm({ ...fieldForm, entity: val })}
@@ -1752,29 +1764,128 @@ export default function Settings() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Data Type</label>
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Data Type *</label>
               <Select
                 value={fieldForm.type}
-                onChange={(val) => setFieldForm({ ...fieldForm, type: val })}
+                onChange={(val) => {
+                  setFieldForm({ ...fieldForm, type: val, defaultValue: val === 'boolean' ? false : '' });
+                }}
                 options={[
                   { value: 'text', label: 'Text (Single Line)' },
+                  { value: 'textarea', label: 'Multi-line Text' },
                   { value: 'number', label: 'Numeric / Amount' },
                   { value: 'email', label: 'Email Address' },
+                  { value: 'phone', label: 'Phone Number' },
                   { value: 'date', label: 'Date Picker' },
-                  { value: 'textarea', label: 'Multi-line Text' },
-                  { value: 'select', label: 'Dropdown List' }
+                  { value: 'datetime', label: 'Date & Time' },
+                  { value: 'time', label: 'Time' },
+                  { value: 'dropdown', label: 'Dropdown List' },
+                  { value: 'multiselect', label: 'Multi-Select Dropdown' },
+                  { value: 'radio', label: 'Radio Buttons' },
+                  { value: 'boolean', label: 'Checkbox / Boolean' },
+                  { value: 'url', label: 'URL' }
                 ]}
               />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="req_field" checked={fieldForm.required} onChange={(e) => setFieldForm({ ...fieldForm, required: e.target.checked })} className="rounded text-primary focus:ring-primary" />
-            <label htmlFor="req_field" className="text-sm text-[var(--vz-heading)] cursor-pointer">Mark as mandatory field</label>
+
+          <Input label="Help Text / Description" placeholder="Optional context for users" value={fieldForm.helpText} onChange={(e) => setFieldForm({ ...fieldForm, helpText: e.target.value })} />
+          {!['dropdown', 'multiselect', 'radio', 'boolean'].includes(fieldForm.type) && (
+            <Input label="Placeholder" placeholder="Optional input placeholder" value={fieldForm.placeholder} onChange={(e) => setFieldForm({ ...fieldForm, placeholder: e.target.value })} />
+          )}
+
+          {['dropdown', 'multiselect', 'radio'].includes(fieldForm.type) && (
+            <div className="space-y-3 p-3 bg-[var(--vz-body-bg)] rounded-lg border border-[var(--vz-border)]">
+              <label className="block text-sm font-medium text-[var(--vz-heading)]">Options / Values *</label>
+              <div className="space-y-2">
+                {fieldForm.options.map((opt, idx) => (
+                  <div key={opt.id} className="flex items-center gap-2">
+                    <Input 
+                      placeholder="Option Label (e.g. Website)" 
+                      value={opt.label} 
+                      onChange={(e) => {
+                        const newOpts = [...fieldForm.options];
+                        newOpts[idx].label = e.target.value;
+                        if (!newOpts[idx].value || newOpts[idx].value === opt.value) {
+                           newOpts[idx].value = e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+                        }
+                        setFieldForm({ ...fieldForm, options: newOpts });
+                      }} 
+                    />
+                    <Input 
+                      placeholder="Value" 
+                      value={opt.value} 
+                      onChange={(e) => {
+                        const newOpts = [...fieldForm.options];
+                        newOpts[idx].value = e.target.value.replace(/\s+/g, '_');
+                        setFieldForm({ ...fieldForm, options: newOpts });
+                      }} 
+                    />
+                    <button 
+                      type="button" 
+                      disabled={fieldForm.options.length <= 1} 
+                      onClick={() => setFieldForm({ ...fieldForm, options: fieldForm.options.filter((_, i) => i !== idx) })} 
+                      className="p-2 text-danger hover:bg-danger/10 rounded disabled:opacity-30 shrink-0"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setFieldForm({ ...fieldForm, options: [...fieldForm.options, { id: Date.now().toString(), label: '', value: '' }] })}
+                  className="w-full mt-2 border-dashed"
+                >
+                  <Plus size={14} className="mr-1" /> Add Option
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-[var(--vz-heading)]">Default Value</label>
+            {fieldForm.type === 'boolean' ? (
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm text-[var(--vz-heading)]">
+                  <input type="radio" name="default_bool" checked={fieldForm.defaultValue === false} onChange={() => setFieldForm({ ...fieldForm, defaultValue: false })} className="text-primary focus:ring-primary" />
+                  Unchecked
+                </label>
+                <label className="flex items-center gap-2 text-sm text-[var(--vz-heading)]">
+                  <input type="radio" name="default_bool" checked={fieldForm.defaultValue === true} onChange={() => setFieldForm({ ...fieldForm, defaultValue: true })} className="text-primary focus:ring-primary" />
+                  Checked
+                </label>
+              </div>
+            ) : ['dropdown', 'radio'].includes(fieldForm.type) ? (
+              <select 
+                value={fieldForm.defaultValue || ''} 
+                onChange={(e) => setFieldForm({ ...fieldForm, defaultValue: e.target.value })}
+                className="w-full bg-[var(--vz-input-bg)] border border-[var(--vz-input-border)] rounded-md px-3 py-2 text-sm text-[var(--vz-heading)] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+              >
+                <option value="">Select default option</option>
+                {fieldForm.options.filter(o => o.value).map(opt => (
+                  <option key={opt.id} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            ) : fieldForm.type === 'number' ? (
+              <Input type="number" placeholder="Default number" value={fieldForm.defaultValue} onChange={(e) => setFieldForm({ ...fieldForm, defaultValue: e.target.value })} />
+            ) : fieldForm.type === 'date' ? (
+              <Input type="date" value={fieldForm.defaultValue} onChange={(e) => setFieldForm({ ...fieldForm, defaultValue: e.target.value })} />
+            ) : fieldForm.type === 'multiselect' ? (
+              <Input placeholder="Enter default values separated by commas" value={fieldForm.defaultValue} onChange={(e) => setFieldForm({ ...fieldForm, defaultValue: e.target.value })} />
+            ) : (
+              <Input placeholder="Default text" value={fieldForm.defaultValue} onChange={(e) => setFieldForm({ ...fieldForm, defaultValue: e.target.value })} />
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 pt-2 border-t border-[var(--vz-border)]">
+            <input type="checkbox" id="req_field" checked={fieldForm.required} onChange={(e) => setFieldForm({ ...fieldForm, required: e.target.checked })} className="rounded text-primary focus:ring-primary w-4 h-4" />
+            <label htmlFor="req_field" className="text-sm font-medium text-[var(--vz-heading)] cursor-pointer">Mark as mandatory field</label>
           </div>
         </div>
         <Modal.Footer>
           <Button variant="ghost" size="sm" onClick={() => setShowAddField(false)}>Cancel</Button>
-          <Button size="sm" onClick={handleAddField} disabled={!fieldForm.name}>Add to Schema</Button>
+          <Button size="sm" onClick={handleAddField} disabled={!fieldForm.name || (['dropdown', 'radio', 'multiselect'].includes(fieldForm.type) && fieldForm.options.some(o => !o.label || !o.value))}>Add to Schema</Button>
         </Modal.Footer>
       </Modal>
 

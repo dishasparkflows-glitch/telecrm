@@ -3,6 +3,7 @@ const { calculateLeadScore } = require('./scoring.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { ACTIVITY_TYPES, recordLeadActivity } = require('./leadActivity.service');
 const { assignLeadFromPolicy } = require('./assignment.service');
+const { generateLeadNumber } = require('./sequence.service');
 const { cacheHelper } = require('@sparkcrm/shared-utils');
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
@@ -141,7 +142,10 @@ const createOrUpdateLeadFromSource = async ({
         convertedAt: leadData.lifecycle?.convertedAt || null,
     };
 
+    const leadNumber = await generateLeadNumber();
+
     const lead = await Lead.create({
+        leadNumber,
         ...leadData,
         pipeline,
         lifecycle,

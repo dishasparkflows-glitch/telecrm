@@ -13,12 +13,17 @@ const customFieldDefinitionSchema = new mongoose.Schema(
         name: { type: String, required: true, trim: true }, // camelCase identifier
         type: {
             type: String,
-            enum: ['text', 'number', 'dropdown', 'select', 'date', 'checkbox', 'textarea', 'email'],
+            enum: ['text', 'textarea', 'number', 'email', 'phone', 'date', 'datetime', 'time', 'dropdown', 'multiselect', 'radio', 'checkbox', 'boolean', 'url'],
             default: 'text'
         },
-        options: [String], // for dropdown
+        options: [{
+            id: { type: String, required: true },
+            label: { type: String, required: true, trim: true },
+            value: { type: String, required: true, trim: true }
+        }], // for dropdown, multiselect, radio
         isRequired: { type: Boolean, default: false },
         placeholder: { type: String, default: '' },
+        helpText: { type: String, default: '' },
         defaultValue: { type: mongoose.Schema.Types.Mixed, default: null },
         order: { type: Number, default: 0 },
         isActive: { type: Boolean, default: true },

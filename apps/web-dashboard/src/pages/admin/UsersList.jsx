@@ -12,6 +12,7 @@ import Modal from '../../components/ui/Modal'
 import ConfirmModal from '../../components/ui/ConfirmModal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import DynamicCustomFieldInput from '../../components/ui/DynamicCustomFieldInput'
 import { useToast } from '../../components/ui/Toast'
 
 const formatLastLogin = (dateStr) => {
@@ -538,11 +539,10 @@ export default function UsersList() {
                 {fieldsData.data.map(field => (
                   <div key={field._id}>
                     <label className="block text-xs font-semibold text-[var(--vz-heading)] mb-1">{field.name}</label>
-                    <Input 
-                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                      placeholder={field.name}
-                      value={inviteForm.customFields?.[field.name] || ''}
-                      onChange={(e) => setInviteForm({ ...inviteForm, customFields: { ...inviteForm.customFields, [field.name]: e.target.value } })}
+                    <DynamicCustomFieldInput
+                      field={field}
+                      value={inviteForm.customFields?.[field.name]}
+                      onChange={(val) => setInviteForm({ ...inviteForm, customFields: { ...inviteForm.customFields, [field.name]: val } })}
                     />
                   </div>
                 ))}
@@ -637,11 +637,10 @@ export default function UsersList() {
                   {fieldsData.data.map(field => (
                     <div key={field._id}>
                       <label className="block text-xs font-semibold text-[var(--vz-heading)] mb-1">{field.name}</label>
-                      <Input 
-                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                        placeholder={field.name}
-                        value={editUserForm.customFields?.[field.name] || ''}
-                        onChange={(e) => setEditUserForm({ ...editUserForm, customFields: { ...editUserForm.customFields, [field.name]: e.target.value } })}
+                      <DynamicCustomFieldInput
+                        field={field}
+                        value={editUserForm.customFields?.[field.name]}
+                        onChange={(val) => setEditUserForm({ ...editUserForm, customFields: { ...editUserForm.customFields, [field.name]: val } })}
                       />
                     </div>
                   ))}

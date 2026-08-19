@@ -7,6 +7,11 @@ const {
 
 const leadSchema = new mongoose.Schema(
     {
+        leadNumber: {
+            type: String,
+            required: true,
+            index: true,
+        },
         tenantId: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
@@ -238,6 +243,7 @@ const leadSchema = new mongoose.Schema(
 );
 
 // ─── Indexes for performance ───
+leadSchema.index({ leadNumber: 1 }, { unique: true });
 leadSchema.index({ tenantId: 1, 'pipeline.stage': 1 });
 leadSchema.index({ tenantId: 1, assignedTo: 1 });
 leadSchema.index({ tenantId: 1, source: 1 });

@@ -93,6 +93,7 @@ const getLeads = asyncHandler(async (req, res) => {
             { 'contact.email': { $regex: escapedSearch, $options: 'i' } },
             { 'contact.phone': { $regex: escapedSearch, $options: 'i' } },
             { 'contact.company': { $regex: escapedSearch, $options: 'i' } },
+            { leadNumber: { $regex: escapedSearch, $options: 'i' } },
         ];
     }
 
@@ -104,7 +105,7 @@ const getLeads = asyncHandler(async (req, res) => {
     else if (['priority', 'expectedValue', 'followUpAt'].includes(sortBy)) dbSortBy = `lifecycle.${sortBy}`;
     const sort = { [dbSortBy]: sortOrder === 'asc' ? 1 : -1 };
 
-    const LIST_PROJECTION = 'contact pipeline.stage scoring.score scoring.scoreBreakdown source assignedTo fullName';
+    const LIST_PROJECTION = 'leadNumber contact pipeline.stage scoring.score scoring.scoreBreakdown source assignedTo fullName';
 
     const [dbLeads, total] = await Promise.all([
         Lead.find(filter).select(LIST_PROJECTION).sort(sort).skip(skip).limit(limit),

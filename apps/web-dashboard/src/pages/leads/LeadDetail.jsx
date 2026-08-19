@@ -18,6 +18,7 @@ import Tabs from '../../components/ui/Tabs'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import DynamicCustomFieldInput from '../../components/ui/DynamicCustomFieldInput'
 import { useToast } from '../../components/ui/Toast'
 import FollowUpCard from './components/FollowUpCard'
 import {
@@ -216,6 +217,11 @@ export default function LeadDetail() {
               <div className="w-16 h-16 mx-auto rounded-full bg-primary/20 flex items-center justify-center text-xl font-bold text-primary mb-3">
                 {lead.contact?.firstName?.[0]}{lead.contact?.lastName?.[0]}
               </div>
+              {lead.leadNumber && (
+                <div className="text-xs font-bold text-[var(--vz-text-muted)] uppercase mb-1 tracking-wider">
+                  {lead.leadNumber}
+                </div>
+              )}
               <h4 className="text-lg font-semibold text-[var(--vz-heading)]">
                 {lead.contact?.firstName} {lead.contact?.lastName}
               </h4>
@@ -364,7 +370,9 @@ export default function LeadDetail() {
                         <div key={field._id} className="p-3 rounded-lg border border-[var(--vz-border)] bg-[var(--vz-body-bg)]/50">
                           <p className="text-[10px] text-[var(--vz-text-muted)] uppercase font-bold mb-1">{field.name}</p>
                           <p className="text-sm text-[var(--vz-heading)] font-medium">
-                            {lead.customFields?.[field.name] || <span className="text-[var(--vz-text-muted)] italic">Not set</span>}
+                            {lead.customFields?.[field.name] !== undefined && lead.customFields?.[field.name] !== '' ? (
+                              Array.isArray(lead.customFields[field.name]) ? lead.customFields[field.name].join(', ') : lead.customFields[field.name].toString()
+                            ) : <span className="text-[var(--vz-text-muted)] italic">Not set</span>}
                           </p>
                         </div>
                       ))}
@@ -570,11 +578,10 @@ export default function LeadDetail() {
                   {fieldsData.data.map(field => (
                     <div key={field._id} className={field.type === 'textarea' ? 'col-span-2' : ''}>
                       <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1.5">{field.name}</label>
-                      <Input 
-                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                        placeholder={field.name}
-                        value={editForm.customFields[field.name] || ''}
-                        onChange={(e) => setEditForm({ ...editForm, customFields: { ...editForm.customFields, [field.name]: e.target.value } })}
+                      <DynamicCustomFieldInput
+                        field={field}
+                        value={editForm.customFields[field.name]}
+                        onChange={(val) => setEditForm({ ...editForm, customFields: { ...editForm.customFields, [field.name]: val } })}
                       />
                     </div>
                   ))}
