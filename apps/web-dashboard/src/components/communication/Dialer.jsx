@@ -4,8 +4,7 @@ import { useLocation } from 'react-router-dom'
 import { closeDialer } from '../../slices/uiSlice'
 import { useInitiateCallMutation } from '../../features/calls/callApi'
 import { Phone, X, Delete, PhoneOff, User } from 'lucide-react'
-import { useNotificationsSocket } from '../../hooks/useNotificationsSocket'
-
+import { useSocketEvent } from '../../hooks/useSocketEvent'
 import { useToast } from '../ui/Toast'
 
 export default function Dialer() {
@@ -17,21 +16,18 @@ export default function Dialer() {
   const [duration, setDuration] = useState(0)
   const [initiateCall, { isLoading }] = useInitiateCallMutation()
   const location = useLocation()
-  const socket = useNotificationsSocket()
 
-  useEffect(() => {
-    if (!socket) return
-    const handleCallCompleted = () => {
-      setStatus('ended')
-      setTimeout(() => {
-        setStatus('idle')
-        setDuration(0)
-        dispatch(closeDialer())
-      }, 2000)
-    }
-    socket.on('call_completed', handleCallCompleted)
-    return () => socket.off('call_completed', handleCallCompleted)
-  }, [socket, dispatch])
+  // Listen for call_completed via the SocketContext (correct architecture)
+  // useNotificationsSocket returns null — use useSocketEvent directly instead
+  useSocketEvent('call_completed', () => {
+    // Auto-close dialer when call ends from either side (customer or agent)
+    setStatus('ended')
+    setTimeout(() => {
+      setStatus('idle')
+      setDuration(0)
+      dispatch(closeDialer())
+    }, 2000)
+  })
 
   useEffect(() => {
     if (!location.pathname.startsWith('/leads')) {

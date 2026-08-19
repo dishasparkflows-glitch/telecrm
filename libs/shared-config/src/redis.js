@@ -112,8 +112,19 @@ const publishRealtimeEvent = async ({ type, tenantId, userId, event, data }) => 
     }
 
     const publisher = getRedisClient();
-    if (!publisher || !isRedisReady()) {
-        console.warn('⚠️ Redis publisher not ready, skipping realtime event:', type);
+
+    // Wait up to 3s for Redis to become ready — same pattern as publishEvent.
+    // Without this wait, events fired during service startup (when Redis is
+    // still connecting) are silently dropped even though Redis comes up moments later.
+    if (!isRedisReady()) {
+        await Promise.race([
+            new Promise((resolve) => publisher.once('ready', resolve)),
+            new Promise((resolve) => setTimeout(resolve, 3000)),
+        ]);
+    }
+
+    if (!isRedisReady()) {
+        console.warn('⚠️ Redis publisher still not ready after wait, dropping realtime event:', type);
         return;
     }
 

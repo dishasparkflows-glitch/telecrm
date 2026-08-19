@@ -210,7 +210,7 @@ const registerEventListeners = async () => {
                     data: { type: 'call_missed', callId, leadId: leadId || '', actionUrl: leadId ? `/leads/${leadId}` : '/calls' },
                 });
                 const realtimeService = require('../services/realtime.service');
-                realtimeService.emitToUser(userId, 'call_completed', { callId, leadId });
+                realtimeService.emitToUser(userId, 'call_completed', { tenantId, callId, leadId });
             }
         } catch (err) {
             console.error('❌ call.missed notification error:', err.message);
@@ -220,10 +220,11 @@ const registerEventListeners = async () => {
     // ─── Call completed → notify UI via socket ───
     await subscribeToEvents(EVENTS.CALL_COMPLETED, async (_channel, data) => {
         try {
-            const { callId, leadId, userId } = data;
+            const { tenantId, callId, leadId, userId } = data;
             if (userId) {
                 const realtimeService = require('../services/realtime.service');
-                realtimeService.emitToUser(userId, 'call_completed', { callId, leadId });
+                // tenantId MUST be in the data object — realtime.service drops events without it
+                realtimeService.emitToUser(userId, 'call_completed', { tenantId, callId, leadId });
             }
         } catch (err) {
             console.error('❌ call.completed notification error:', err.message);
@@ -233,10 +234,10 @@ const registerEventListeners = async () => {
     // ─── Call recording ready → notify UI via socket ───
     await subscribeToEvents(EVENTS.CALL_RECORDING_READY, async (_channel, data) => {
         try {
-            const { callId, userId, recordingUrl } = data;
+            const { tenantId, callId, userId, recordingUrl } = data;
             if (userId) {
                 const realtimeService = require('../services/realtime.service');
-                realtimeService.emitToUser(userId, 'call_recording_ready', { callId, recordingUrl });
+                realtimeService.emitToUser(userId, 'call_recording_ready', { tenantId, callId, recordingUrl });
             }
         } catch (err) {
             console.error('❌ call.recording_ready notification error:', err.message);

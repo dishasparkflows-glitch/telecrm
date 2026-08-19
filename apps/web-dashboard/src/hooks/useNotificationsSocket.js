@@ -2,6 +2,7 @@ import { useDispatch } from 'react-redux';
 import { useSocketEvent } from './useSocketEvent';
 import { notificationApi } from '../features/notifications/notificationApi';
 import { callApi } from '../features/calls/callApi';
+import { closeDialer } from '../slices/uiSlice';
 
 export function useNotificationsSocket() {
     const dispatch = useDispatch();
@@ -18,7 +19,10 @@ export function useNotificationsSocket() {
     });
 
     useSocketEvent('call_completed', (data) => {
+        console.log('📞 call_completed socket event received', data);
         dispatch(callApi.util.invalidateTags([{ type: 'Call', id: 'LIST' }, { type: 'CallLog', id: 'LIST' }]));
+        // Safety net: ensure dialer closes even if Dialer component listener missed the event
+        dispatch(closeDialer());
     });
 
     return null; // Return value not needed anymore, kept for backwards compatibility

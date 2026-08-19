@@ -67,9 +67,13 @@ const io = {
         emit: (event, data) => {
             // room format: 'qr:tenantId:userId'
             const parts = room.split(':');
-            const tenantId = parts.length > 1 ? parts[1] : 'unknown';
-            const userId = parts.length > 2 ? parts[2] : 'unknown';
-            
+            if (parts.length < 3 || !parts[1] || !parts[2]) {
+                console.warn(`⚠️ [Baileys] Unexpected room format for socket emit: "${room}" — event ${event} dropped`);
+                return;
+            }
+            const tenantId = parts[1];
+            const userId = parts[2];
+
             let type = 'WHATSAPP_EVENT';
             if (event === 'wa:qr') type = 'WHATSAPP_QR_UPDATED';
             if (event === 'wa:message') type = 'WHATSAPP_MESSAGE_RECEIVED';
@@ -237,7 +241,10 @@ const createSession = async (tenantId, userId, options = {}) => {
                     session.retryTimer = setTimeout(() => {
                         const current = sessions.get(key);
                         if (current !== session || current.status !== 'reconnecting') return;
-                        createSession(tenantId, userId, io, { retryCount }).catch((error) => {
+                        // FIXED: was createSession(tenantId, userId, io, { retryCount })
+                        // createSession signature is (tenantId, userId, options={}) — the io
+                        // arg was silently swallowed, reconnects ran without socket events.
+                        createSession(tenantId, userId, { retryCount }).catch((error) => {
                             console.error(`❌ [Baileys] Reconnect failed ${key}:`, error.message);
                         });
                     }, 3000 * retryCount);
