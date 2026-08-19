@@ -216,12 +216,43 @@ const createFollowUp = async (tenantId, action, triggerData) => {
     });
 };
 
+const createTask = async (tenantId, action, triggerData) => {
+    const leadId = triggerData.leadId || triggerData._id; // Accommodate standard payload or raw Lead doc
+    if (!leadId) throw new Error('Cannot create task: triggerData missing lead context');
+
+    const reqConfig = buildInternalRequest('POST', `/api/tasks`, 'LEAD', tenantId);
+
+    const dueDate = new Date();
+    if (action.config.delayDays) dueDate.setDate(dueDate.getDate() + parseInt(action.config.delayDays));
+    if (action.config.delayHours) dueDate.setHours(dueDate.getHours() + parseInt(action.config.delayHours));
+    if (action.config.delayMinutes) dueDate.setMinutes(dueDate.getMinutes() + parseInt(action.config.delayMinutes));
+
+    const assignedTo = action.config.assignedTo || triggerData.assignedTo;
+    if (!assignedTo) throw new Error('Cannot create task: no assignedTo found in config or trigger');
+
+    reqConfig.headers['x-user-id'] = String(assignedTo);
+
+    await axios.post(reqConfig.url, {
+        leadId,
+        title: action.config.title || 'Automated Task',
+        description: action.config.description || '',
+        assignedTo,
+        status: 'PENDING',
+        priority: action.config.priority || 'MEDIUM',
+        dueDate,
+        source: 'AUTOMATION'
+    }, {
+        headers: reqConfig.headers,
+    });
+};
+
 module.exports = {
     assignLead,
     changeStage,
     changeStatus,
     addTag,
     createFollowUp,
+    createTask,
     sendEmail,
     sendWhatsapp,
     webhook,

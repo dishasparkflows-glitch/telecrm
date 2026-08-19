@@ -60,6 +60,11 @@ const SERVICE_ROUTES = {
         module: 'followups',
         feature: 'lead_management',
     },
+    '/api/tasks': {
+        target: env.SERVICES.LEAD,
+        module: 'tasks',
+        feature: 'task_management',
+    },
     '/api/calls': {
         target: env.SERVICES.CALL,
         module: 'calls',

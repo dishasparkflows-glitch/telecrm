@@ -21,6 +21,7 @@ import Select from '../../components/ui/Select'
 import DynamicCustomFieldInput from '../../components/ui/DynamicCustomFieldInput'
 import { useToast } from '../../components/ui/Toast'
 import FollowUpCard from './components/FollowUpCard'
+import TaskCard from '../tasks/components/TaskCard'
 import {
   Phone, MessageSquare, Mail, MapPin, Building2, Calendar, Star,
   Edit3, Send, Clock, StickyNote, Activity, Megaphone
@@ -268,7 +269,7 @@ export default function LeadDetail() {
               </div>
             </div>
 
-            {/* Actions */}
+          <Card>
             <div className="flex gap-2 mt-4 pt-4 border-t border-[var(--vz-border)]">
               <Button variant="soft-primary" size="sm" className="flex-1" onClick={handleCall} disabled={!lead.contact?.phone}>
                 <Phone size={14} /> Call
@@ -280,6 +281,7 @@ export default function LeadDetail() {
           </Card>
 
           <FollowUpCard lead={lead} />
+          <TaskCard lead={lead} />
 
           {/* Stage Pipeline */}
           <Card>

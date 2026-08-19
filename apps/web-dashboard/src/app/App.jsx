@@ -15,6 +15,7 @@ const Pricing = lazy(() => import('../pages/Pricing'))
 const LeadsList = lazy(() => import('../pages/leads/LeadsList'))
 const LeadDetail = lazy(() => import('../pages/leads/LeadDetail'))
 const FollowUpsList = lazy(() => import('../pages/follow-ups/FollowUpsList'))
+const TasksList = lazy(() => import('../pages/tasks/TasksList'))
 const CallLogs = lazy(() => import('../pages/calls/CallLogs'))
 const WhatsApp = lazy(() => import('../pages/whatsapp/WhatsApp'))
 const TeamInbox = lazy(() => import('../pages/whatsapp/TeamInbox'))
@@ -122,6 +123,7 @@ export default function App() {
           <Route path="/leads" element={<FeatureRoute feature="lead_management"><LeadsList /></FeatureRoute>} />
           <Route path="/leads/:id" element={<FeatureRoute feature="lead_management"><LeadDetail /></FeatureRoute>} />
           <Route path="/follow-ups" element={<FeatureRoute feature="lead_management"><FollowUpsList /></FeatureRoute>} />
+          <Route path="/tasks" element={<FeatureRoute feature="task_management"><TasksList /></FeatureRoute>} />
           <Route path="/calls" element={<FeatureRoute feature="calling_basic"><CallLogs /></FeatureRoute>} />
           <Route path="/whatsapp" element={<FeatureRoute feature="whatsapp_session"><WhatsApp /></FeatureRoute>} />
           <Route path="/whatsapp/inbox" element={<FeatureRoute feature="whatsapp_session"><TeamInbox /></FeatureRoute>} />

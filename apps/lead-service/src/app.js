@@ -5,6 +5,7 @@ const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = re
 
 const leadRoutes = require('./routes/lead.routes');
 const followupRoutes = require('./routes/followup.routes');
+const taskRoutes = require('./routes/task.routes');
 const leadController = require('./controllers/lead.controller');
 const { requireVerifiedUser, requireInternalService } = require('./middleware/security');
 
@@ -52,6 +53,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/leads', requireProtectedLeadRequest, leadRoutes);
 app.use('/api/follow-ups', requireProtectedLeadRequest, followupRoutes);
+app.use('/api/tasks', requireProtectedLeadRequest, taskRoutes);
 
 // Internal endpoints (service-to-service, no auth)
 const Lead = require('./models/Lead');

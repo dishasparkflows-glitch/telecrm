@@ -18,6 +18,12 @@ const EVENTS = {
     LEAD_SCORE_UPDATED: 'lead.score.updated',
     LEAD_FOLLOWUP_SCHEDULED: 'lead.followup.scheduled',
 
+    // Task events
+    TASK_CREATED: 'task.created',
+    TASK_ASSIGNED: 'task.assigned',
+    TASK_DUE: 'task.due',
+    TASK_COMPLETED: 'task.completed',
+
     // Call events
     CALL_INITIATED: 'call.initiated',
     CALL_COMPLETED: 'call.completed',

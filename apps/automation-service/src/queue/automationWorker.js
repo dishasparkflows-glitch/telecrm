@@ -52,6 +52,9 @@ const automationWorker = new Worker('AutomationActionQueue', async (job) => {
                 case 'create_follow_up':
                     result = await executors.createFollowUp(tenantId, node, triggerData);
                     break;
+                case 'create_task':
+                    result = await executors.createTask(tenantId, node, triggerData);
+                    break;
                 default:
                     throw new Error(`Unsupported action type: ${node.actionType}`);
             }

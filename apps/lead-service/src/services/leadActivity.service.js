@@ -17,6 +17,11 @@ const ACTIVITY_TYPES = {
     FOLLOWUP_COMPLETED: 'followup.completed',
     FOLLOWUP_RESCHEDULED: 'followup.rescheduled',
     FOLLOWUP_CANCELLED: 'followup.cancelled',
+    TASK_CREATED: 'task.created',
+    TASK_ASSIGNED: 'task.assigned',
+    TASK_COMPLETED: 'task.completed',
+    TASK_STATUS_CHANGED: 'task.status_changed',
+    TASK_DELETED: 'task.deleted',
 };
 
 const recordLeadActivity = async ({

@@ -794,11 +794,12 @@ const getActiveLeads = asyncHandler(async (req, res) => {
             { 'contact.firstName': { $regex: escapedSearch, $options: 'i' } },
             { 'contact.lastName': { $regex: escapedSearch, $options: 'i' } },
             { 'contact.phone': { $regex: escapedSearch, $options: 'i' } },
+            { 'leadNumber': { $regex: escapedSearch, $options: 'i' } },
         ];
     }
 
     let query = Lead.find(filter)
-        .select('_id contact')
+        .select('_id contact leadNumber')
         .sort({ 'lifecycle.lastActivityAt': -1, 'meta.updatedAt': -1 });
 
     if (hasPagination) {
