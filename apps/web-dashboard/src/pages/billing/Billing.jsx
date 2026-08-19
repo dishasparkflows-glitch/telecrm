@@ -478,19 +478,19 @@ export default function Billing() {
                 <tbody>
                   {payments.map((p) => (
                     <tr key={p._id} className="border-b border-[var(--vz-border)] hover:bg-[var(--vz-input-bg)]">
-                      <td className="py-3 px-4 text-[var(--vz-text)]">{formatDate(p.paidAt || p.meta?.createdAt)}</td>
-                      <td className="py-3 px-4"><code className="text-xs bg-[var(--vz-input-bg)] px-2 py-0.5 rounded">{p.invoiceNumber}</code></td>
-                      <td className="py-3 px-4 font-medium text-[var(--vz-heading)]">{p.planName}</td>
+                      <td className="py-3 px-4 text-[var(--vz-text)]">{formatDate(p.payment?.paidAt || p.meta?.createdAt)}</td>
+                      <td className="py-3 px-4"><code className="text-xs bg-[var(--vz-input-bg)] px-2 py-0.5 rounded">{p.invoice?.number}</code></td>
+                      <td className="py-3 px-4 font-medium text-[var(--vz-heading)]">{p.plan?.name}</td>
                       <td className="py-3 px-4 font-bold text-[var(--vz-heading)]">
-                        {p.amount === 0 ? <span className="text-secondary">Free</span> : `₹${p.amount.toLocaleString('en-IN')}`}
+                        {p.invoice?.amount === 0 ? <span className="text-secondary">Free</span> : `₹${p.invoice?.amount?.toLocaleString('en-IN')}`}
                       </td>
                       <td className="py-3 px-4">
-                        <Badge color={p.status === 'completed' ? 'success' : p.status === 'trial' ? 'warning' : p.status === 'failed' ? 'danger' : 'info'}>
-                          {p.status}
+                        <Badge color={p.payment?.status === 'completed' || p.payment?.status === 'paid' ? 'success' : p.payment?.status === 'trial' ? 'warning' : p.payment?.status === 'failed' ? 'danger' : 'info'}>
+                          {p.payment?.status}
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-[var(--vz-text-muted)] text-xs">
-                        {formatDate(p.periodStart)} — {formatDate(p.periodEnd)}
+                        {formatDate(p.subscription?.periodStart)} — {formatDate(p.subscription?.periodEnd)}
                       </td>
                     </tr>
                   ))}

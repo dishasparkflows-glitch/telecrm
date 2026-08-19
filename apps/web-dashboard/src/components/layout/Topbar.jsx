@@ -38,8 +38,9 @@ export default function Topbar() {
   // Listen for real-time notification events to show a toast
   useEffect(() => {
     const handleNewNotification = (e) => {
-      const { title, message, type } = e.detail
-      toast(title || message, type === 'error' ? 'error' : 'success')
+      // const payload = e.detail.notification || e.detail;
+      // const { title, message, type } = payload;
+      // toast({ title, message }, type === 'error' ? 'error' : (type || 'success'))
     }
     window.addEventListener('app:notification', handleNewNotification)
     return () => window.removeEventListener('app:notification', handleNewNotification)

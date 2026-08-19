@@ -8,57 +8,71 @@ const paymentSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
-        planId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Plan',
-            required: true,
+        plan: {
+            planId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Plan',
+                required: true,
+            },
+            name: {
+                type: String,
+                required: true,
+            },
+            billingCycle: {
+                type: String,
+                enum: ['monthly', 'yearly', 'trial', 'none'],
+                default: 'monthly',
+            },
         },
-        planName: {
-            type: String,
-            required: true,
+        invoice: {
+            number: {
+                type: String,
+                required: true,
+                unique: true,
+            },
+            amount: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
+            currency: {
+                type: String,
+                default: 'INR',
+                enum: ['INR', 'USD'],
+            },
+            description: { type: String, default: '' },
+            receiptUrl: { type: String, default: '' },
         },
-        invoiceNumber: {
-            type: String,
-            required: true,
-            unique: true,
+        subscription: {
+            status: {
+                type: String,
+                enum: ['pending', 'completed', 'failed', 'refunded', 'trial'],
+                default: 'pending',
+            },
+            periodStart: { type: Date, default: null },
+            periodEnd: { type: Date, default: null },
         },
-        amount: {
-            type: Number,
-            required: true,
-            min: 0,
+        payment: {
+            method: {
+                type: String,
+                enum: ['razorpay', 'stripe', 'card', 'upi', 'netbanking', 'wallet', 'free', 'none'],
+                default: 'none',
+            },
+            status: {
+                type: String,
+                enum: ['pending', 'paid', 'completed', 'failed', 'refunded', 'trial'],
+                default: 'pending',
+            },
+            razorpay: {
+                paymentId: { type: String, default: null },
+                orderId: { type: String, default: null },
+            },
+            stripe: {
+                paymentIntentId: { type: String, default: null },
+                sessionId: { type: String, default: null },
+            },
+            paidAt: { type: Date, default: null },
         },
-        currency: {
-            type: String,
-            default: 'INR',
-            enum: ['INR', 'USD'],
-        },
-        billingCycle: {
-            type: String,
-            enum: ['monthly', 'yearly', 'trial', 'none'],
-            default: 'monthly',
-        },
-        status: {
-            type: String,
-            enum: ['pending', 'completed', 'failed', 'refunded', 'trial'],
-            default: 'pending',
-        },
-        method: {
-            type: String,
-            enum: ['razorpay', 'stripe', 'card', 'upi', 'netbanking', 'wallet', 'free', 'none'],
-            default: 'none',
-        },
-        // Payment gateway references
-        razorpayPaymentId: { type: String, default: null },
-        razorpayOrderId: { type: String, default: null },
-        stripePaymentIntentId: { type: String, default: null },
-        stripeSessionId: { type: String, default: null },
-        // Dates
-        paidAt: { type: Date, default: null },
-        periodStart: { type: Date, default: null },
-        periodEnd: { type: Date, default: null },
-        // Metadata
-        description: { type: String, default: '' },
-        receiptUrl: { type: String, default: '' },
         meta: {
             createdBy: { type: mongoose.Schema.Types.ObjectId },
             updatedBy: { type: mongoose.Schema.Types.ObjectId },

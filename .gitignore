@@ -38,3 +38,6 @@ tmp/
 
 # WhatsApp Sessions
 apps/whatsapp-service/sessions/
+
+# Firebase Service Accounts
+*-firebase-adminsdk-*.json

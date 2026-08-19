@@ -115,20 +115,20 @@ const getDashboard = asyncHandler(async (req, res) => {
 
         // Revenue this month
         Payment.aggregate([
-            { $match: { paidAt: { $gte: startOfMonth }, status: { $in: ['completed', 'trial'] } } },
-            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+            { $match: { 'payment.paidAt': { $gte: startOfMonth }, 'payment.status': { $in: ['completed', 'paid', 'trial'] } } },
+            { $group: { _id: null, total: { $sum: '$invoice.amount' }, count: { $sum: 1 } } },
         ]),
 
         // Revenue this year
         Payment.aggregate([
-            { $match: { paidAt: { $gte: startOfYear }, status: { $in: ['completed', 'trial'] } } },
-            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+            { $match: { 'payment.paidAt': { $gte: startOfYear }, 'payment.status': { $in: ['completed', 'paid', 'trial'] } } },
+            { $group: { _id: null, total: { $sum: '$invoice.amount' }, count: { $sum: 1 } } },
         ]),
 
         // Revenue all time
         Payment.aggregate([
-            { $match: { status: { $in: ['completed'] } } },
-            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+            { $match: { 'payment.status': { $in: ['completed', 'paid'] } } },
+            { $group: { _id: null, total: { $sum: '$invoice.amount' }, count: { $sum: 1 } } },
         ]),
 
         // New tenants today
@@ -146,8 +146,8 @@ const getDashboard = asyncHandler(async (req, res) => {
 
         // Monthly revenue trend (last 12 months)
         Payment.aggregate([
-            { $match: { paidAt: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) }, status: 'completed' } },
-            { $group: { _id: { year: { $year: '$paidAt' }, month: { $month: '$paidAt' } }, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+            { $match: { 'payment.paidAt': { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) }, 'payment.status': { $in: ['completed', 'paid'] } } },
+            { $group: { _id: { year: { $year: '$payment.paidAt' }, month: { $month: '$payment.paidAt' } }, total: { $sum: '$invoice.amount' }, count: { $sum: 1 } } },
             { $sort: { '_id.year': 1, '_id.month': 1 } },
         ]),
     ]);
@@ -584,12 +584,12 @@ const getRevenue = asyncHandler(async (req, res) => {
     const status = req.query.status || '';
 
     const filter = {};
-    if (status) filter.status = status;
+    if (status) filter['payment.status'] = status;
 
     // Revenue by plan
     const revenueByPlan = await Payment.aggregate([
-        { $match: { status: 'completed' } },
-        { $group: { _id: '$planName', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $match: { 'payment.status': { $in: ['completed', 'paid'] } } },
+        { $group: { _id: '$plan.name', total: { $sum: '$invoice.amount' }, count: { $sum: 1 } } },
         { $sort: { total: -1 } },
     ]);
 

@@ -46,7 +46,9 @@ const markAllRead = asyncHandler(async (req, res) => {
     const branchId = req.headers['x-branch-id'] || req.headers['x-user-branch-id'];
 
     const filter = { tenantId, userId, 'readState.isRead': false };
-    if (branchId) filter.branchId = branchId;
+    if (branchId) {
+        filter.$or = [{ branchId }, { branchId: null }];
+    }
 
     await Notification.updateMany(filter, { $set: { 'readState.isRead': true, 'readState.readAt': new Date() } });
     ApiResponse.success(res, null, 'All notifications marked as read');

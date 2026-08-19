@@ -82,13 +82,13 @@ export default function OwnerRevenue() {
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-[var(--vz-text-muted)]">No payments yet</td></tr>
               ) : payments.map((p) => (
                 <tr key={p._id} className="hover:bg-[var(--vz-body-bg)]/50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{p.invoiceNumber}</td>
+                  <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{p.invoice?.number}</td>
                   <td className="px-4 py-3 text-[var(--vz-text)]">{p.tenantId?.companyName || '—'}</td>
-                  <td className="px-4 py-3"><Badge color="soft-primary">{p.planName}</Badge></td>
-                  <td className="px-4 py-3 font-bold text-[var(--vz-heading)]">₹{p.amount?.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-[var(--vz-text)]">{p.billingCycle}</td>
-                  <td className="px-4 py-3"><Badge color={p.status === 'completed' ? 'success' : 'warning'}>{p.status}</Badge></td>
-                  <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}</td>
+                  <td className="px-4 py-3"><Badge color="soft-primary">{p.plan?.name}</Badge></td>
+                  <td className="px-4 py-3 font-bold text-[var(--vz-heading)]">₹{p.invoice?.amount?.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-[var(--vz-text)]">{p.plan?.billingCycle}</td>
+                  <td className="px-4 py-3"><Badge color={p.payment?.status === 'completed' || p.payment?.status === 'paid' ? 'success' : 'warning'}>{p.payment?.status}</Badge></td>
+                  <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{p.payment?.paidAt ? new Date(p.payment?.paidAt).toLocaleDateString() : '—'}</td>
                 </tr>
               ))}
             </tbody>

@@ -188,6 +188,41 @@ const passwordResetTemplate = (data) => {
     return { subject: '🔑 Reset Your SparkCRM Password', html: wrapTemplate(html) };
 };
 
+// ─── Meeting Invite Template ───
+const meetingInviteTemplate = (data) => {
+    let dateStr = 'TBD';
+    let timeStr = '';
+    if (data.scheduledAt) {
+        const scheduledDate = new Date(data.scheduledAt);
+        dateStr = scheduledDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        timeStr = scheduledDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+    }
+    
+    const html = `
+    <h1 style="font-size:22px;color:#111827;margin:0 0 8px;">Meeting Invitation</h1>
+    <p style="color:#6b7280;font-size:14px;margin:0 0 20px;line-height:1.5;">
+        You have been invited to a meeting. Please find the details below.
+    </p>
+    <div style="background:#f9fafb;border-radius:10px;padding:20px;margin:0 0 20px;border:1px solid #e5e7eb;">
+        <table style="width:100%;font-size:14px;color:#374151;" cellspacing="0" cellpadding="6">
+            <tr><td style="color:#6b7280;width:100px;font-weight:500;">Title:</td><td style="font-weight:600;color:#111827;">${data.meetingTitle || 'Scheduled Meeting'}</td></tr>
+            <tr><td style="color:#6b7280;font-weight:500;">Date:</td><td>${dateStr}</td></tr>
+            <tr><td style="color:#6b7280;font-weight:500;">Time:</td><td>${timeStr}</td></tr>
+            ${data.duration ? `<tr><td style="color:#6b7280;font-weight:500;">Duration:</td><td>${data.duration} minutes</td></tr>` : ''}
+        </table>
+    </div>
+    ${data.meetingUrl && data.meetingUrl !== '#' ? `
+    <div style="text-align:center;margin:24px 0;">
+        <a href="${data.meetingUrl}" style="display:inline-block;background:${BRAND.color};color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Join Meeting →</a>
+        <p style="margin-top:12px;font-size:12px;color:#9ca3af;">Or copy this link: <br/><a href="${data.meetingUrl}" style="color:${BRAND.color};word-break:break-all;">${data.meetingUrl}</a></p>
+    </div>` : `
+    <div style="text-align:center;margin:24px 0;">
+        <p style="font-size:14px;color:#6b7280;font-style:italic;">No link provided. Location or conference details will be shared separately.</p>
+    </div>`}
+    <p style="color:#9ca3af;font-size:13px;margin:0;text-align:center;">Looking forward to seeing you there!</p>`;
+    return { subject: `Invitation: ${data.meetingTitle || 'Meeting'} @ ${dateStr} ${timeStr}`, html: wrapTemplate(html) };
+};
+
 // ─── Template registry ───
 const TEMPLATES = {
     otp: otpTemplate,
@@ -198,6 +233,7 @@ const TEMPLATES = {
     trial_expiring: trialExpiringTemplate,
     trial_expired: trialExpiredTemplate,
     password_reset: passwordResetTemplate,
+    meeting_invite: meetingInviteTemplate,
 };
 
 /**

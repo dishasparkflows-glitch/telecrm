@@ -150,24 +150,46 @@ const registerEventListeners = async () => {
     // ─── Meeting booked → notify host ───
     await subscribeToEvents(EVENTS.MEETING_BOOKED, async (_channel, data) => {
         try {
-            const { tenantId, meetingId, hostId } = data;
-            if (!hostId) return;
-            await sendInApp(tenantId, hostId, {
-                title: 'New Meeting Booked',
-                message: 'Someone has scheduled a meeting with you',
-                type: 'info',
-                actionUrl: `/meetings/${meetingId}`,
-                actionType: 'meeting',
-                data: { meetingId },
-                branchId: data.branchId,
-            });
-            await sendPushToUser({
-                tenantId,
-                userId: hostId,
-                title: 'New Meeting Booked',
-                body: 'Someone has scheduled a meeting with you',
-                data: { type: 'meeting_booked', meetingId, actionUrl: '/meetings' },
-            });
+            const { tenantId, meetingId, hostId, inviteeEmails, meetingTitle, scheduledAt, meetingUrl, duration } = data;
+            
+            // Send email to invitees
+            if (inviteeEmails && inviteeEmails.length > 0) {
+                for (const email of inviteeEmails) {
+                    await sendTemplateEmail(email, 'meeting_invite', {
+                        meetingTitle,
+                        scheduledAt,
+                        meetingUrl,
+                        duration
+                    });
+                }
+            }
+
+            const usersToNotify = [hostId];
+            if (data.attendeeIds && Array.isArray(data.attendeeIds)) {
+                data.attendeeIds.forEach(id => {
+                    if (id && id !== hostId) usersToNotify.push(id);
+                });
+            }
+
+            for (const userId of usersToNotify) {
+                if (!userId) continue;
+                await sendInApp(tenantId, userId, {
+                    title: 'New Meeting Booked',
+                    message: 'Someone has scheduled a meeting with you',
+                    type: 'info',
+                    actionUrl: `/meetings/${meetingId}`,
+                    actionType: 'meeting',
+                    data: { meetingId },
+                    branchId: data.branchId,
+                });
+                await sendPushToUser({
+                    tenantId,
+                    userId: userId,
+                    title: 'New Meeting Booked',
+                    body: 'Someone has scheduled a meeting with you',
+                    data: { type: 'meeting_booked', meetingId, actionUrl: '/meetings' },
+                });
+            }
         } catch (err) {
             console.error('❌ meeting.booked notification error:', err.message);
         }

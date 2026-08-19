@@ -93,18 +93,27 @@ const createTenantWithTrial = async ({ company, companyName, email, phone, refer
     try {
         await Payment.create({
             tenantId: tenant._id,
-            planId: trialPlan._id,
-            planName: trialPlan.name,
-            invoiceNumber,
-            amount: 0,
-            currency: 'INR',
-            billingCycle: 'trial',
-            status: 'trial',
-            method: 'free',
-            paidAt: now,
-            periodStart: now,
-            periodEnd: trialExpiresAt,
-            description: `${trialPlan.name} — 30-day free trial`,
+            plan: {
+                planId: trialPlan._id,
+                name: trialPlan.name,
+                billingCycle: 'trial',
+            },
+            invoice: {
+                number: invoiceNumber,
+                amount: 0,
+                currency: 'INR',
+                description: `${trialPlan.name} — 30-day free trial`,
+            },
+            subscription: {
+                status: 'trial',
+                periodStart: now,
+                periodEnd: trialExpiresAt,
+            },
+            payment: {
+                method: 'free',
+                status: 'trial',
+                paidAt: now,
+            }
         });
     } catch (err) {
         console.error('⚠️ Failed to create trial payment record:', err.message);

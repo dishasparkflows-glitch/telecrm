@@ -127,7 +127,28 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
         branchId: scope.branchId || null,
         hostId: userId,
     });
-    await publishEvent(EVENTS.MEETING_BOOKED, { tenantId: scope.tenantId, meetingId: meeting._id, hostId: userId, leadId: meeting.leadId });
+    
+    // Collect invitee emails for notifications
+    const inviteeEmails = [];
+    if (meeting.guest?.email) inviteeEmails.push(meeting.guest.email);
+    if (meeting.attendees?.length > 0) {
+        const userIds = meeting.attendees.map(a => String(a.userId));
+        const users = await getUsersBulk(scope.tenantId, userIds);
+        users.forEach(u => { if (u.email) inviteeEmails.push(u.email) });
+    }
+
+    await publishEvent(EVENTS.MEETING_BOOKED, { 
+        tenantId: scope.tenantId, 
+        meetingId: meeting._id, 
+        hostId: userId, 
+        leadId: meeting.leadId,
+        attendeeIds: meeting.attendees?.map(a => String(a.userId)) || [],
+        inviteeEmails,
+        meetingTitle: meeting.meeting.title,
+        scheduledAt: meeting.meeting.scheduledAt,
+        duration: meeting.meeting.duration,
+        meetingUrl: meeting.meeting.link || meeting.conference?.meetingUrl
+    });
     ApiResponse.created(res, meeting, 'Meeting scheduled');
 });
 
@@ -161,7 +182,7 @@ const getMeetings = asyncHandler(async (req, res) => {
         }
     }
     const [meetings, total] = await Promise.all([
-        Meeting.find(filter).select('-meta -calendar -attendees').sort({ 'meeting.scheduledAt': 1 }).skip(skip).limit(limit).lean(),
+        Meeting.find(filter).select('-meta -calendar').sort({ 'meeting.scheduledAt': 1 }).skip(skip).limit(limit).lean(),
         Meeting.countDocuments(filter),
     ]);
 

@@ -221,18 +221,27 @@ const upgradePlan = asyncHandler(async (req, res) => {
     const invoiceNumber = `INV-${tenant._id.toString().slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
     const payment = await Payment.create({
         tenantId: tenant._id,
-        planId: newPlan._id,
-        planName: newPlan.name,
-        invoiceNumber,
-        amount,
-        currency: 'INR',
-        billingCycle: cycle,
-        status: 'completed',
-        method: 'none', // Updated when payment gateway is integrated
-        paidAt: now,
-        periodStart: now,
-        periodEnd,
-        description: `${newPlan.name} — ${cycle} plan`,
+        plan: {
+            planId: newPlan._id,
+            name: newPlan.name,
+            billingCycle: cycle,
+        },
+        invoice: {
+            number: invoiceNumber,
+            amount,
+            currency: 'INR',
+            description: `${newPlan.name} — ${cycle} plan`,
+        },
+        subscription: {
+            status: 'completed',
+            periodStart: now,
+            periodEnd,
+        },
+        payment: {
+            method: 'none',
+            status: 'completed',
+            paidAt: now,
+        }
     });
 
     // Publish event

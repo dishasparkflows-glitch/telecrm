@@ -46,7 +46,7 @@ export default function Meetings() {
 
   const { data: meetingsData, isLoading } = useGetMeetingsQuery({ page, limit: PAGE_SIZE })
   const { data: linksData, isFetching: isFetchingLinks } = useGetBookingLinksQuery(undefined, { skip: activeTab !== 'links' })
-  const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery(undefined, { skip: !showSchedule && !showCreateLink })
+  const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery(undefined, { skip: !showSchedule && !showCreateLink && !showEdit })
   const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Meeting' }, { skip: !showSchedule && !showEdit })
   const [scheduleMeeting, { isLoading: scheduling }] = useScheduleMeetingMutation()
   const [updateMeeting, { isLoading: updating }] = useUpdateMeetingMutation()
@@ -103,10 +103,13 @@ export default function Meetings() {
     try {
       await updateMeeting({
         id: editMeetingForm.id,
-        title: editMeetingForm.title,
-        scheduledAt: editMeetingForm.dateTime,
-        duration: editMeetingForm.duration,
-        status: editMeetingForm.status,
+        meeting: {
+          title: editMeetingForm.title,
+          scheduledAt: editMeetingForm.dateTime,
+          duration: editMeetingForm.duration,
+          status: editMeetingForm.status,
+        },
+        attendees: editMeetingForm.attendees.map(a => ({ userId: a.userId?._id || a.userId })),
       }).unwrap()
       toast('Meeting updated', 'success')
       setShowEdit(false)
@@ -504,6 +507,44 @@ export default function Meetings() {
                   { value: 'completed', label: 'Completed' }
                 ]}
               />
+
+              <div className="space-y-1.5 pt-3 border-t border-[var(--vz-border)]">
+                <label className="block text-sm font-medium text-[var(--vz-heading)]">Internal Attendees</label>
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedAttendee}
+                    onChange={(val) => setSelectedAttendee(val)}
+                    className="flex-1"
+                    options={[
+                      { value: '', label: isFetchingUsers ? 'Loading users...' : 'Select User' },
+                      ...(usersData?.data || []).map(u => ({ value: u._id, label: u.email ? `${u.name} (${u.email})` : u.name }))
+                    ]}
+                  />
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    if (!selectedAttendee) return
+                    const user = usersData?.data?.find(u => u._id === selectedAttendee)
+                    if (user && !editMeetingForm.attendees.some(a => (a.userId?._id || a.userId) === user._id)) {
+                      setEditMeetingForm({ 
+                        ...editMeetingForm, 
+                        attendees: [...editMeetingForm.attendees, { userId: user._id, name: user.name, email: user.email }] 
+                      })
+                    }
+                    setSelectedAttendee('')
+                  }}>Add</Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {editMeetingForm.attendees.map(a => {
+                    const attendeeId = a.userId?._id || a.userId;
+                    const attendeeName = a.name || a.userId?.name || usersData?.data?.find(u => u._id === attendeeId)?.name || 'Unknown';
+                    return (
+                      <Badge key={attendeeId} color="primary" className="flex items-center gap-1">
+                        {attendeeName}
+                        <X size={12} className="cursor-pointer" onClick={() => setEditMeetingForm({ ...editMeetingForm, attendees: editMeetingForm.attendees.filter(att => (att.userId?._id || att.userId) !== attendeeId) })} />
+                      </Badge>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
             <Modal.Footer>
               <Button variant="ghost" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>

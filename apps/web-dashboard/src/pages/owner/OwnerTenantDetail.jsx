@@ -500,11 +500,11 @@ export default function OwnerTenantDetail() {
               <tbody className="divide-y divide-[var(--vz-border)]">
                 {payments.map((p) => (
                   <tr key={p._id}>
-                    <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{p.invoiceNumber}</td>
-                    <td className="px-4 py-3 text-[var(--vz-text)]">{p.planName}</td>
-                    <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">₹{p.amount?.toLocaleString()}</td>
-                    <td className="px-4 py-3"><Badge color={p.status === 'completed' ? 'success' : 'warning'}>{p.status}</Badge></td>
-                    <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}</td>
+                    <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">{p.invoice?.number}</td>
+                    <td className="px-4 py-3 text-[var(--vz-text)]">{p.plan?.name}</td>
+                    <td className="px-4 py-3 font-medium text-[var(--vz-heading)]">₹{p.invoice?.amount?.toLocaleString()}</td>
+                    <td className="px-4 py-3"><Badge color={p.payment?.status === 'completed' || p.payment?.status === 'paid' ? 'success' : 'warning'}>{p.payment?.status}</Badge></td>
+                    <td className="px-4 py-3 text-[var(--vz-text-muted)] text-xs">{p.payment?.paidAt ? new Date(p.payment?.paidAt).toLocaleDateString() : '—'}</td>
                   </tr>
                 ))}
               </tbody>

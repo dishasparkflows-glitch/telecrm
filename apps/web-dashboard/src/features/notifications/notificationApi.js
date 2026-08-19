@@ -32,6 +32,13 @@ export const notificationApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: [{ type: 'Notification', id: 'LIST' }],
         }),
+        registerDevice: builder.mutation({
+            query: (data) => ({
+                url: '/notifications/devices',
+                method: 'POST',
+                body: data,
+            }),
+        }),
     }),
 })
 
@@ -40,4 +47,5 @@ export const {
     useMarkAsReadMutation,
     useMarkAllReadMutation,
     useDeleteNotificationMutation,
+    useRegisterDeviceMutation,
 } = notificationApi
