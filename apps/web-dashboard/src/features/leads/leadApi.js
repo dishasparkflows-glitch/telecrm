@@ -206,7 +206,15 @@ export const leadApi = baseApi.injectEndpoints({
             invalidatesTags: [{ type: 'Lead', id: 'LIST' }, { type: 'Lead', id: 'STATS' }],
         }),
         getGoogleIntegrationAuthStatus: builder.query({
-            query: () => '/leads/google/status',
+            query: (integrationType = 'GOOGLE_SHEETS') => `/leads/google/status?type=${integrationType}`,
+            providesTags: ['GoogleAuth'],
+        }),
+        disconnectGoogleIntegration: builder.mutation({
+            query: (connectionId) => ({
+                url: `/integrations/${connectionId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['GoogleAuth', 'Integration'],
         }),
         getGoogleForms: builder.query({
             query: () => '/leads/google/forms',
@@ -303,4 +311,5 @@ export const {
     useSyncGoogleFormMutation,
     useTestGoogleFormMutation,
     useImportGoogleSheetMutation,
+    useDisconnectGoogleIntegrationMutation,
 } = leadApi

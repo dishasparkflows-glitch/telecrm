@@ -15,12 +15,12 @@ function sign(payload, options) {
 
 test('accepts normal access and owner impersonation token purposes', () => {
     const accessToken = sign({
-        userId: 'user-1', tenantId: 'tenant-1', role: 'superadmin', tokenVersion: 2,
+        userId: 'user-1', tenantId: 'tenant-1', role: 'super-admin', tokenVersion: 2,
     }, { issuer: 'sparkcrm-auth', audience: 'sparkcrm-api' });
     assert.equal(verifyGatewayToken(accessToken).tenantId, 'tenant-1');
 
     const impersonationToken = sign({
-        userId: 'owner-1', tenantId: 'tenant-1', role: 'superadmin',
+        userId: 'owner-1', tenantId: 'tenant-1', role: 'super-admin',
         originalRole: 'owner', isImpersonating: true, tokenVersion: 3,
     }, { issuer: 'sparkcrm-tenant-service', audience: 'sparkcrm-tenant-impersonation' });
     assert.equal(verifyGatewayToken(impersonationToken).isImpersonating, true);
@@ -53,7 +53,7 @@ test('tenant impersonation remains restricted to subscribed features', () => {
 
 test('rejects tokens that mix normal and impersonation purposes', () => {
     const wrongAudience = sign({
-        userId: 'owner-1', tenantId: 'tenant-1', role: 'superadmin',
+        userId: 'owner-1', tenantId: 'tenant-1', role: 'super-admin',
         originalRole: 'owner', isImpersonating: true, tokenVersion: 3,
     }, { issuer: 'sparkcrm-auth', audience: 'sparkcrm-api' });
     assert.throws(() => verifyGatewayToken(wrongAudience), /Invalid impersonation token purpose/);

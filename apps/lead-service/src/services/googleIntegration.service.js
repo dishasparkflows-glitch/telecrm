@@ -1,214 +1,88 @@
-const { google } = require('googleapis');
-const { getUserIntegrationConfig } = require('./serviceClients/tenant.client');
-
 /**
- * Fetch Google Tokens from IntegrationCredential
- */
-const getGoogleTokens = async (tenantId, userId) => {
-    const cred = await getUserIntegrationConfig(tenantId, userId, 'google_calendar');
-    if (!cred || !cred.credentials) return null;
-    return cred.credentials;
-};
-
-/**
- * Create a configured OAuth2 client for a user
- */
-const createClientWithTokens = (tokens) => {
-    const client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
-    );
-    client.setCredentials(tokens);
-    return client;
-};
-
-/**
- * --- Google Forms API ---
+ * googleIntegration.service.js (lead-service)
+ *
+ * Previously contained direct googleapis calls with token management.
+ * Now delegates all Google API calls to the centralized integration-service
+ * via integration.client.js.
+ *
+ * @deprecated Direct googleapis methods are no longer used here.
  */
 
-const listForms = async (tokens) => {
-    const client = createClientWithTokens(tokens);
-    const drive = google.drive({ version: 'v3', auth: client });
-    
-    // We search drive for files with mimeType form
-    const response = await drive.files.list({
-        q: "mimeType='application/vnd.google-apps.form' and trashed=false",
-        fields: 'files(id, name, modifiedTime)',
-        orderBy: 'modifiedTime desc',
-        pageSize: 50
-    });
-    
-    return response.data.files || [];
+const { getConnection, googleSheetsApi, googleFormsApi } = require('./serviceClients/integration.client');
+
+/**
+ * Resolve Google account connection for a given user.
+ * Tries user-level first, then falls back to tenant-level.
+ */
+const getGoogleConnection = async (tenantId, userId, integrationType = 'GOOGLE_SHEETS') => {
+    const connection = await getConnection(tenantId, userId, 'GOOGLE', integrationType);
+    return connection || null;
 };
 
-const getFormFields = async (tokens, formId) => {
-    const client = createClientWithTokens(tokens);
-    const forms = google.forms({ version: 'v1', auth: client });
-    
-    const response = await forms.forms.get({ formId });
-    const items = response.data.items || [];
-    
-    const fields = items.filter(item => item.questionItem).map(item => {
-        let type = 'Text';
-        const question = item.questionItem.question;
-        if (question.choiceQuestion) {
-            type = 'Choice';
-        } else if (question.dateQuestion) {
-            type = 'Date';
-        } else if (question.timeQuestion) {
-            type = 'Time';
-        } else if (question.fileUploadQuestion) {
-            type = 'File';
-        }
-        return {
-            id: item.itemId,
-            name: item.title,
-            type,
-            required: item.questionItem.question.required || false
-        };
-    });
-    
-    return fields;
+const getGoogleSheetsConnection = (tenantId, userId) => getGoogleConnection(tenantId, userId, 'GOOGLE_SHEETS');
+const getGoogleFormsConnection = (tenantId, userId) => getGoogleConnection(tenantId, userId, 'GOOGLE_FORMS');
+
+/**
+ * --- Google Forms API (via integration-service) ---
+ */
+
+const listForms = async (tenantId, userId) => {
+    const connection = await getGoogleFormsConnection(tenantId, userId);
+    if (!connection) throw new Error('GOOGLE_FORMS_NOT_CONNECTED');
+    return googleFormsApi.listForms(tenantId, connection.connectionId);
 };
 
-const getFormResponses = async (tokens, formId, lastSyncAt) => {
-    const client = createClientWithTokens(tokens);
-    const forms = google.forms({ version: 'v1', auth: client });
-    
-    const params = { formId };
-    if (lastSyncAt) {
-        params.filter = `timestamp > ${new Date(lastSyncAt).toISOString()}`;
-    }
-    
-    const response = await forms.forms.responses.list(params);
-    return response.data.responses || [];
+const getFormFields = async (tenantId, userId, formId) => {
+    const connection = await getGoogleFormsConnection(tenantId, userId);
+    if (!connection) throw new Error('GOOGLE_FORMS_NOT_CONNECTED');
+    return googleFormsApi.getFields(tenantId, connection.connectionId, formId);
 };
 
-const createFormWatch = async (tokens, formId, watchId) => {
-    const client = createClientWithTokens(tokens);
-    const forms = google.forms({ version: 'v1', auth: client });
-    
-    const response = await forms.forms.watches.create({
-        formId,
-        requestBody: {
-            watch: {
-                target: {
-                    topic: {
-                        topicName: process.env.GOOGLE_PUBSUB_TOPIC // We would need a pub/sub topic for this in real prod
-                    }
-                },
-                eventType: 'RESPONSES'
-            }
-        }
-    });
-    
-    return response.data;
-};
-
-const renewFormWatch = async (tokens, formId, watchId) => {
-    const client = createClientWithTokens(tokens);
-    const forms = google.forms({ version: 'v1', auth: client });
-    
-    const response = await forms.forms.watches.renew({
-        formId,
-        watchId
-    });
-    
-    return response.data;
-};
-
-const deleteFormWatch = async (tokens, formId, watchId) => {
-    const client = createClientWithTokens(tokens);
-    const forms = google.forms({ version: 'v1', auth: client });
-    
-    await forms.forms.watches.delete({
-        formId,
-        watchId
-    });
+const createFormWatch = async (tenantId, userId, formId) => {
+    const connection = await getGoogleFormsConnection(tenantId, userId);
+    if (!connection) throw new Error('GOOGLE_FORMS_NOT_CONNECTED');
+    return googleFormsApi.watchForm(tenantId, connection.connectionId, formId);
 };
 
 /**
- * --- Google Sheets API ---
+ * --- Google Sheets API (via integration-service) ---
  */
 
-const listSpreadsheets = async (tokens) => {
-    const client = createClientWithTokens(tokens);
-    const drive = google.drive({ version: 'v3', auth: client });
-    
-    const response = await drive.files.list({
-        q: "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
-        fields: 'files(id, name, modifiedTime)',
-        orderBy: 'modifiedTime desc',
-        pageSize: 50
-    });
-    
-    return response.data.files || [];
+const listSpreadsheets = async (tenantId, userId) => {
+    const connection = await getGoogleSheetsConnection(tenantId, userId);
+    if (!connection) throw new Error('GOOGLE_SHEETS_NOT_CONNECTED');
+    return googleSheetsApi.listSpreadsheets(tenantId, connection.connectionId);
 };
 
-const listWorksheets = async (tokens, spreadsheetId) => {
-    const client = createClientWithTokens(tokens);
-    const sheets = google.sheets({ version: 'v4', auth: client });
-    
-    const response = await sheets.spreadsheets.get({ spreadsheetId });
-    return response.data.sheets.map(sheet => ({
-        id: sheet.properties.sheetId,
-        name: sheet.properties.title
-    }));
+const listWorksheets = async (tenantId, userId, spreadsheetId) => {
+    const connection = await getGoogleSheetsConnection(tenantId, userId);
+    if (!connection) throw new Error('GOOGLE_SHEETS_NOT_CONNECTED');
+    return googleSheetsApi.listWorksheets(tenantId, connection.connectionId, spreadsheetId);
 };
 
-const previewSheet = async (tokens, spreadsheetId, worksheetName) => {
-    const client = createClientWithTokens(tokens);
-    const sheets = google.sheets({ version: 'v4', auth: client });
-    
-    // Read first 10 rows
-    const range = `${worksheetName}!1:10`;
-    const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-    const rows = response.data.values || [];
-    
-    if (rows.length === 0) return { headers: [], sampleRows: [] };
-    
-    const headers = rows[0];
-    const sampleRows = rows.slice(1);
-    
-    return { headers, sampleRows };
+const previewSheet = async (tenantId, userId, spreadsheetId, worksheetName) => {
+    const connection = await getGoogleSheetsConnection(tenantId, userId);
+    if (!connection) throw new Error('GOOGLE_SHEETS_NOT_CONNECTED');
+    return googleSheetsApi.previewSheet(tenantId, connection.connectionId, spreadsheetId, worksheetName);
 };
 
-const getSheetRows = async (tokens, spreadsheetId, worksheetName) => {
-    const client = createClientWithTokens(tokens);
-    const sheets = google.sheets({ version: 'v4', auth: client });
-    
-    // Read all values
-    const range = `${worksheetName}`;
-    const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-    return response.data.values || [];
-};
-
-const appendSheetRows = async (tokens, spreadsheetId, worksheetName, values) => {
-    const client = createClientWithTokens(tokens);
-    const sheets = google.sheets({ version: 'v4', auth: client });
-    
-    const range = `${worksheetName}`;
-    await sheets.spreadsheets.values.append({
-        spreadsheetId,
-        range,
-        valueInputOption: 'USER_ENTERED',
-        requestBody: { values }
-    });
+const getSheetRows = async (tenantId, userId, spreadsheetId, worksheetName) => {
+    const connection = await getGoogleSheetsConnection(tenantId, userId);
+    if (!connection) throw new Error('GOOGLE_SHEETS_NOT_CONNECTED');
+    // getSheetRows is called with connection details now
+    const { apiClient } = require('./serviceClients/integration.client');
+    const res = await apiClient.get(`/google/sheets/rows`, { params: { tenantId, connectionId: connection.connectionId, spreadsheetId, worksheetName } });
+    return res.data.data || [];
 };
 
 module.exports = {
-    getGoogleTokens,
-    createClientWithTokens,
+    getGoogleSheetsConnection,
+    getGoogleFormsConnection,
     listForms,
     getFormFields,
-    getFormResponses,
     createFormWatch,
-    renewFormWatch,
-    deleteFormWatch,
     listSpreadsheets,
     listWorksheets,
     previewSheet,
     getSheetRows,
-    appendSheetRows
 };

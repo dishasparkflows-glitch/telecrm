@@ -9,6 +9,7 @@ const {
 } = require('../models/LeadSourceModels');
 const { encrypt } = require('../services/leadSourceCrypto.service');
 const { createOrUpdateLeadFromSource } = require('../services/leadIngestion.service');
+const { getConnection } = require('../services/serviceClients/integration.client');
 const {
     verifyMetaSignature,
     extractLeadChanges,
@@ -322,90 +323,147 @@ const saveMapping = asyncHandler(async (req, res) => {
     const {
         id,
         connectionId,
+        provider = 'meta_lead_ads',
         externalPageId,
         externalPageName,
         externalFormId,
         externalFormName,
+        externalSpreadsheetId,
+        externalSpreadsheetName,
+        externalWorksheetId,
+        externalWorksheetName,
         source = 'facebook',
         defaultAssignedTo,
         welcomeTemplateName,
         sendWelcomeMessage = false,
         requireWhatsappConsent = true,
         fieldMapping = {},
+        customFieldMapping = {},
+        importMode = 'new',
+        duplicateHandling = 'update',
         isActive = true,
     } = req.body;
 
     if (!connectionId) throw ApiError.badRequest('connectionId is required');
-    if (!externalPageId) throw ApiError.badRequest('externalPageId is required');
-    if (!externalFormId) throw ApiError.badRequest('externalFormId is required');
     if (sendWelcomeMessage && !welcomeTemplateName) {
         throw ApiError.badRequest('An approved WhatsApp template name is required when welcome messaging is enabled');
     }
 
-    const normalizedPageId = String(externalPageId).trim();
-    const normalizedFormId = String(externalFormId).trim();
-    const connection = await LeadSourceConnection.findOne({
-        _id: connectionId,
-        tenantId,
-        provider: 'meta_lead_ads',
-        isActive: true,
-    });
-    if (!connection) throw ApiError.notFound('Active Meta lead source connection not found');
-
-    const targetFilter = id
-        ? { _id: id, tenantId }
-        : {
+    let connection;
+    if (provider === 'meta_lead_ads') {
+        connection = await LeadSourceConnection.findOne({
+            _id: connectionId,
             tenantId,
-            provider: 'meta_lead_ads',
+            provider,
+            isActive: true,
+        });
+    } else {
+        // google_forms or google_sheets connections are managed by integration-service
+        connection = await getConnection(tenantId, userId, 'GOOGLE', provider.toUpperCase());
+    }
+    if (!connection) throw ApiError.notFound(`Active ${provider} connection not found`);
+
+    let targetFilter = {};
+    let updateFields = {};
+
+    if (provider === 'meta_lead_ads') {
+        if (!externalPageId) throw ApiError.badRequest('externalPageId is required');
+        if (!externalFormId) throw ApiError.badRequest('externalFormId is required');
+        const normalizedPageId = String(externalPageId).trim();
+        const normalizedFormId = String(externalFormId).trim();
+
+        targetFilter = {
+            tenantId,
+            provider,
             externalPageId: normalizedPageId,
             externalFormId: normalizedFormId,
         };
-    const existingMapping = await LeadSourceMapping.findOne(targetFilter);
+        updateFields = {
+            externalPageId: normalizedPageId,
+            externalPageName: externalPageName || '',
+            externalFormId: normalizedFormId,
+            externalFormName: externalFormName || '',
+        };
+    } else if (provider === 'google_forms') {
+        if (!externalFormId) throw ApiError.badRequest('externalFormId is required');
+        const normalizedFormId = String(externalFormId).trim();
+
+        targetFilter = {
+            tenantId,
+            provider,
+            externalFormId: normalizedFormId,
+        };
+        updateFields = {
+            externalFormId: normalizedFormId,
+            externalFormName: externalFormName || '',
+        };
+    } else if (provider === 'google_sheets') {
+        if (!externalSpreadsheetId) throw ApiError.badRequest('externalSpreadsheetId is required');
+        if (!externalWorksheetId) throw ApiError.badRequest('externalWorksheetId is required');
+        const normalizedSpreadsheetId = String(externalSpreadsheetId).trim();
+        const normalizedWorksheetId = String(externalWorksheetId).trim();
+
+        targetFilter = {
+            tenantId,
+            provider,
+            externalSpreadsheetId: normalizedSpreadsheetId,
+            externalWorksheetId: normalizedWorksheetId,
+        };
+        updateFields = {
+            externalSpreadsheetId: normalizedSpreadsheetId,
+            externalSpreadsheetName: externalSpreadsheetName || '',
+            externalWorksheetId: normalizedWorksheetId,
+            externalWorksheetName: externalWorksheetName || '',
+        };
+    } else {
+        throw ApiError.badRequest(`Unsupported provider: ${provider}`);
+    }
+
+    const existingMapping = await LeadSourceMapping.findOne(id ? { _id: id, tenantId } : targetFilter);
     if (id && !existingMapping) throw ApiError.notFound('Lead source mapping not found');
 
     if (isActive) {
         const conflict = await LeadSourceMapping.findOne({
-            provider: 'meta_lead_ads',
-            externalPageId: normalizedPageId,
-            externalFormId: normalizedFormId,
+            ...targetFilter,
+            tenantId: { $exists: true },
             isActive: true,
             ...(existingMapping ? { _id: { $ne: existingMapping._id } } : {}),
         }).select('_id tenantId connectionId');
         if (conflict) {
-            throw ApiError.conflict('This Meta Page/Form is already assigned to another active mapping');
+            throw ApiError.conflict(`This ${provider} configuration is already assigned to another active mapping`);
         }
     }
 
     let mapping;
     try {
         mapping = await LeadSourceMapping.findOneAndUpdate(
-        existingMapping ? { _id: existingMapping._id, tenantId } : targetFilter,
-        {
-            $set: {
-                tenantId,
-                branchId: branchId && branchId !== 'all' ? branchId : null,
-                connectionId,
-                provider: 'meta_lead_ads',
-                externalPageId: normalizedPageId,
-                externalPageName: externalPageName || '',
-                externalFormId: normalizedFormId,
-                externalFormName: externalFormName || '',
-                source,
-                defaultAssignedTo: defaultAssignedTo || null,
-                welcomeTemplateName: welcomeTemplateName || '',
-                sendWelcomeMessage,
-                requireWhatsappConsent,
-                fieldMapping,
-                isActive,
-                updatedBy: userId || null,
+            existingMapping ? { _id: existingMapping._id, tenantId } : targetFilter,
+            {
+                $set: {
+                    tenantId,
+                    branchId: branchId && branchId !== 'all' ? branchId : null,
+                    connectionId,
+                    provider,
+                    source,
+                    defaultAssignedTo: defaultAssignedTo || null,
+                    welcomeTemplateName: welcomeTemplateName || '',
+                    sendWelcomeMessage,
+                    requireWhatsappConsent,
+                    fieldMapping,
+                    customFieldMapping,
+                    importMode,
+                    duplicateHandling,
+                    isActive,
+                    updatedBy: userId || null,
+                    ...updateFields
+                },
+                $setOnInsert: { createdBy: userId || null },
             },
-            $setOnInsert: { createdBy: userId || null },
-        },
-        { upsert: !existingMapping, new: true, setDefaultsOnInsert: true }
+            { upsert: !existingMapping, new: true, setDefaultsOnInsert: true }
         );
     } catch (error) {
         if (error?.code === 11000) {
-            throw ApiError.conflict('This Meta Page/Form is already assigned to another active mapping');
+            throw ApiError.conflict(`This ${provider} configuration is already assigned to another active mapping`);
         }
         throw error;
     }
@@ -413,11 +471,9 @@ const saveMapping = asyncHandler(async (req, res) => {
     if (mapping.isActive) {
         await InboundLeadEvent.updateMany(
             {
-                provider: 'meta_lead_ads',
-                externalPageId: normalizedPageId,
-                externalFormId: normalizedFormId,
-                status: 'unmapped',
+                ...targetFilter,
                 tenantId: null,
+                status: 'unmapped',
             },
             {
                 $set: {
@@ -432,7 +488,7 @@ const saveMapping = asyncHandler(async (req, res) => {
         );
     }
 
-    ApiResponse.success(res, mapping, 'Lead source mapping saved');
+    return res.json(new ApiResponse(existingMapping ? 200 : 201, mapping, 'Mapping saved successfully'));
 });
 
 const getWebhookConfig = asyncHandler(async (_req, res) => {

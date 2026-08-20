@@ -106,8 +106,8 @@ export const meetingApi = baseApi.injectEndpoints({
                 params: { date, duration }
             }),
         }),
-        getGoogleAuthUrl: builder.query({
-            query: () => '/meetings/google/auth',
+        getGoogleAuthUrl: builder.mutation({
+            query: (integrationType = 'GOOGLE_CALENDAR') => `/meetings/google/auth?integrationType=${integrationType}`,
         }),
         getGoogleAuthStatus: builder.query({
             query: () => '/meetings/google/status',

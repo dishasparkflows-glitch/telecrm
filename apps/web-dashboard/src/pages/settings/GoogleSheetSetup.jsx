@@ -22,7 +22,8 @@ export default function GoogleSheetSetup({
     loadingWorksheets,
     loadingPreview,
     activeMapping,
-    customFields
+    customFields,
+    connectionId
 }) {
     const toast = useToast();
     const [saveMapping, { isLoading: saving }] = useSaveLeadSourceMappingMutation();
@@ -51,6 +52,7 @@ export default function GoogleSheetSetup({
         if (!selectedSpreadsheetId || !selectedWorksheetId) return toast('Please select a spreadsheet and worksheet', 'error');
         try {
             await saveMapping({
+                connectionId,
                 source: 'google_sheets',
                 provider: 'google_sheets',
                 externalSpreadsheetId: selectedSpreadsheetId,
@@ -102,7 +104,7 @@ export default function GoogleSheetSetup({
                         <label className="block text-sm font-medium text-[var(--vz-text-muted)] mb-1">Spreadsheet</label>
                         <Select
                             value={selectedSpreadsheetId}
-                            onChange={(e) => onSelectSpreadsheet(e.target.value)}
+                            onChange={(val) => onSelectSpreadsheet(val)}
                             options={[
                                 { label: 'Select a spreadsheet...', value: '' },
                                 ...spreadsheets.map(s => ({ label: s.name, value: s.id }))
@@ -113,7 +115,7 @@ export default function GoogleSheetSetup({
                         <label className="block text-sm font-medium text-[var(--vz-text-muted)] mb-1">Worksheet</label>
                         <Select
                             value={selectedWorksheetId}
-                            onChange={(e) => onSelectWorksheet(e.target.value)}
+                            onChange={(val) => onSelectWorksheet(val)}
                             options={[
                                 { label: 'Select a worksheet...', value: '' },
                                 ...(worksheets || []).map(w => ({ label: w.name, value: w.name })) // Use name instead of ID since sheets API uses ranges like 'Sheet1!A1'
@@ -163,7 +165,7 @@ export default function GoogleSheetSetup({
                                 <div className="text-sm">{crmField.label}</div>
                                 <Select
                                     value={fieldMapping[crmField.value] || ''}
-                                    onChange={(e) => setFieldMapping(prev => ({ ...prev, [crmField.value]: e.target.value }))}
+                                    onChange={(val) => setFieldMapping(prev => ({ ...prev, [crmField.value]: val }))}
                                     options={[
                                         { label: '-- Ignore --', value: '' },
                                         ...headers.map(h => ({ label: h, value: h }))
@@ -182,7 +184,7 @@ export default function GoogleSheetSetup({
                                         <div className="text-sm">{customField.label}</div>
                                         <Select
                                             value={customMapping[customField.name] || ''}
-                                            onChange={(e) => setCustomMapping(prev => ({ ...prev, [customField.name]: e.target.value }))}
+                                            onChange={(val) => setCustomMapping(prev => ({ ...prev, [customField.name]: val }))}
                                             options={[
                                                 { label: '-- Ignore --', value: '' },
                                                 ...headers.map(h => ({ label: h, value: h }))
@@ -200,7 +202,7 @@ export default function GoogleSheetSetup({
                             <div className="text-sm">Duplicate Handling</div>
                             <Select
                                 value={leadConfig.duplicateHandling}
-                                onChange={(e) => setLeadConfig(prev => ({ ...prev, duplicateHandling: e.target.value }))}
+                                onChange={(val) => setLeadConfig(prev => ({ ...prev, duplicateHandling: val }))}
                                 options={[
                                     { label: 'Update Existing Lead', value: 'update' },
                                     { label: 'Create Always', value: 'create' },

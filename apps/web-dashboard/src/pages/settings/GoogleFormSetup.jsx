@@ -21,7 +21,8 @@ export default function GoogleFormSetup({
     loadingForms, 
     loadingFields,
     activeMapping,
-    customFields
+    customFields,
+    connectionId
 }) {
     const toast = useToast();
     const [activateForm, { isLoading: activating }] = useActivateGoogleFormMutation();
@@ -53,6 +54,7 @@ export default function GoogleFormSetup({
         if (!selectedFormId) return toast('Please select a form first', 'error');
         try {
             await saveMapping({
+                connectionId,
                 source: 'google_forms',
                 provider: 'google_forms',
                 externalFormId: selectedFormId,
@@ -133,7 +135,7 @@ export default function GoogleFormSetup({
                 </div>
                 <Select
                     value={selectedFormId}
-                    onChange={(e) => onSelectForm(e.target.value)}
+                    onChange={(val) => onSelectForm(val)}
                     options={[
                         { label: 'Select a form...', value: '' },
                         ...forms.map(f => ({ label: f.name, value: f.id }))
@@ -156,10 +158,10 @@ export default function GoogleFormSetup({
                                 <div className="text-sm">{crmField.label}</div>
                                 <Select
                                     value={fieldMapping[crmField.value] || ''}
-                                    onChange={(e) => setFieldMapping(prev => ({ ...prev, [crmField.value]: e.target.value }))}
+                                    onChange={(val) => setFieldMapping(prev => ({ ...prev, [crmField.value]: val }))}
                                     options={[
                                         { label: '-- Ignore --', value: '' },
-                                        ...fields.map(f => ({ label: f.name, value: f.name }))
+                                        ...fields.map(f => ({ label: f.name, value: f.id }))
                                     ]}
                                 />
                             </div>
@@ -175,10 +177,10 @@ export default function GoogleFormSetup({
                                         <div className="text-sm">{customField.label}</div>
                                         <Select
                                             value={customMapping[customField.name] || ''}
-                                            onChange={(e) => setCustomMapping(prev => ({ ...prev, [customField.name]: e.target.value }))}
+                                            onChange={(val) => setCustomMapping(prev => ({ ...prev, [customField.name]: val }))}
                                             options={[
                                                 { label: '-- Ignore --', value: '' },
-                                                ...fields.map(f => ({ label: f.name, value: f.name }))
+                                                ...fields.map(f => ({ label: f.name, value: f.id }))
                                             ]}
                                         />
                                     </div>
@@ -193,7 +195,7 @@ export default function GoogleFormSetup({
                             <div className="text-sm">Duplicate Handling</div>
                             <Select
                                 value={leadConfig.duplicateHandling}
-                                onChange={(e) => setLeadConfig(prev => ({ ...prev, duplicateHandling: e.target.value }))}
+                                onChange={(val) => setLeadConfig(prev => ({ ...prev, duplicateHandling: val }))}
                                 options={[
                                     { label: 'Update Existing Lead', value: 'update' },
                                     { label: 'Create Always', value: 'create' },
@@ -251,3 +253,5 @@ export default function GoogleFormSetup({
         </div>
     );
 }
+
+console.log("GoogleFormSetup rendered");

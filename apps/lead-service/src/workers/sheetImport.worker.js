@@ -2,7 +2,7 @@ const { Worker, Queue } = require('bullmq');
 const IORedis = require('ioredis');
 const { env } = require('@sparkcrm/shared-config');
 const { LeadSourceMapping, InboundLeadEvent } = require('../models/LeadSourceModels');
-const googleIntegrationService = require('../services/googleIntegration.service');
+const { getConnection, apiClient } = require('../services/serviceClients/integration.client');
 const { createOrUpdateLeadFromSource } = require('../services/leadIngestion.service');
 const crypto = require('crypto');
 
@@ -63,10 +63,13 @@ const sheetImportWorker = new Worker('SheetImportQueue', async (job) => {
     const mapping = await LeadSourceMapping.findById(mappingId);
     if (!mapping) throw new Error('Mapping not found');
     
-    const tokens = await googleIntegrationService.getGoogleTokens(tenantId, userId);
-    if (!tokens) throw new Error('Google connection not found');
-    
-    const rows = await googleIntegrationService.getSheetRows(tokens, spreadsheetId, worksheetId);
+    const connection = await getConnection(tenantId, userId, 'GOOGLE', 'GOOGLE_SHEETS');
+    if (!connection) throw new Error('Google Sheets connection not found');
+
+    const rowRes = await apiClient.get('/google/sheets/rows', {
+        params: { tenantId, connectionId: connection.connectionId, spreadsheetId, worksheetName: worksheetId }
+    });
+    const rows = rowRes.data.data || [];
     if (!rows || rows.length <= 1) return { imported: 0, skipped: 0, errors: 0 };
     
     const headers = rows[0];

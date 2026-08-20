@@ -40,6 +40,8 @@ import {
   useGetGoogleSpreadsheetsQuery,
   useLazyGetGoogleWorksheetsQuery,
   useLazyPreviewGoogleSheetQuery,
+  useTestGoogleFormMutation,
+  useDisconnectGoogleIntegrationMutation,
 } from '../../features/leads/leadApi'
 import { 
   useGetCustomFieldsQuery, 
@@ -217,7 +219,7 @@ export default function Settings() {
 
   // Google Integration
   const { data: googleStatusResp } = meetingApi.endpoints.getGoogleAuthStatus.useQuery(undefined, { skip: activeTab !== 'integrations' })
-  const [getGoogleAuthUrl] = meetingApi.endpoints.getGoogleAuthUrl.useLazyQuery()
+  const [getGoogleAuthUrl] = meetingApi.endpoints.getGoogleAuthUrl.useMutation()
   const [disconnectGoogle, { isLoading: disconnectingGoogle }] = meetingApi.endpoints.disconnectGoogle.useMutation()
   
   const googleStatus = googleStatusResp?.data || { connected: false }
@@ -233,12 +235,14 @@ export default function Settings() {
   const [leadSourceTab, setLeadSourceTab] = useState('meta_lead_ads')
 
   // Google Forms & Sheets Queries
-  const { data: googleAuthStatusResp } = useGetGoogleIntegrationAuthStatusQuery(undefined, { skip: activeTab !== 'lead_sources' })
+  const currentGoogleIntegrationType = leadSourceTab === 'google_forms' ? 'GOOGLE_FORMS' : 'GOOGLE_SHEETS'
+  const { data: googleAuthStatusResp } = useGetGoogleIntegrationAuthStatusQuery(currentGoogleIntegrationType, { skip: activeTab !== 'lead_sources' })
+  const [disconnectGoogleIntegration, { isLoading: disconnectingGoogleIntegration }] = useDisconnectGoogleIntegrationMutation()
   const { data: googleFormsResp, isFetching: googleFormsLoading, refetch: refetchGoogleForms } = useGetGoogleFormsQuery(undefined, { skip: activeTab !== 'lead_sources' || leadSourceTab !== 'google_forms' || !googleAuthStatusResp?.data?.connected })
   const { data: googleSheetsResp, isFetching: googleSheetsLoading, refetch: refetchGoogleSheets } = useGetGoogleSpreadsheetsQuery(undefined, { skip: activeTab !== 'lead_sources' || leadSourceTab !== 'google_sheets' || !googleAuthStatusResp?.data?.connected })
-  const [getGoogleFormFields, { isFetching: googleFormFieldsLoading }] = useLazyGetGoogleFormFieldsQuery()
-  const [getGoogleWorksheets, { isFetching: googleWorksheetsLoading }] = useLazyGetGoogleWorksheetsQuery()
-  const [previewGoogleSheet, { isFetching: previewGoogleSheetLoading }] = useLazyPreviewGoogleSheetQuery()
+  const [getGoogleFormFields, { data: googleFormFieldsResp, isFetching: googleFormFieldsLoading }] = useLazyGetGoogleFormFieldsQuery()
+  const [getGoogleWorksheets, { data: googleWorksheetsResp, isFetching: googleWorksheetsLoading }] = useLazyGetGoogleWorksheetsQuery()
+  const [previewGoogleSheet, { data: previewDataResp, isFetching: previewGoogleSheetLoading }] = useLazyPreviewGoogleSheetQuery()
   
   const [selectedGoogleForm, setSelectedGoogleForm] = useState('')
   const [selectedGoogleSheet, setSelectedGoogleSheet] = useState('')
@@ -1301,12 +1305,12 @@ export default function Settings() {
                               <CheckCircle2 size={14} className="mr-1.5" /> 
                               Connected: <span className="font-bold ml-1">{googleAuthStatusResp.data.email || 'Google Account'}</span>
                             </span>
-                            <Button size="sm" variant="soft-danger" onClick={() => disconnectGoogle().unwrap().then(() => toast('Google disconnected', 'success'))} disabled={disconnectingGoogle}>
+                            <Button size="sm" variant="soft-danger" onClick={() => disconnectGoogleIntegration(googleAuthStatusResp.data.connectionId).unwrap().then(() => toast('Google disconnected', 'success'))} disabled={disconnectingGoogleIntegration}>
                               Disconnect
                             </Button>
                           </div>
                         ) : (
-                          <Button size="sm" variant="soft-primary" onClick={() => getGoogleAuthUrl().unwrap().then(res => window.location.href = res.data.url)}>
+                          <Button size="sm" variant="soft-primary" onClick={() => getGoogleAuthUrl('GOOGLE_FORMS').unwrap().then(res => window.location.href = res.data.url)}>
                             <ExternalLink size={14} className="mr-1" /> Connect Google Account
                           </Button>
                         )}
@@ -1316,10 +1320,15 @@ export default function Settings() {
                       <GoogleFormSetup 
                         forms={googleFormsResp?.data || []}
                         fields={googleFormFieldsResp?.data || []}
+                        selectedFormId={selectedGoogleForm}
+                        loadingForms={googleFormsLoading}
+                        loadingFields={googleFormFieldsLoading}
+                        activeMapping={leadSourceMappingsResp?.data?.find(m => m.provider === 'google_forms' && m.externalFormId === selectedGoogleForm)}
+                        customFields={customFieldsResp?.data || []}
+                        connectionId={googleAuthStatusResp?.data?.connectionId}
                         onSelectForm={(id) => {
-                           // we can use a local state in Settings or let the component handle it, but wait, the component expects selectedFormId to be passed down!
-                           // Wait, earlier the selectedFormId was not maintained in Settings state for forms. 
-                           // I should probably just render it!
+                          setSelectedGoogleForm(id);
+                          if (id) getGoogleFormFields(id);
                         }}
                       />
                     )}
@@ -1340,19 +1349,39 @@ export default function Settings() {
                               <CheckCircle2 size={14} className="mr-1.5" /> 
                               Connected: <span className="font-bold ml-1">{googleAuthStatusResp.data.email || 'Google Account'}</span>
                             </span>
-                            <Button size="sm" variant="soft-danger" onClick={() => disconnectGoogle().unwrap().then(() => toast('Google disconnected', 'success'))} disabled={disconnectingGoogle}>
+                            <Button size="sm" variant="soft-danger" onClick={() => disconnectGoogleIntegration(googleAuthStatusResp.data.connectionId).unwrap().then(() => toast('Google disconnected', 'success'))} disabled={disconnectingGoogleIntegration}>
                               Disconnect
                             </Button>
                           </div>
                         ) : (
-                          <Button size="sm" variant="soft-primary" onClick={() => getGoogleAuthUrl().unwrap().then(res => window.location.href = res.data.url)}>
+                          <Button size="sm" variant="soft-primary" onClick={() => getGoogleAuthUrl('GOOGLE_SHEETS').unwrap().then(res => window.location.href = res.data.url)}>
                             <ExternalLink size={14} className="mr-1" /> Connect Google Account
                           </Button>
                         )}
                       </div>
                     </Card.Header>
                     {googleAuthStatusResp?.data?.connected && (
-                      <GoogleSheetSetup />
+                      <GoogleSheetSetup 
+                        spreadsheets={googleSheetsResp?.data || []}
+                        worksheets={googleWorksheetsResp?.data || []}
+                        selectedSpreadsheetId={selectedGoogleSheet}
+                        selectedWorksheetId={selectedGoogleWorksheet}
+                        previewData={previewDataResp?.data || null}
+                        loadingSpreadsheets={googleSheetsLoading}
+                        loadingWorksheets={googleWorksheetsLoading}
+                        loadingPreview={previewGoogleSheetLoading}
+                        activeMapping={leadSourceMappingsResp?.data?.find(m => m.provider === 'google_sheets' && m.externalSpreadsheetId === selectedGoogleSheet)}
+                        customFields={customFieldsResp?.data || []}
+                        connectionId={googleAuthStatusResp?.data?.connectionId}
+                        onSelectSpreadsheet={(id) => {
+                          setSelectedGoogleSheet(id);
+                          if (id) getGoogleWorksheets(id);
+                        }}
+                        onSelectWorksheet={(id) => {
+                          setSelectedGoogleWorksheet(id);
+                          if (selectedGoogleSheet && id) previewGoogleSheet({ spreadsheetId: selectedGoogleSheet, worksheetName: id });
+                        }}
+                      />
                     )}
                   </Card>
                 )}

@@ -14,6 +14,7 @@ const services = [
     'form-service',
     'meeting-service',
     'upload-service',
+    'integration-service',
 ];
 
 console.log('Starting all SparkCRM services in watch mode...\n');

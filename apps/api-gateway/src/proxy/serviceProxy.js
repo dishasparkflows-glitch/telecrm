@@ -153,8 +153,13 @@ const SERVICE_ROUTES = {
         target: env.SERVICES.TENANT,
     },
     '/api/integrations': {
-        target: env.SERVICES.TENANT,
-        minRole: ROLES.ADMIN,
+        target: env.SERVICES.INTEGRATION,
+        publicPaths: [
+            // Google redirects back to this with ?code=... — no auth token in browser redirect
+            { method: 'GET', pattern: /^\/api\/integrations\/oauth\/callback\/[a-z]+\/?$/ },
+            // OAuth authorization is initiated by top-level browser redirect, so no auth token is sent in headers
+            { method: 'GET', pattern: /^\/api\/integrations\/oauth\/authorize\/?$/ },
+        ],
     },
     '/api/owner': {
         target: env.SERVICES.TENANT,
@@ -191,6 +196,7 @@ const TARGET_AUDIENCES = new Map([
     [env.SERVICES.FORM, 'form-service'],
     [env.SERVICES.MEETING, 'meeting-service'],
     [env.SERVICES.UPLOAD, 'upload-service'],
+    [env.SERVICES.INTEGRATION, 'integration-service'],
 ]);
 
 /**
@@ -206,7 +212,7 @@ const isPublicRequest = (config, req) => {
 };
 
 const createGatewayServiceHeaders = (config, audience, req) => {
-    if (config.public || isPublicRequest(config, req)) return null;
+    if (!config || config.public || isPublicRequest(config, req)) return null;
 
     const permissions = req.headers['x-user-permissions'];
     return createServiceHeaders({

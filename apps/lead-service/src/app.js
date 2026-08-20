@@ -52,8 +52,8 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
-app.use('/api/leads', requireProtectedLeadRequest, leadRoutes);
 app.use('/api/leads/google', requireProtectedLeadRequest, require('./routes/googleIntegration.routes'));
+app.use('/api/leads', requireProtectedLeadRequest, leadRoutes);
 app.use('/api/follow-ups', requireProtectedLeadRequest, followupRoutes);
 app.use('/api/tasks', requireProtectedLeadRequest, taskRoutes);
 
