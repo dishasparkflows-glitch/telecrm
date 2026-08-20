@@ -13,24 +13,28 @@ const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_REDIRECT_URI
 );
 
-const SCOPES = [
+const DEFAULT_SCOPES = [
     'https://www.googleapis.com/auth/calendar.freebusy',
     'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/calendar.calendarlist.readonly'
+    'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
 ];
 
 /**
  * Generate Authorization URL
  */
-function getAuthorizationUrl(tenantId, userId) {
+function getAuthorizationUrl(tenantId, userId, requestedScopes = []) {
     // Generate state with tenantId and userId to prevent CSRF and identify user on callback
     const state = Buffer.from(JSON.stringify({ tenantId, userId, nonce: crypto.randomBytes(16).toString('hex') })).toString('base64');
     
+    // Combine DEFAULT_SCOPES with any requestedScopes (e.g. for Forms or Sheets), removing duplicates
+    const finalScopes = [...new Set([...DEFAULT_SCOPES, ...requestedScopes])];
+
     return oauth2Client.generateAuthUrl({
         access_type: 'offline',
         prompt: 'consent', // Force to get refresh token
-        scope: SCOPES,
-        state: state
+        scope: finalScopes,
+        state: state,
+        include_granted_scopes: true // Incremental authorization
     });
 }
 

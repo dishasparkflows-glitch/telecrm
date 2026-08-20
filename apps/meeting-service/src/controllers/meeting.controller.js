@@ -1,6 +1,6 @@
 const { Meeting, BookingLink } = require('../models/Meeting');
 const { withBookingLock } = require('../models/BookingLock');
-const { IntegrationCredential, encrypt, decrypt } = require('../../../tenant-service/src/models/IntegrationCredential');
+const { getUserIntegrationConfig, saveUserIntegrationConfig, deleteUserIntegrationConfig } = require('../services/serviceClients/tenant.client');
 const googleCalendarService = require('../services/googleCalendar.service');
 const {
     pickMeetingCreateInput,
@@ -622,7 +622,9 @@ const deleteBookingLink = asyncHandler(async (req, res) => {
 const googleAuthUrl = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const userId = req.headers['x-user-id'];
-    const url = googleCalendarService.getAuthorizationUrl(tenantId, userId);
+    const scopesQuery = req.query.scopes;
+    const requestedScopes = scopesQuery ? scopesQuery.split(',').map(s => s.trim()) : [];
+    const url = googleCalendarService.getAuthorizationUrl(tenantId, userId, requestedScopes);
     ApiResponse.success(res, { url });
 });
 
@@ -652,48 +654,33 @@ const googleAuthCallback = asyncHandler(async (req, res) => {
         connected: 'true'
     };
     
-    // Convert to map of encrypted strings
-    const encryptedCredentials = {};
-    for (const [key, value] of Object.entries(credentialData)) {
-        if (value) encryptedCredentials[key] = encrypt(String(value));
-    }
-
-    await IntegrationCredential.findOneAndUpdate(
-        { tenantId, userId, provider: 'google_calendar' },
-        {
-            $set: {
-                credentials: encryptedCredentials,
-                isActive: true,
-                configuredBy: userId,
-            }
+    await saveUserIntegrationConfig(tenantId, userId, 'google_calendar', {
+        credentials: {
+            refresh_token: tokens.refresh_token,
+            calendarId,
+            email,
+            connected: 'true'
         },
-        { upsert: true, new: true }
-    );
+        isActive: true,
+        label: email
+    });
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     res.redirect(`${frontendUrl}/settings`);
 });
 
-const getGoogleTokens = async (tenantId, userId) => {
-    const cred = await IntegrationCredential.findOne({ tenantId, userId, provider: 'google_calendar', isActive: true });
-    if (!cred || !cred.credentials) return null;
-    const tokens = {};
-    for (const [key, value] of cred.credentials.entries()) {
-        tokens[key] = decrypt(value);
-    }
-    return tokens;
-};
+
 
 const googleAuthStatus = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const userId = req.headers['x-user-id'];
-    const tokens = await getGoogleTokens(tenantId, userId);
+    const cred = await getUserIntegrationConfig(tenantId, userId, 'google_calendar');
     
-    if (tokens && tokens.connected === 'true') {
+    if (cred && cred.credentials?.connected === 'true') {
         ApiResponse.success(res, {
             connected: true,
-            email: tokens.email,
-            calendarId: tokens.calendarId
+            email: cred.credentials.email,
+            calendarId: cred.credentials.calendarId
         });
     } else {
         ApiResponse.success(res, { connected: false });
@@ -703,7 +690,7 @@ const googleAuthStatus = asyncHandler(async (req, res) => {
 const googleDisconnect = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const userId = req.headers['x-user-id'];
-    await IntegrationCredential.findOneAndDelete({ tenantId, userId, provider: 'google_calendar' });
+    await deleteUserIntegrationConfig(tenantId, userId, 'google_calendar');
     ApiResponse.success(res, null, 'Google Calendar disconnected');
 });
 

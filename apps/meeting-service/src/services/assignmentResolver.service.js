@@ -1,6 +1,7 @@
 const { ApiError } = require('@sparkcrm/shared-utils');
 const { Meeting } = require('../models/Meeting');
 const googleCalendarService = require('./googleCalendar.service');
+const { getUserIntegrationConfig } = require('./serviceClients/tenant.client');
 
 const resolveBookingHost = async (bookingLink, lead, scheduledAt, requestedEnd, tenantId) => {
     let resolvedHostId = null;
@@ -36,13 +37,9 @@ const resolveBookingHost = async (bookingLink, lead, scheduledAt, requestedEnd, 
                     // We need a helper to get tokens. Let's assume a getTokensHelper exists or we fetch from DB here.
                     // For now, we rely on the main controller to do final validation. 
                     // To do it right, we should check FreeBusy here.
-                    const { IntegrationCredential, decrypt } = require('../../../tenant-service/src/models/IntegrationCredential');
-                    const cred = await IntegrationCredential.findOne({ tenantId, userId: candidateId, provider: 'google_calendar', isActive: true });
+                    const cred = await getUserIntegrationConfig(tenantId, candidateId, 'google_calendar');
                     if (cred && cred.credentials) {
-                        const tokens = {};
-                        for (const [key, value] of cred.credentials.entries()) {
-                            tokens[key] = decrypt(value);
-                        }
+                        const tokens = cred.credentials;
                         if (tokens.refresh_token) {
                             try {
                                 const busySlots = await googleCalendarService.getFreeBusy(tokens, tokens.calendarId, scheduledAt, requestedEnd, bookingLink.availability.timezone);

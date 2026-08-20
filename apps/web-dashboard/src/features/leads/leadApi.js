@@ -205,6 +205,59 @@ export const leadApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: [{ type: 'Lead', id: 'LIST' }, { type: 'Lead', id: 'STATS' }],
         }),
+        getGoogleIntegrationAuthStatus: builder.query({
+            query: () => '/leads/google/status',
+        }),
+        getGoogleForms: builder.query({
+            query: () => '/leads/google/forms',
+        }),
+        getGoogleFormFields: builder.query({
+            query: (formId) => `/leads/google/forms/${formId}/fields`,
+        }),
+        getGoogleSpreadsheets: builder.query({
+            query: () => '/leads/google/sheets',
+        }),
+        getGoogleWorksheets: builder.query({
+            query: (spreadsheetId) => `/leads/google/sheets/${spreadsheetId}/worksheets`,
+        }),
+        previewGoogleSheet: builder.query({
+            query: ({ spreadsheetId, worksheetName }) => `/leads/google/sheets/${spreadsheetId}/${worksheetName}/preview`,
+        }),
+        activateGoogleForm: builder.mutation({
+            query: (formId) => ({
+                url: `/leads/google/forms/${formId}/activate`,
+                method: 'POST',
+            }),
+            invalidatesTags: [{ type: 'Lead', id: 'SOURCE_MAPPINGS' }],
+        }),
+        pauseGoogleForm: builder.mutation({
+            query: (formId) => ({
+                url: `/leads/google/forms/${formId}/pause`,
+                method: 'POST',
+            }),
+            invalidatesTags: [{ type: 'Lead', id: 'SOURCE_MAPPINGS' }],
+        }),
+        syncGoogleForm: builder.mutation({
+            query: (formId) => ({
+                url: `/leads/google/forms/${formId}/sync`,
+                method: 'POST',
+            }),
+            invalidatesTags: [{ type: 'Lead', id: 'LIST' }, { type: 'Lead', id: 'STATS' }, { type: 'Lead', id: 'SOURCE_MAPPINGS' }],
+        }),
+        testGoogleForm: builder.mutation({
+            query: (formId) => ({
+                url: `/leads/google/forms/${formId}/test`,
+                method: 'POST',
+            }),
+        }),
+        importGoogleSheet: builder.mutation({
+            query: (data) => ({
+                url: `/leads/google/sheets/import`,
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: [{ type: 'Lead', id: 'LIST' }, { type: 'Lead', id: 'STATS' }, { type: 'Lead', id: 'SOURCE_MAPPINGS' }],
+        }),
     }),
 })
 
@@ -239,4 +292,15 @@ export const {
     useAddNoteMutation,
     useAssignLeadMutation,
     useArchiveLeadMutation,
+    useGetGoogleIntegrationAuthStatusQuery,
+    useGetGoogleFormsQuery,
+    useLazyGetGoogleFormFieldsQuery,
+    useGetGoogleSpreadsheetsQuery,
+    useLazyGetGoogleWorksheetsQuery,
+    useLazyPreviewGoogleSheetQuery,
+    useActivateGoogleFormMutation,
+    usePauseGoogleFormMutation,
+    useSyncGoogleFormMutation,
+    useTestGoogleFormMutation,
+    useImportGoogleSheetMutation,
 } = leadApi

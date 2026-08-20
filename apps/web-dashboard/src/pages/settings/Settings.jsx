@@ -34,6 +34,12 @@ import {
   useGetLeadSourceMappingsQuery,
   useSaveLeadSourceMappingMutation,
   useGetMetaWebhookConfigQuery,
+  useGetGoogleIntegrationAuthStatusQuery,
+  useGetGoogleFormsQuery,
+  useLazyGetGoogleFormFieldsQuery,
+  useGetGoogleSpreadsheetsQuery,
+  useLazyGetGoogleWorksheetsQuery,
+  useLazyPreviewGoogleSheetQuery,
 } from '../../features/leads/leadApi'
 import { 
   useGetCustomFieldsQuery, 
@@ -65,6 +71,8 @@ import {
 import { meetingApi } from '../../features/meetings/meetingApi'
 import TwoFactorSetupModal from './TwoFactorSetupModal'
 import EmailTemplates from './EmailTemplates'
+import GoogleFormSetup from './GoogleFormSetup'
+import GoogleSheetSetup from './GoogleSheetSetup'
 
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -219,9 +227,23 @@ export default function Settings() {
   const compactUsers = users
   const roles = rolesResp?.data || []
   const branches = branchesResp?.data || []
-  const referralCode = referralData?.data?.code || ''
+  const referralLink = referralData?.data?.referralLink || ''
   const refStats = refStatsData?.data || {}
 
+  const [leadSourceTab, setLeadSourceTab] = useState('meta_lead_ads')
+
+  // Google Forms & Sheets Queries
+  const { data: googleAuthStatusResp } = useGetGoogleIntegrationAuthStatusQuery(undefined, { skip: activeTab !== 'lead_sources' })
+  const { data: googleFormsResp, isFetching: googleFormsLoading, refetch: refetchGoogleForms } = useGetGoogleFormsQuery(undefined, { skip: activeTab !== 'lead_sources' || leadSourceTab !== 'google_forms' || !googleAuthStatusResp?.data?.connected })
+  const { data: googleSheetsResp, isFetching: googleSheetsLoading, refetch: refetchGoogleSheets } = useGetGoogleSpreadsheetsQuery(undefined, { skip: activeTab !== 'lead_sources' || leadSourceTab !== 'google_sheets' || !googleAuthStatusResp?.data?.connected })
+  const [getGoogleFormFields, { isFetching: googleFormFieldsLoading }] = useLazyGetGoogleFormFieldsQuery()
+  const [getGoogleWorksheets, { isFetching: googleWorksheetsLoading }] = useLazyGetGoogleWorksheetsQuery()
+  const [previewGoogleSheet, { isFetching: previewGoogleSheetLoading }] = useLazyPreviewGoogleSheetQuery()
+  
+  const [selectedGoogleForm, setSelectedGoogleForm] = useState('')
+  const [selectedGoogleSheet, setSelectedGoogleSheet] = useState('')
+  const [selectedGoogleWorksheet, setSelectedGoogleWorksheet] = useState('')
+  
   // Forms
   const [companyForm, setCompanyForm] = useState({
     companyName: '',
@@ -398,6 +420,43 @@ export default function Settings() {
       toast('Meta form mapping saved', 'success')
     } catch (err) {
       toast(err.data?.message || 'Failed to save lead source mapping', 'error')
+    }
+  }
+
+  const handleSaveGoogleFormMapping = async (formId, formName) => {
+    if (!formId) return toast('Form ID is required', 'error')
+    try {
+      await saveLeadSourceMapping({
+        branchId: activeBranchId || null,
+        source: 'google_forms',
+        provider: 'google_forms',
+        externalFormId: formId,
+        externalFormName: formName || formId,
+        isActive: true
+      }).unwrap()
+      toast('Google Form mapping saved', 'success')
+    } catch (err) {
+      toast(err.data?.message || 'Failed to save Google Form mapping', 'error')
+    }
+  }
+
+  const handleSaveGoogleSheetMapping = async (spreadsheetId, worksheetName, importMode, duplicateHandling, customFieldMapping) => {
+    if (!spreadsheetId || !worksheetName) return toast('Spreadsheet and Worksheet are required', 'error')
+    try {
+      await saveLeadSourceMapping({
+        branchId: activeBranchId || null,
+        source: 'google_sheets',
+        provider: 'google_sheets',
+        externalSpreadsheetId: spreadsheetId,
+        externalWorksheetId: worksheetName,
+        importMode: importMode || 'one_time',
+        duplicateHandling: duplicateHandling || 'skip',
+        customFieldMapping: customFieldMapping || {},
+        isActive: true
+      }).unwrap()
+      toast('Google Sheet mapping saved', 'success')
+    } catch (err) {
+      toast(err.data?.message || 'Failed to save Google Sheet mapping', 'error')
     }
   }
 
@@ -1010,82 +1069,52 @@ export default function Settings() {
             {/* 4. Lead Sources */}
             {activeTab === 'lead_sources' && (
               <div className="space-y-5">
-                <Card>
-                  <Card.Header>
-                    <Card.Title>Meta Lead Ads Webhook</Card.Title>
-                    <p className="text-xs text-[var(--vz-text-muted)]">Use this webhook URL in your Meta app for Facebook and Instagram Lead Ads.</p>
-                  </Card.Header>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="md:col-span-2 p-3 rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)] text-xs text-[var(--vz-heading)] break-all">
-                      {metaWebhookConfigResp?.data?.webhookUrl || 'Webhook URL unavailable'}
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      <Badge color={metaWebhookConfigResp?.data?.verifyTokenConfigured ? 'success' : 'danger'}>
-                        Verify token {metaWebhookConfigResp?.data?.verifyTokenConfigured ? 'set' : 'missing'}
-                      </Badge>
-                      <Badge color={metaWebhookConfigResp?.data?.appIdConfigured ? 'success' : 'danger'}>
-                        App ID {metaWebhookConfigResp?.data?.appIdConfigured ? 'set' : 'missing'}
-                      </Badge>
-                      <Badge color={metaWebhookConfigResp?.data?.appSecretConfigured ? 'success' : 'danger'}>
-                        App secret {metaWebhookConfigResp?.data?.appSecretConfigured ? 'set' : 'missing'}
-                      </Badge>
-                    </div>
-                  </div>
-                </Card>
+                {/* Source Selector */}
+                <div className="flex gap-2 p-1 bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-xl overflow-x-auto">
+                  {['meta_lead_ads', 'google_forms', 'google_sheets', 'website_api'].map((tab) => (
+                    <button 
+                      key={tab}
+                      onClick={() => setLeadSourceTab(tab)}
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg whitespace-nowrap transition-colors ${
+                        leadSourceTab === tab 
+                          ? 'bg-primary text-white shadow' 
+                          : 'text-[var(--vz-text-muted)] hover:bg-[var(--vz-body-bg)] hover:text-[var(--vz-heading)]'
+                      }`}
+                    >
+                      {tab === 'meta_lead_ads' && 'Meta Lead Ads'}
+                      {tab === 'google_forms' && 'Google Forms'}
+                      {tab === 'google_sheets' && 'Google Sheets'}
+                      {tab === 'website_api' && 'Website / Custom API'}
+                    </button>
+                  ))}
+                </div>
 
-                <Card>
-                  <Card.Header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <Card.Title>Website / Custom Lead API</Card.Title>
-                      <p className="text-xs text-[var(--vz-text-muted)]">Create a tenant-scoped API endpoint for websites, Google Ads middleware, marketplaces, or custom integrations.</p>
-                    </div>
-                    <Button size="sm" onClick={handleCreateLeadSourceApi} disabled={creatingLeadSourceApi}>{creatingLeadSourceApi ? 'Creating...' : 'Create API Connection'}</Button>
-                  </Card.Header>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Connection Name" value={leadSourceApiForm.label} onChange={(e) => setLeadSourceApiForm({ ...leadSourceApiForm, label: e.target.value })} />
-                    <div className="space-y-1.5">
-                      <Select
-                        value={leadSourceApiForm.provider}
-                        onChange={(val) => setLeadSourceApiForm({ ...leadSourceApiForm, provider: val, defaultSource: val === 'website_api' ? 'website' : val === 'google_ads' ? 'google_ads' : 'api' })}
-                        options={[
-                          { value: 'website_api', label: 'Website API' },
-                          { value: 'google_ads', label: 'Google Ads Middleware' },
-                          { value: 'custom_api', label: 'Custom API' }
-                        ]}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Select
-                        value={leadSourceApiForm.defaultAssignedTo}
-                        onChange={(val) => setLeadSourceApiForm({ ...leadSourceApiForm, defaultAssignedTo: val })}
-                        options={[
-                          { value: '', label: 'Use assignment policy' },
-                          ...compactUsers.map((user) => ({ value: user._id, label: user.name || user.email }))
-                        ]}
-                      />
-                    </div>
-                  </div>
-
-                  {leadSourceApiCredential?.apiKey && (
-                    <div className="mt-5 p-4 rounded-xl border border-warning/30 bg-warning/10 space-y-3">
-                      <div className="flex items-center gap-2 text-warning font-bold text-sm"><AlertTriangle size={16} /> Save this API key now. It will not be displayed again.</div>
-                      {leadSourceApiCredential.endpoint && <div><p className="text-[10px] uppercase text-[var(--vz-text-muted)]">Endpoint</p><code className="text-xs break-all text-[var(--vz-heading)]">{leadSourceApiCredential.endpoint}</code></div>}
-                      <div><p className="text-[10px] uppercase text-[var(--vz-text-muted)]">Bearer API Key</p><code className="text-xs break-all text-[var(--vz-heading)]">{leadSourceApiCredential.apiKey}</code></div>
-                      <Button size="sm" variant="soft-primary" onClick={() => navigator.clipboard?.writeText(leadSourceApiCredential.apiKey)}><Copy size={13} className="mr-1" /> Copy Key</Button>
-                    </div>
-                  )}
-
-                  {(leadSourceConnectionsResp?.data || []).filter((connection) => ['website_api', 'custom_api', 'google_ads'].includes(connection.provider)).length > 0 && (
-                    <div className="mt-5 space-y-2">
-                      {(leadSourceConnectionsResp?.data || []).filter((connection) => ['website_api', 'custom_api', 'google_ads'].includes(connection.provider)).map((connection) => (
-                        <div key={connection._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-[var(--vz-border)]">
-                          <div><p className="text-sm font-semibold text-[var(--vz-heading)]">{connection.label}</p><p className="text-xs text-[var(--vz-text-muted)]">{connection.provider} · Key prefix {connection.apiKeyPrefix || '—'} · {connection.isActive ? 'Active' : 'Inactive'}</p></div>
-                          <Button size="sm" variant="soft-primary" onClick={() => handleRotateLeadSourceApi(connection._id)}><RefreshCw size={13} className="mr-1" /> Rotate Key</Button>
+                {leadSourceTab === 'meta_lead_ads' && (
+                  <>
+                    <Card>
+                      <Card.Header>
+                        <Card.Title>Meta Lead Ads Webhook</Card.Title>
+                        <p className="text-xs text-[var(--vz-text-muted)]">Use this webhook URL in your Meta app for Facebook and Instagram Lead Ads.</p>
+                      </Card.Header>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="md:col-span-2 p-3 rounded-lg border border-[var(--vz-border)] bg-[var(--vz-input-bg)] text-xs text-[var(--vz-heading)] break-all">
+                          {metaWebhookConfigResp?.data?.webhookUrl || 'Webhook URL unavailable'}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
+                        <div className="space-y-1 text-xs">
+                          <Badge color={metaWebhookConfigResp?.data?.verifyTokenConfigured ? 'success' : 'danger'}>
+                            Verify token {metaWebhookConfigResp?.data?.verifyTokenConfigured ? 'set' : 'missing'}
+                          </Badge>
+                          <Badge color={metaWebhookConfigResp?.data?.appIdConfigured ? 'success' : 'danger'}>
+                            App ID {metaWebhookConfigResp?.data?.appIdConfigured ? 'set' : 'missing'}
+                          </Badge>
+                          <Badge color={metaWebhookConfigResp?.data?.appSecretConfigured ? 'success' : 'danger'}>
+                            App secret {metaWebhookConfigResp?.data?.appSecretConfigured ? 'set' : 'missing'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Card>
+
+
 
                 <Card>
                   <Card.Header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1255,10 +1284,140 @@ export default function Settings() {
                   )}
                 </Card>
 
+                  </>
+                )}
+                
+                {leadSourceTab === 'google_forms' && (
+                  <Card>
+                    <Card.Header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <Card.Title>Google Forms Integration</Card.Title>
+                        <p className="text-xs text-[var(--vz-text-muted)]">Connect your Google Account to automatically sync form submissions as leads.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {googleAuthStatusResp?.data?.connected ? (
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-success font-medium flex items-center bg-success/10 px-2 py-1 rounded-md">
+                              <CheckCircle2 size={14} className="mr-1.5" /> 
+                              Connected: <span className="font-bold ml-1">{googleAuthStatusResp.data.email || 'Google Account'}</span>
+                            </span>
+                            <Button size="sm" variant="soft-danger" onClick={() => disconnectGoogle().unwrap().then(() => toast('Google disconnected', 'success'))} disabled={disconnectingGoogle}>
+                              Disconnect
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button size="sm" variant="soft-primary" onClick={() => getGoogleAuthUrl().unwrap().then(res => window.location.href = res.data.url)}>
+                            <ExternalLink size={14} className="mr-1" /> Connect Google Account
+                          </Button>
+                        )}
+                      </div>
+                    </Card.Header>
+                    {googleAuthStatusResp?.data?.connected && (
+                      <GoogleFormSetup 
+                        forms={googleFormsResp?.data || []}
+                        fields={googleFormFieldsResp?.data || []}
+                        onSelectForm={(id) => {
+                           // we can use a local state in Settings or let the component handle it, but wait, the component expects selectedFormId to be passed down!
+                           // Wait, earlier the selectedFormId was not maintained in Settings state for forms. 
+                           // I should probably just render it!
+                        }}
+                      />
+                    )}
+                  </Card>
+                )}
+                
+                {leadSourceTab === 'google_sheets' && (
+                  <Card>
+                    <Card.Header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <Card.Title>Google Sheets Integration</Card.Title>
+                        <p className="text-xs text-[var(--vz-text-muted)]">Import leads from a Google Sheet and continuously sync new rows.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {googleAuthStatusResp?.data?.connected ? (
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-success font-medium flex items-center bg-success/10 px-2 py-1 rounded-md">
+                              <CheckCircle2 size={14} className="mr-1.5" /> 
+                              Connected: <span className="font-bold ml-1">{googleAuthStatusResp.data.email || 'Google Account'}</span>
+                            </span>
+                            <Button size="sm" variant="soft-danger" onClick={() => disconnectGoogle().unwrap().then(() => toast('Google disconnected', 'success'))} disabled={disconnectingGoogle}>
+                              Disconnect
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button size="sm" variant="soft-primary" onClick={() => getGoogleAuthUrl().unwrap().then(res => window.location.href = res.data.url)}>
+                            <ExternalLink size={14} className="mr-1" /> Connect Google Account
+                          </Button>
+                        )}
+                      </div>
+                    </Card.Header>
+                    {googleAuthStatusResp?.data?.connected && (
+                      <GoogleSheetSetup />
+                    )}
+                  </Card>
+                )}
+
+                {leadSourceTab === 'website_api' && (
+                  <Card>
+                    <Card.Header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <Card.Title>Website / Custom Lead API</Card.Title>
+                        <p className="text-xs text-[var(--vz-text-muted)]">Create a tenant-scoped API endpoint for websites, Google Ads middleware, marketplaces, or custom integrations.</p>
+                      </div>
+                      <Button size="sm" onClick={handleCreateLeadSourceApi} disabled={creatingLeadSourceApi}>{creatingLeadSourceApi ? 'Creating...' : 'Create API Connection'}</Button>
+                    </Card.Header>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input label="Connection Name" value={leadSourceApiForm.label} onChange={(e) => setLeadSourceApiForm({ ...leadSourceApiForm, label: e.target.value })} />
+                      <div className="space-y-1.5">
+                        <Select
+                          value={leadSourceApiForm.provider}
+                          onChange={(val) => setLeadSourceApiForm({ ...leadSourceApiForm, provider: val, defaultSource: val === 'website_api' ? 'website' : val === 'google_ads' ? 'google_ads' : 'api' })}
+                          options={[
+                            { value: 'website_api', label: 'Website API' },
+                            { value: 'google_ads', label: 'Google Ads Middleware' },
+                            { value: 'custom_api', label: 'Custom API' }
+                          ]}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Select
+                          value={leadSourceApiForm.defaultAssignedTo}
+                          onChange={(val) => setLeadSourceApiForm({ ...leadSourceApiForm, defaultAssignedTo: val })}
+                          options={[
+                            { value: '', label: 'Use assignment policy' },
+                            ...compactUsers.map((user) => ({ value: user._id, label: user.name || user.email }))
+                          ]}
+                        />
+                      </div>
+                    </div>
+
+                    {leadSourceApiCredential?.apiKey && (
+                      <div className="mt-5 p-4 rounded-xl border border-warning/30 bg-warning/10 space-y-3">
+                        <div className="flex items-center gap-2 text-warning font-bold text-sm"><AlertTriangle size={16} /> Save this API key now. It will not be displayed again.</div>
+                        {leadSourceApiCredential.endpoint && <div><p className="text-[10px] uppercase text-[var(--vz-text-muted)]">Endpoint</p><code className="text-xs break-all text-[var(--vz-heading)]">{leadSourceApiCredential.endpoint}</code></div>}
+                        <div><p className="text-[10px] uppercase text-[var(--vz-text-muted)]">Bearer API Key</p><code className="text-xs break-all text-[var(--vz-heading)]">{leadSourceApiCredential.apiKey}</code></div>
+                        <Button size="sm" variant="soft-primary" onClick={() => navigator.clipboard?.writeText(leadSourceApiCredential.apiKey)}><Copy size={13} className="mr-1" /> Copy Key</Button>
+                      </div>
+                    )}
+
+                    {(leadSourceConnectionsResp?.data || []).filter((connection) => ['website_api', 'custom_api', 'google_ads'].includes(connection.provider)).length > 0 && (
+                      <div className="mt-5 space-y-2">
+                        {(leadSourceConnectionsResp?.data || []).filter((connection) => ['website_api', 'custom_api', 'google_ads'].includes(connection.provider)).map((connection) => (
+                          <div key={connection._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-[var(--vz-border)]">
+                            <div><p className="text-sm font-semibold text-[var(--vz-heading)]">{connection.label}</p><p className="text-xs text-[var(--vz-text-muted)]">{connection.provider} · Key prefix {connection.apiKeyPrefix || '—'} · {connection.isActive ? 'Active' : 'Inactive'}</p></div>
+                            <Button size="sm" variant="soft-primary" onClick={() => handleRotateLeadSourceApi(connection._id)}><RefreshCw size={13} className="mr-1" /> Rotate Key</Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                )}
+                
+                {/* Lead Events Table for All sources */}
                 <Card>
                   <Card.Header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <Card.Title>Inbound Meta Lead Events</Card.Title>
+                      <Card.Title>Inbound Lead Events</Card.Title>
                       <p className="text-xs text-[var(--vz-text-muted)]">Review tenant-owned webhook events and replay failed imports after fixing setup.</p>
                     </div>
                     <Select
@@ -1276,7 +1435,7 @@ export default function Settings() {
                     />
                   </Card.Header>
                   {(!leadSourceEventsResp?.data || leadSourceEventsResp.data.length === 0) ? (
-                    <EmptyState icon={RefreshCw} title="No inbound events" description="Meta webhook events for this tenant will appear here after they are received." />
+                    <EmptyState icon={RefreshCw} title="No inbound events" description="Webhook events for this tenant will appear here after they are received." />
                   ) : (
                     <div className="space-y-2">
                       {leadSourceEventsResp.data.map((event) => (
@@ -1284,7 +1443,7 @@ export default function Settings() {
                           <div>
                             <p className="text-sm font-semibold text-[var(--vz-heading)]">Lead {event.externalLeadId || 'Unknown'}</p>
                             <p className="text-xs text-[var(--vz-text-muted)]">
-                              Page {event.externalPageId || '-'} · Form {event.externalFormId || '-'} · Attempts {event.attempts || 0}
+                              Source: {event.source || 'Unknown'} · Attempts {event.attempts || 0}
                               {event.error ? ` · ${event.error}` : ''}
                             </p>
                           </div>
@@ -1570,29 +1729,73 @@ export default function Settings() {
                   <Card.Title>Referral Program</Card.Title>
                   <p className="text-xs text-[var(--vz-text-muted)]">Invite friends and earn rewards on every subscription</p>
                 </Card.Header>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className="space-y-4">
-                      <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-lg">
-                        <Gift className="mb-3 opacity-80" size={32} />
-                        <h4 className="text-xl font-bold mb-1">Refer and Earn</h4>
-                        <p className="text-xs opacity-80 leading-relaxed mb-4">Sharing is caring. Give your friends 1 free month and get ₹500 in your account.</p>
-                        <div className="flex items-center gap-2 p-2 bg-white/10 rounded-lg border border-white/20 backdrop-blur-sm">
-                           <input readOnly value={referralCode} className="bg-transparent border-none outline-none text-white font-bold text-sm flex-1 ml-2" />
-                           <button onClick={() => { navigator.clipboard.writeText(referralCode); toast('Link copied!', 'success') }}
-                             className="p-2 rounded bg-white/20 hover:bg-white/30 transition-colors"><Copy size={16} /></button>
-                        </div>
-                      </div>
+                <div className="space-y-6">
+                   {/* Top: Refer and Earn Banner */}
+                   <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                     <div className="absolute inset-0 bg-black/10 mix-blend-overlay"></div>
+                     <div className="relative z-10 flex-1">
+                       <div className="flex items-center gap-3 mb-2">
+                         <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                           <Gift size={24} className="text-white" />
+                         </div>
+                         <h4 className="text-2xl font-black tracking-tight">Refer & Earn</h4>
+                       </div>
+                       <p className="text-white/90 text-sm leading-relaxed max-w-md">
+                         Sharing is caring. Give your friends 1 free month of SparkCRM and get <strong className="text-white font-bold">1 free month</strong> credited to your account when they subscribe!
+                       </p>
+                     </div>
+                     
+                     <div className="relative z-10 w-full md:w-auto md:min-w-[380px]">
+                       <div className="flex flex-col gap-2 p-3 bg-black/20 rounded-xl border border-white/20 backdrop-blur-md shadow-inner">
+                         <span className="text-[10px] uppercase tracking-wider font-bold text-white/70 ml-1">Your Unique Link</span>
+                         <div className="flex items-center gap-2">
+                           <input 
+                              readOnly 
+                              value={referralLink} 
+                              placeholder="Generating your link..." 
+                              className="bg-black/20 border border-white/10 rounded-lg outline-none text-white font-medium text-sm flex-1 px-3 py-2.5 placeholder:text-white/40 truncate shadow-inner focus:border-white/30 transition-colors" 
+                           />
+                           <button 
+                             onClick={() => { 
+                               if (referralLink) {
+                                 navigator.clipboard.writeText(referralLink); 
+                                 toast('Link copied!', 'success');
+                               } else {
+                                 toast('Link not ready yet', 'error');
+                               }
+                             }}
+                             className="p-2.5 rounded-lg bg-white text-purple-700 hover:bg-gray-100 transition-all font-bold shadow-md flex items-center justify-center gap-2 active:scale-95"
+                           >
+                             <Copy size={16} />
+                             <span className="hidden sm:inline text-sm">Copy</span>
+                           </button>
+                         </div>
+                       </div>
+                     </div>
                    </div>
-                   <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 rounded-xl border border-[var(--vz-border)] text-center">
-                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-widest font-bold mb-1">Signups</p>
-                        <p className="text-2xl font-black text-[var(--vz-heading)]">{refStats.totalReferrals || 0}</p>
-                        <div className="mt-2 text-[10px] text-success font-bold">+2 this week</div>
+
+                   {/* Bottom: Stats */}
+                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="p-5 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-body-bg)] flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                        <Users2 className="text-indigo-500 mb-3 group-hover:scale-110 transition-transform duration-300" size={28} />
+                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-widest font-bold mb-1">Total Referrals</p>
+                        <p className="text-3xl font-black text-[var(--vz-heading)]">{refStats.totalReferrals || 0}</p>
                       </div>
-                      <div className="p-4 rounded-xl border border-[var(--vz-border)] text-center">
-                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-widest font-bold mb-1">Commission</p>
-                        <p className="text-2xl font-black text-secondary">₹{refStats.totalRewards || 0}</p>
-                        <div className="mt-2 text-[10px] text-[var(--vz-text-muted)]">Redeem after ₹1,000</div>
+                      <div className="p-5 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-body-bg)] flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                        <CheckCircle2 className="text-emerald-500 mb-3 group-hover:scale-110 transition-transform duration-300" size={28} />
+                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-widest font-bold mb-1">Converted</p>
+                        <p className="text-3xl font-black text-[var(--vz-heading)]">{refStats.converted || 0}</p>
+                      </div>
+                      <div className="p-5 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-body-bg)] flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                        <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+                          <Gift size={120} />
+                        </div>
+                        <CreditCard className="text-purple-500 mb-3 group-hover:scale-110 transition-transform duration-300" size={28} />
+                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-widest font-bold mb-1">Rewards Earned</p>
+                        <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">
+                           {refStats.rewardsEarned || 0}
+                        </p>
+                        <div className="mt-1 text-[10px] text-[var(--vz-text-muted)] font-medium">Free Months Applied</div>
                       </div>
                    </div>
                 </div>

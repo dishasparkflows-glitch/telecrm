@@ -18,8 +18,8 @@ const referralSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['pending', 'converted', 'expired'],
-            default: 'pending',
+            enum: ['registered', 'converted', 'expired'],
+            default: 'registered',
         },
         rewardType: {
             type: String,
@@ -51,6 +51,10 @@ const referralSchema = new mongoose.Schema(
 referralSchema.index({ referrerTenantId: 1 });
 referralSchema.index({ referralCode: 1 });
 referralSchema.index({ status: 1 });
+referralSchema.index(
+    { referredTenantId: 1 },
+    { unique: true, partialFilterExpression: { referredTenantId: { $type: 'objectId' } } }
+);
 
 const Referral = mongoose.model('Referral', referralSchema);
 module.exports = Referral;

@@ -67,6 +67,10 @@ const getUploadUrl = asyncHandler(async (req, res) => {
         keyPath += `/meetings/${meetingId}`;
     }
 
+    if (req.body.taskId) {
+        keyPath += `/tasks/${req.body.taskId}`;
+    }
+
     keyPath += `/${uploadType}`;
 
     if (subUploadType) {
@@ -81,6 +85,19 @@ const getUploadUrl = asyncHandler(async (req, res) => {
     ApiResponse.success(res, { uploadUrl, downloadUrl, key }, 'Upload URL generated');
 });
 
+/**
+ * POST /api/uploads/download-url
+ * Generate a presigned URL for downloading a file
+ */
+const getDownloadUrl = asyncHandler(async (req, res) => {
+    const { key, downloadFilename } = req.body;
+    if (!key) throw ApiError.badRequest("Key is required");
+
+    const downloadUrl = await getPresignedDownloadUrl(key, 86400, downloadFilename);
+    ApiResponse.success(res, { downloadUrl }, 'Download URL generated');
+});
+
 module.exports = {
     getUploadUrl,
+    getDownloadUrl,
 };

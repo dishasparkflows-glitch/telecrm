@@ -9,13 +9,16 @@
   },
   "dependencies": {
     "@sparkcrm/shared-config": "*",
-    "@sparkcrm/shared-utils": "*",
-    "@sparkcrm/shared-middleware": "*",
     "@sparkcrm/shared-events": "*",
+    "@sparkcrm/shared-middleware": "*",
+    "@sparkcrm/shared-utils": "*",
     "axios": "^1.13.5",
-    "express": "^4.21.0",
+    "bullmq": "^6.1.2",
     "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "googleapis": "^174.0.1",
     "helmet": "^8.0.0",
+    "ioredis": "^5.11.1",
     "mongoose": "^8.9.0"
   },
   "devDependencies": {

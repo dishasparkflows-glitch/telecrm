@@ -67,21 +67,21 @@ export default function TaskCard({ lead }) {
                                 className="p-3 border border-[var(--vz-border)] rounded-lg hover:border-primary/50 cursor-pointer transition-colors bg-[var(--vz-bg-body)]"
                             >
                                 <div className="flex justify-between items-start mb-2">
-                                    <h4 className={`text-sm font-semibold ${task.status === 'COMPLETED' ? 'text-[var(--vz-text-muted)] line-through' : 'text-[var(--vz-heading)]'}`}>
-                                        {task.title}
+                                    <h4 className={`text-sm font-semibold ${task.details?.status === 'COMPLETED' ? 'text-[var(--vz-text-muted)] line-through' : 'text-[var(--vz-heading)]'}`}>
+                                        {task.details?.title}
                                     </h4>
-                                    <Badge color={getPriorityColor(task.priority)}>{task.priority}</Badge>
+                                    <Badge color={getPriorityColor(task.details?.priority)}>{task.details?.priority}</Badge>
                                 </div>
                                 
                                 <div className="flex items-center justify-between text-xs text-[var(--vz-text-muted)]">
                                     <div className="flex items-center gap-1.5">
-                                        {task.status === 'COMPLETED' ? (
+                                        {task.details?.status === 'COMPLETED' ? (
                                             <><CheckCircle size={12} className="text-success" /> <span className="text-success font-medium">Completed</span></>
                                         ) : task.dueDate ? (
                                             <>
-                                                <Clock size={12} className={isOverdue(task.dueDate, task.status) ? 'text-danger' : ''} /> 
-                                                <span className={isOverdue(task.dueDate, task.status) ? 'text-danger font-medium' : ''}>
-                                                    {isOverdue(task.dueDate, task.status) ? 'Overdue' : new Date(task.dueDate).toLocaleDateString()}
+                                                <Clock size={12} className={isOverdue(task.dueDate, task.details?.status) ? 'text-danger' : ''} /> 
+                                                <span className={isOverdue(task.dueDate, task.details?.status) ? 'text-danger font-medium' : ''}>
+                                                    {isOverdue(task.dueDate, task.details?.status) ? 'Overdue' : new Date(task.dueDate).toLocaleDateString()}
                                                 </span>
                                             </>
                                         ) : <span>No due date</span>}

@@ -37,7 +37,7 @@ const getReferralStats = asyncHandler(async (req, res) => {
     const stats = {
         totalReferrals: referrals.length,
         converted: referrals.filter((r) => r.status === 'converted').length,
-        pending: referrals.filter((r) => r.status === 'pending').length,
+        pending: referrals.filter((r) => r.status === 'registered').length,
         rewardsEarned: referrals.filter((r) => r.rewardApplied).length,
         referrals,
     };

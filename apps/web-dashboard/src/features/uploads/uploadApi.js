@@ -9,7 +9,14 @@ export const uploadApi = baseApi.injectEndpoints({
                 body: data,
             }),
         }),
+        getDownloadUrl: builder.mutation({
+            query: (data) => ({
+                url: '/uploads/download-url',
+                method: 'POST',
+                body: data,
+            }),
+        }),
     }),
 })
 
-export const { useGetUploadUrlMutation } = uploadApi
+export const { useGetUploadUrlMutation, useGetDownloadUrlMutation } = uploadApi

@@ -1,5 +1,6 @@
 const Referral = require('../models/Referral');
 const Tenant = require('../models/Tenant');
+const AuditLog = require('../models/AuditLog');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 
 /**
@@ -10,37 +11,50 @@ const processReferralReward = async (tenantId) => {
     const tenant = await Tenant.findById(tenantId);
     if (!tenant || !tenant.referredBy) return null;
 
-    // Find or create referral record
-    let referral = await Referral.findOne({
-        referredTenantId: tenantId,
-        status: 'pending',
-    });
-
-    if (!referral) {
-        referral = await Referral.create({
-            referrerTenantId: tenant.referredBy,
+    // Atomically find the registered referral and mark it as converted and rewardApplied
+    const referral = await Referral.findOneAndUpdate(
+        {
             referredTenantId: tenantId,
-            referralCode: tenant.referralCode,
-            status: 'pending',
-        });
-    }
+            status: 'registered',
+        },
+        {
+            $set: {
+                status: 'converted',
+                convertedAt: new Date(),
+                rewardApplied: true,
+                rewardType: 'free_month',
+            }
+        },
+        { new: true }
+    );
 
-    // Mark as converted
-    referral.status = 'converted';
-    referral.convertedAt = new Date();
-    await referral.save();
+    // If no referral was updated, it means it was already converted, or doesn't exist
+    if (!referral) return null;
 
     // Apply reward to referrer (extend plan by 30 days)
     const referrer = await Tenant.findById(tenant.referredBy);
-    if (referrer && referrer.planExpiresAt) {
-        referrer.planExpiresAt = new Date(
-            referrer.planExpiresAt.getTime() + 30 * 24 * 60 * 60 * 1000
+    if (referrer && referrer.subscription?.expiresAt) {
+        referrer.subscription.expiresAt = new Date(
+            referrer.subscription.expiresAt.getTime() + 30 * 24 * 60 * 60 * 1000
         );
         await referrer.save();
 
-        referral.rewardApplied = true;
-        referral.rewardType = 'free_month';
-        await referral.save();
+        try {
+            await AuditLog.create({
+                tenantId: referrer._id,
+                action: 'REFERRAL_REWARD_CREDITED',
+                entityType: 'Referral',
+                entityId: referral._id,
+                details: {
+                    message: '30-day plan extension applied',
+                    referredTenantId: tenantId,
+                    rewardType: 'free_month',
+                },
+                system: true,
+            });
+        } catch (err) {
+            console.error('⚠️ Failed to create AuditLog for referral reward:', err.message);
+        }
 
         await publishEvent(EVENTS.SEND_EMAIL, {
             to: referrer.company?.email,
@@ -64,11 +78,11 @@ const trackReferralClick = async (referralCode) => {
     const referrerTenant = await Tenant.findOne({ referralCode });
     if (!referrerTenant) return null;
 
-    // Create a pending referral record
+    // Create a registered referral record
     const referral = await Referral.create({
         referrerTenantId: referrerTenant._id,
         referralCode,
-        status: 'pending',
+        status: 'registered',
     });
 
     return referral;

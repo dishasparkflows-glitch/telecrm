@@ -12,8 +12,8 @@ const getTasks = asyncHandler(async (req, res) => {
 
     const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'tasks' });
     
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
+    if (status) filter['details.status'] = status;
+    if (priority) filter['details.priority'] = priority;
     if (assignedTo) filter.assignedTo = assignedTo;
     if (leadId) filter.leadId = leadId;
     if (source) filter.source = source;
@@ -29,7 +29,7 @@ const getTasks = asyncHandler(async (req, res) => {
             };
         } else if (dueDate === 'overdue') {
             filter.dueDate = { $lt: today };
-            filter.status = { $nin: ['COMPLETED', 'CANCELLED'] };
+            filter['details.status'] = { $nin: ['COMPLETED', 'CANCELLED'] };
         } else if (dueDate === 'upcoming') {
             filter.dueDate = { $gte: today };
         } else if (dueDate === 'none') {
@@ -39,8 +39,8 @@ const getTasks = asyncHandler(async (req, res) => {
 
     if (search) {
         filter.$or = [
-            { title: { $regex: search, $options: 'i' } },
-            { description: { $regex: search, $options: 'i' } },
+            { 'details.title': { $regex: search, $options: 'i' } },
+            { 'details.description': { $regex: search, $options: 'i' } },
             { leadNumber: { $regex: search, $options: 'i' } }
         ];
     }
@@ -50,7 +50,7 @@ const getTasks = asyncHandler(async (req, res) => {
     // Sort by Due Date, then priority
     const sort = {};
     sort.dueDate = 1;
-    sort.priority = -1; // HIGH before LOW
+    sort['details.priority'] = -1; // HIGH before LOW
 
     const [tasks, total] = await Promise.all([
         Task.find(filter)
@@ -94,10 +94,10 @@ const getTaskStats = asyncHandler(async (req, res) => {
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
     const [myTasksCount, dueTodayCount, overdueCount, completedCount] = await Promise.all([
-        Task.countDocuments({ ...filter, assignedTo: req.headers['x-user-id'], status: { $nin: ['COMPLETED', 'CANCELLED'] } }),
-        Task.countDocuments({ ...filter, dueDate: { $gte: today, $lt: tomorrow }, status: { $nin: ['COMPLETED', 'CANCELLED'] } }),
-        Task.countDocuments({ ...filter, dueDate: { $lt: today }, status: { $nin: ['COMPLETED', 'CANCELLED'] } }),
-        Task.countDocuments({ ...filter, status: 'COMPLETED' })
+        Task.countDocuments({ ...filter, assignedTo: req.headers['x-user-id'], 'details.status': { $nin: ['COMPLETED', 'CANCELLED'] } }),
+        Task.countDocuments({ ...filter, dueDate: { $gte: today, $lt: tomorrow }, 'details.status': { $nin: ['COMPLETED', 'CANCELLED'] } }),
+        Task.countDocuments({ ...filter, dueDate: { $lt: today }, 'details.status': { $nin: ['COMPLETED', 'CANCELLED'] } }),
+        Task.countDocuments({ ...filter, 'details.status': 'COMPLETED' })
     ]);
 
     ApiResponse.success(res, {
@@ -114,6 +114,11 @@ const getTaskStats = asyncHandler(async (req, res) => {
 const createTask = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const userId = req.headers['x-user-id'];
+    const branchId = req.headers['x-branch-id'];
+
+    if (!req.body.branchId && branchId && branchId !== 'all') {
+        req.body.branchId = branchId;
+    }
     
     // Authorization check is handled by route middleware (requirePermission('tasks', 'create'))
     

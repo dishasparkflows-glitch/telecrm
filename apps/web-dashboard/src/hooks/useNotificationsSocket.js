@@ -33,7 +33,7 @@ export function useNotificationsSocket() {
         };
         initPush();
 
-        onMessageListener().then((payload) => {
+        const unsubscribe = onMessageListener((payload) => {
             console.log('🔔 Firebase Foreground Notification:', payload);
             dispatch(notificationApi.util.invalidateTags([{ type: 'Notification', id: 'LIST' }]));
             // Also trigger standard UI toast
@@ -44,7 +44,19 @@ export function useNotificationsSocket() {
                     type: 'info' 
                 } 
             }));
-        }).catch(err => console.log('failed: ', err));
+
+            // Show native Chrome notification
+            if (Notification.permission === 'granted') {
+                new Notification(payload.notification?.title || 'New Notification', {
+                    body: payload.notification?.body || '',
+                    icon: '/vite.svg'
+                });
+            }
+        });
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, [dispatch, registerDevice]);
 
     useSocketEvent('notification', (notification) => {

@@ -16,6 +16,7 @@ const PUBLIC_LEAD_ROUTES = [
   ['POST', /^\/api\/leads\/webhooks\/meta\/?$/],
   ['POST', /^\/api\/leads\/webhooks\/inbound\/[a-f0-9]{24}\/?$/],
   ['GET', /^\/api\/leads\/oauth\/meta\/callback\/?$/],
+  ['POST', /^\/api\/leads\/google\/webhooks\/forms\/?$/],
 ];
 
 const requireProtectedLeadRequest = (req, res, next) => {
@@ -52,6 +53,7 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/leads', requireProtectedLeadRequest, leadRoutes);
+app.use('/api/leads/google', requireProtectedLeadRequest, require('./routes/googleIntegration.routes'));
 app.use('/api/follow-ups', requireProtectedLeadRequest, followupRoutes);
 app.use('/api/tasks', requireProtectedLeadRequest, taskRoutes);
 

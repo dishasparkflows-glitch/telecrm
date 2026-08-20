@@ -87,20 +87,27 @@ const getPresignedUploadUrl = async (fileName, contentType, expiresIn = 3600) =>
  * Generates a presigned URL for downloading a file from Cloudflare R2.
  * @param {string} fileName - Destination file path/name inside the bucket.
  * @param {number} expiresIn - Expiration time in seconds (default 24 hours).
+ * @param {string} downloadFilename - Optional filename to force download.
  * @returns {Promise<string>}
  */
-const getPresignedDownloadUrl = async (fileName) => {
+const getPresignedDownloadUrl = async (fileName, expiresIn = 86400, downloadFilename = null) => {
     if (!fileName || fileName.startsWith('http')) return fileName;
 
     try {
         const client = getR2Client();
 
-        const command = new GetObjectCommand({
+        const params = {
             Bucket: env.CLOUDFLARE_BUCKET_NAME,
             Key: fileName,
-        });
+        };
 
-        const downloadUrl = await getSignedUrl(client, command, { expiresIn: 86400 });
+        if (downloadFilename) {
+            params.ResponseContentDisposition = `attachment; filename="${downloadFilename}"`;
+        }
+
+        const command = new GetObjectCommand(params);
+
+        const downloadUrl = await getSignedUrl(client, command, { expiresIn });
         return downloadUrl;
     } catch (error) {
         console.error('❌ Error generating presigned download URL:', error.message);

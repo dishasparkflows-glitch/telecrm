@@ -1,6 +1,7 @@
 const { EVENTS, subscribeToEvents } = require('@sparkcrm/shared-events');
 const Tenant = require('../models/Tenant');
 const { getRedisClient } = require('@sparkcrm/shared-config');
+const { processReferralReward } = require('../services/referral.service');
 
 const invalidateTenantCache = async (tenantId) => {
     try {
@@ -56,6 +57,15 @@ const registerEventListeners = async () => {
             });
             await invalidateTenantCache(tenantId);
             console.log(`📈 Tenant ${tenantId} upgraded to plan ${planSlug}`);
+
+            try {
+                const referral = await processReferralReward(tenantId);
+                if (referral) {
+                    console.log(`🎁 Referral reward processed for tenant ${tenantId}`);
+                }
+            } catch (err) {
+                console.error(`❌ Failed to process referral reward for ${tenantId}:`, err.message);
+            }
         } catch (err) {
             console.error('❌ plan.upgraded handler error:', err.message);
         }

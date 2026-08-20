@@ -44,6 +44,8 @@ const LEAD_SOURCES = {
     FACEBOOK: 'facebook',
     INSTAGRAM: 'instagram',
     GOOGLE_ADS: 'google_ads',
+    GOOGLE_FORMS: 'google_forms',
+    GOOGLE_SHEETS: 'google_sheets',
     WHATSAPP: 'whatsapp',
     CSV: 'csv',
     API: 'api',

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const PROVIDERS = ['meta_lead_ads', 'facebook', 'instagram', 'website_api', 'google_ads', 'custom_api'];
+const PROVIDERS = ['meta_lead_ads', 'facebook', 'instagram', 'website_api', 'google_ads', 'custom_api', 'google_forms', 'google_sheets'];
 
 const leadSourceConnectionSchema = new mongoose.Schema(
     {
@@ -49,6 +49,13 @@ const leadSourceMappingSchema = new mongoose.Schema(
         externalPageName: { type: String, default: '', trim: true },
         externalFormId: { type: String, default: '', trim: true, index: true },
         externalFormName: { type: String, default: '', trim: true },
+        externalSpreadsheetId: { type: String, default: '', trim: true, index: true },
+        externalWorksheetId: { type: String, default: '', trim: true, index: true },
+        importMode: { type: String, enum: ['all', 'new'], default: 'new' },
+        duplicateHandling: { type: String, enum: ['create', 'update', 'ignore'], default: 'update' },
+        customFieldMapping: { type: Map, of: String, default: {} },
+        pipelineId: { type: mongoose.Schema.Types.ObjectId, default: null },
+        stageId: { type: String, default: '' },
         source: { type: String, default: 'facebook' },
         defaultAssignedTo: { type: mongoose.Schema.Types.ObjectId, default: null },
         welcomeTemplateName: { type: String, default: '' },

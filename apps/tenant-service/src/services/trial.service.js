@@ -1,6 +1,7 @@
 const Tenant = require('../models/Tenant');
 const Plan = require('../models/Plan');
 const Payment = require('../models/Payment');
+const Referral = require('../models/Referral');
 const { TENANT_STATUS, TRIAL_STATUS, TRIAL_DURATION_DAYS } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const crypto = require('crypto');
@@ -8,7 +9,7 @@ const crypto = require('crypto');
 /**
  * Create a new tenant with 30-day free trial
  */
-const createTenantWithTrial = async ({ company, companyName, email, phone, referralCode, planSlug }) => {
+const createTenantWithTrial = async ({ company, referralCode, planSlug }) => {
     const compName = company?.name;
     const compEmail = company?.email;
     const compPhone = company?.phone || '';
@@ -82,9 +83,24 @@ const createTenantWithTrial = async ({ company, companyName, email, phone, refer
     // Handle referral
     if (referralCode) {
         const referrerTenant = await Tenant.findOne({ referralCode });
-        if (referrerTenant) {
+        if (
+            referrerTenant &&
+            referrerTenant.company?.email !== compEmail &&
+            referrerTenant.company?.phone !== compPhone
+        ) {
             tenant.referredBy = referrerTenant._id;
             await tenant.save();
+            
+            try {
+                await Referral.create({
+                    referrerTenantId: referrerTenant._id,
+                    referredTenantId: tenant._id,
+                    referralCode: referrerTenant.referralCode,
+                    status: 'registered',
+                });
+            } catch (err) {
+                console.error('⚠️ Failed to create Referral record:', err.message);
+            }
         }
     }
 

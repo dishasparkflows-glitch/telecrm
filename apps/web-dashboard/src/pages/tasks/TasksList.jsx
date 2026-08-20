@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckSquare, Calendar, Clock, CheckCircle, Search, Filter, Edit3, Trash2 } from 'lucide-react'
+import { CheckSquare, Calendar, Clock, CheckCircle, Search, Filter, Edit3, Trash2, Eye } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
@@ -245,8 +245,8 @@ const TasksList = () => {
                                     {tasks.map(task => (
                                         <tr key={task._id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
                                             <td className="px-4 py-3">
-                                                <div className="font-semibold text-[var(--vz-heading)]">{task.title}</div>
-                                                {task.description && <div className="text-xs text-[var(--vz-text-muted)] truncate max-w-[250px]">{task.description}</div>}
+                                                <div className="font-semibold text-[var(--vz-heading)]">{task.details?.title}</div>
+                                                {task.details?.description && <div className="text-xs text-[var(--vz-text-muted)] truncate max-w-[250px]">{task.details?.description}</div>}
                                             </td>
                                             <td className="px-4 py-3">
                                                 {task.leadId ? (
@@ -262,14 +262,14 @@ const TasksList = () => {
                                             </td>
                                             <td className="px-4 py-3">
                                                 {task.dueDate ? (
-                                                    <div className={`text-sm font-medium ${isOverdue(task.dueDate, task.status) ? 'text-danger' : 'text-[var(--vz-heading)]'}`}>
+                                                    <div className={`text-sm font-medium ${isOverdue(task.dueDate, task.details?.status) ? 'text-danger' : 'text-[var(--vz-heading)]'}`}>
                                                         {new Date(task.dueDate).toLocaleDateString()}
-                                                        {isOverdue(task.dueDate, task.status) && <span className="ml-1 text-xs text-danger">(Overdue)</span>}
+                                                        {isOverdue(task.dueDate, task.details?.status) && <span className="ml-1 text-xs text-danger">(Overdue)</span>}
                                                     </div>
                                                 ) : <span className="text-[var(--vz-text-muted)] text-sm">No Due Date</span>}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <Badge color={getPriorityColor(task.priority)}>{task.priority}</Badge>
+                                                <Badge color={getPriorityColor(task.details?.priority)}>{task.details?.priority}</Badge>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ const TasksList = () => {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Select 
-                                                    value={task.status} 
+                                                    value={task.details?.status} 
                                                     onChange={(val) => handleStatusChange(task._id, val)}
                                                     options={[
                                                         { value: 'PENDING', label: 'Pending' },
@@ -298,7 +298,10 @@ const TasksList = () => {
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <button onClick={() => { setTaskToEdit(task); setIsModalOpen(true); }} className="p-1.5 text-[var(--vz-text-muted)] hover:text-primary transition-colors bg-black/5 dark:bg-white/5 rounded">
+                                                    <button onClick={() => { setTaskToEdit(task); setIsModalOpen(true); }} className="p-1.5 text-[var(--vz-text-muted)] hover:text-primary transition-colors bg-black/5 dark:bg-white/5 rounded" title="View Task">
+                                                        <Eye size={14} />
+                                                    </button>
+                                                    <button onClick={() => { setTaskToEdit(task); setIsModalOpen(true); }} className="p-1.5 text-[var(--vz-text-muted)] hover:text-primary transition-colors bg-black/5 dark:bg-white/5 rounded" title="Edit Task">
                                                         <Edit3 size={14} />
                                                     </button>
                                                     <button onClick={() => setTaskToDelete(task)} className="p-1.5 text-[var(--vz-text-muted)] hover:text-danger transition-colors bg-black/5 dark:bg-white/5 rounded">

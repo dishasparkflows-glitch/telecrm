@@ -26,4 +26,29 @@ const getCustomFieldDefinitions = async (tenantId, entity) => {
     }
 };
 
-module.exports = { getCustomFieldDefinitions };
+const getUserIntegrationConfig = async (tenantId, userId, provider) => {
+    if (!tenantId || !userId || !provider) return null;
+    try {
+        const path = `/internal/user-integration-config/${tenantId}/${userId}/${provider}`;
+        const headers = createServiceHeaders({
+            issuer: 'lead-service',
+            audience: 'tenant-service',
+            method: 'GET',
+            path,
+            identity: { tenantId: String(tenantId), userId: String(userId) },
+        });
+        
+        const response = await axios.get(`${env.SERVICES.TENANT}${path}`, { headers, timeout: 5000 });
+        return response.data?.data || null;
+    } catch (error) {
+        if (error.response?.status !== 404) {
+            console.warn(`Fetch integration config failed for ${provider}: ${error.message}`);
+        }
+        return null;
+    }
+};
+
+module.exports = { 
+    getCustomFieldDefinitions,
+    getUserIntegrationConfig
+};

@@ -420,7 +420,7 @@ router.get(
  *
  * Returns decrypted credentials so the calling service can use them directly.
  */
-const { decrypt: decryptCred } = require('../models/IntegrationCredential');
+const { decrypt: decryptCred, encrypt: encryptCred } = require('../models/IntegrationCredential');
 
 router.get(
     '/integration-config/:tenantId/:provider',
@@ -467,6 +467,101 @@ router.get(
                 lastTestStatus: cred.lastTestStatus,
             },
         });
+    })
+);
+
+/**
+ * POST /internal/user-integration-config/:tenantId/:userId/:provider
+ * Saves/updates user-specific integration credentials (e.g., google_calendar)
+ */
+router.post(
+    '/user-integration-config/:tenantId/:userId/:provider',
+    asyncHandler(async (req, res) => {
+        const { tenantId, userId, provider } = req.params;
+        const { credentials, isActive, label } = req.body;
+
+        const encryptedCredentials = {};
+        for (const [key, value] of Object.entries(credentials || {})) {
+            if (value) encryptedCredentials[key] = encryptCred(String(value));
+        }
+
+        const updateData = {
+            credentials: encryptedCredentials,
+            isActive: isActive !== undefined ? isActive : true,
+            configuredBy: userId
+        };
+        if (label) updateData.label = label;
+
+        await IntegrationCredential.findOneAndUpdate(
+            { tenantId, userId, provider },
+            { $set: updateData },
+            { upsert: true, new: true }
+        );
+
+        res.json({ success: true, message: `${provider} credentials saved` });
+    })
+);
+
+/**
+ * GET /internal/user-integration-config/:tenantId/:userId/:provider
+ * Fetches user-specific integration credentials. Returns decrypted data.
+ */
+router.get(
+    '/user-integration-config/:tenantId/:userId/:provider',
+    asyncHandler(async (req, res) => {
+        const { tenantId, userId, provider } = req.params;
+
+        const cred = await IntegrationCredential.findOne({
+            tenantId,
+            userId,
+            provider,
+            isActive: true,
+        }).lean();
+
+        if (!cred) {
+            return res.status(404).json({
+                success: false,
+                message: `No active ${provider} integration found for user`,
+            });
+        }
+
+        const credMap = cred.credentials instanceof Map
+            ? Object.fromEntries(cred.credentials)
+            : (cred.credentials || {});
+
+        const decrypted = {};
+        for (const [key, val] of Object.entries(credMap)) {
+            try {
+                decrypted[key] = decryptCred(val) || val;
+            } catch {
+                decrypted[key] = val;
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                _id: cred._id,
+                tenantId: cred.tenantId,
+                userId: cred.userId,
+                provider: cred.provider,
+                isActive: cred.isActive,
+                credentials: decrypted,
+            },
+        });
+    })
+);
+
+/**
+ * DELETE /internal/user-integration-config/:tenantId/:userId/:provider
+ * Deletes user-specific integration credentials.
+ */
+router.delete(
+    '/user-integration-config/:tenantId/:userId/:provider',
+    asyncHandler(async (req, res) => {
+        const { tenantId, userId, provider } = req.params;
+        await IntegrationCredential.findOneAndDelete({ tenantId, userId, provider });
+        res.json({ success: true, message: `${provider} disconnected` });
     })
 );
 
