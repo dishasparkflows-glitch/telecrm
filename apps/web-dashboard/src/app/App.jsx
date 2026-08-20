@@ -21,6 +21,7 @@ const WhatsApp = lazy(() => import('../pages/whatsapp/WhatsApp'))
 const TeamInbox = lazy(() => import('../pages/whatsapp/TeamInbox'))
 const SmartForms = lazy(() => import('../pages/forms/SmartForms'))
 const Meetings = lazy(() => import('../pages/meetings/Meetings'))
+const MeetingDetail = lazy(() => import('../components/meetings/MeetingDetail'))
 const BookMeeting = lazy(() => import('../pages/meetings/BookMeeting'))
 const Automations = lazy(() => import('../pages/automations/Automations'))
 const AutomationBuilder = lazy(() => import('../pages/automations/AutomationBuilder'))
@@ -130,6 +131,7 @@ export default function App() {
           <Route path="/whatsapp/broadcasts" element={<FeatureRoute feature="whatsapp_session"><WhatsApp /></FeatureRoute>} />
           <Route path="/forms" element={<FeatureRoute feature="smart_forms"><SmartForms /></FeatureRoute>} />
           <Route path="/meetings" element={<FeatureRoute feature="meeting_scheduler"><Meetings /></FeatureRoute>} />
+          <Route path="/meetings/:id" element={<FeatureRoute feature="meeting_scheduler"><MeetingDetail /></FeatureRoute>} />
           <Route path="/automations" element={<FeatureRoute feature="automation_basic"><Automations /></FeatureRoute>} />
           <Route path="/automations/builder" element={<FeatureRoute feature="automation_basic"><AutomationBuilder /></FeatureRoute>} />
           <Route path="/automations/builder/:id" element={<FeatureRoute feature="automation_basic"><AutomationBuilder /></FeatureRoute>} />

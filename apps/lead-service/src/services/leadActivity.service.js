@@ -22,6 +22,11 @@ const ACTIVITY_TYPES = {
     TASK_COMPLETED: 'task.completed',
     TASK_STATUS_CHANGED: 'task.status_changed',
     TASK_DELETED: 'task.deleted',
+    MEETING_BOOKED: 'meeting.booked',
+    MEETING_COMPLETED: 'meeting.completed',
+    MEETING_RESCHEDULED: 'meeting.rescheduled',
+    MEETING_CANCELLED: 'meeting.cancelled',
+    MEETING_NO_SHOW: 'meeting.no_show',
 };
 
 const recordLeadActivity = async ({

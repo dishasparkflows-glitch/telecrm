@@ -19,7 +19,9 @@ router.post('/google/disconnect', ctrl.googleDisconnect);
 router.get('/google/calendars', ctrl.googleGetCalendars);
 
 router.get('/', ctrl.getMeetings);
+router.get('/stats', ctrl.getMeetingStats);
 router.post('/schedule', ctrl.scheduleMeeting);
+router.post('/check-availability', ctrl.checkAvailability);
 router.get('/booking-links', ctrl.getBookingLinks);
 router.post('/booking-links', ctrl.createBookingLink);
 router.delete('/booking-links/:id', ctrl.deleteBookingLink);
@@ -27,6 +29,7 @@ router.delete('/booking-links/:id', ctrl.deleteBookingLink);
 router.get('/:id', ctrl.getMeeting);
 router.put('/:id', ctrl.updateMeeting);
 router.delete('/:id', ctrl.deleteMeeting);
+router.post('/:id/complete', ctrl.completeMeeting);
 router.post('/:id/comments', ctrl.addMeetingComment);
 router.post('/:id/attachments', ctrl.addMeetingAttachment);
 

@@ -24,4 +24,28 @@ const createOrFindLead = async (tenantId, payload) => {
     }
 };
 
-module.exports = { createOrFindLead };
+const getLeadsBulk = async (tenantId, ids) => {
+    if (!ids || ids.length === 0) return [];
+    try {
+        const queryParams = new URLSearchParams({ ids: ids.join(','), tenantId: String(tenantId) });
+        const path = `/internal/leads/bulk?${queryParams.toString()}`;
+        const headers = createServiceHeaders({
+            issuer: 'meeting-service',
+            audience: 'lead-service',
+            method: 'GET',
+            path,
+            identity: { tenantId: String(tenantId) },
+        });
+
+        const response = await axios.get(
+            `${env.SERVICES.LEAD}${path}`,
+            { headers, timeout: 5000 }
+        );
+        return response.data?.data || [];
+    } catch (error) {
+        console.error(`Bulk lead fetch failed:`, error.response?.data || error.message);
+        return [];
+    }
+};
+
+module.exports = { createOrFindLead, getLeadsBulk };

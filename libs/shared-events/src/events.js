@@ -54,7 +54,10 @@ const EVENTS = {
 
     // Meeting events
     MEETING_BOOKED: 'meeting.booked',
+    MEETING_COMPLETED: 'meeting.completed',
     MEETING_CANCELLED: 'meeting.cancelled',
+    MEETING_RESCHEDULED: 'meeting.rescheduled',
+    MEETING_NO_SHOW: 'meeting.no_show',
     MEETING_REMINDER: 'meeting.reminder',
 
     // Notification events

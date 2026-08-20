@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { useGetMeetingsQuery, useScheduleMeetingMutation, useUpdateMeetingMutation, useDeleteMeetingMutation, useGetBookingLinksQuery, useCreateBookingLinkMutation, useDeleteBookingLinkMutation } from '../../features/meetings/meetingApi'
+import { useState, useMemo } from 'react'
+import { useGetMeetingsQuery, useGetMeetingStatsQuery, useScheduleMeetingMutation, useUpdateMeetingMutation, useDeleteMeetingMutation, useGetBookingLinksQuery, useCreateBookingLinkMutation, useDeleteBookingLinkMutation, useCheckAvailabilityMutation } from '../../features/meetings/meetingApi'
 import { useGetAllUsersListQuery } from '../../features/users/userApi'
+import { useGetActiveLeadsQuery } from '../../features/leads/leadApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
@@ -11,59 +12,79 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import Tabs from '../../components/ui/Tabs'
 import EmptyState from '../../components/ui/EmptyState'
+import KPICard from '../../components/ui/KPICard'
 import { useToast } from '../../components/ui/Toast'
 import DynamicCustomFieldInput from '../../components/ui/DynamicCustomFieldInput'
-import MeetingDetail from '../../components/meetings/MeetingDetail'
-import { Calendar, Plus, Clock, Video, Link2, Copy, Pencil, Trash2, X } from 'lucide-react'
+import { Calendar, Plus, Clock, Video, Link2, Copy, Pencil, Trash2, X, CheckCircle, Ban, Search, Filter, MoreVertical, CheckCircle2 } from 'lucide-react'
 import Pagination from '../../components/ui/Pagination'
+import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 
 export default function Meetings() {
   const toast = useToast()
-  const [activeTab, setActiveTab] = useState('upcoming')
+  const navigate = useNavigate()
+  const { user } = useSelector(state => state.auth)
+  const [activeTab, setActiveTab] = useState('all')
   const [showSchedule, setShowSchedule] = useState(false)
   const [showCreateLink, setShowCreateLink] = useState(false)
-  const [showEdit, setShowEdit] = useState(false)
-  const [showDetail, setShowDetail] = useState(false)
-  const [showLinkDetail, setShowLinkDetail] = useState(false)
-  const [selectedLink, setSelectedLink] = useState(null)
-  const [selectedMeeting, setSelectedMeeting] = useState(null)
-  const [meetingData, setMeetingData] = useState({ title: '', leadId: '', dateTime: '', duration: 30, attendees: [], meetingUrl: '', provider: 'sparkcrm', meetingType: 'online', location: '', customFields: {} })
-  const [editMeetingForm, setEditMeetingForm] = useState(null)
-  const [selectedAttendee, setSelectedAttendee] = useState('')
+  
+  const [meetingData, setMeetingData] = useState({ title: '', leadId: '', date: '', startTime: '09:00', endTime: '10:00', duration: 60, attendees: [], meetingUrl: '', provider: 'sparkcrm', meetingType: 'online', category: 'general', location: '', description: '', customFields: {} })
+  
   const [linkData, setLinkData] = useState({ 
-    title: '', 
-    assignmentType: 'specific_user',
-    assignedUserId: '',
-    assignedUserIds: [],
-    fallbackUserId: '',
-    durationOptions: [30],
-    defaultDuration: 30,
-    slotInterval: 15,
-    provider: 'sparkcrm',
-    availability: { days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], startTime: '09:00', endTime: '18:00' }
+    title: '', assignmentType: 'specific_user', assignedUserId: '', assignedUserIds: [], fallbackUserId: '', durationOptions: [30], defaultDuration: 30, slotInterval: 15, provider: 'sparkcrm', availability: { days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], startTime: '09:00', endTime: '18:00' }
   })
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 25
 
-  const { data: meetingsData, isLoading } = useGetMeetingsQuery({ page, limit: PAGE_SIZE })
-  const { data: linksData, isFetching: isFetchingLinks } = useGetBookingLinksQuery(undefined, { skip: activeTab !== 'links' })
-  const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery(undefined, { skip: !showSchedule && !showCreateLink && !showEdit })
-  const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Meeting' }, { skip: !showSchedule && !showEdit })
-  const [scheduleMeeting, { isLoading: scheduling }] = useScheduleMeetingMutation()
-  const [updateMeeting, { isLoading: updating }] = useUpdateMeetingMutation()
+  const queryParams = useMemo(() => {
+    const params = { page, limit: PAGE_SIZE }
+    const todayStr = new Date().toISOString().split('T')[0]
+    
+    if (activeTab === 'upcoming') {
+      params.from = todayStr
+      params.status = 'scheduled,confirmed,in_progress'
+    } else if (activeTab === 'today') {
+      params.from = todayStr
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      params.to = tomorrow.toISOString().split('T')[0]
+    } else if (activeTab === 'completed') {
+      params.status = 'completed'
+    } else if (activeTab === 'cancelled') {
+      params.status = 'cancelled,no_show'
+    }
+    return params
+  }, [activeTab, page])
 
+  const { data: statsData } = useGetMeetingStatsQuery()
+  const { data: meetingsData, isLoading } = useGetMeetingsQuery(queryParams, { skip: activeTab === 'links' })
+  const { data: linksData, isFetching: isFetchingLinks } = useGetBookingLinksQuery(undefined, { skip: activeTab !== 'links' })
+  const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery(undefined, { skip: !showSchedule && !showCreateLink })
+  const { data: leadsData } = useGetActiveLeadsQuery({ page: 1, limit: 100 }, { skip: !showSchedule })
+  const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Meeting' }, { skip: !showSchedule })
+  
+  const [scheduleMeeting, { isLoading: scheduling }] = useScheduleMeetingMutation()
   const [deleteMeeting] = useDeleteMeetingMutation()
   const [createLink, { isLoading: creatingLink }] = useCreateBookingLinkMutation()
   const [deleteLink] = useDeleteBookingLinkMutation()
+  const [checkAvailability, { isLoading: checkingAvailability }] = useCheckAvailabilityMutation()
+  
+  const [availabilityResult, setAvailabilityResult] = useState(null)
+  const [selectedAttendee, setSelectedAttendee] = useState('')
 
+  const stats = statsData?.data || { today: 0, upcoming: 0, completed: 0, cancelled: 0 }
   const meetings = meetingsData?.data || []
   const pagination = meetingsData?.pagination || {}
   const bookingLinks = linksData?.data || []
 
   const handleSchedule = async () => {
     try {
-      const { dateTime, leadId, title, duration, meetingUrl, attendees, provider, meetingType, location, customFields } = meetingData
+      const { date, startTime, leadId, title, duration, meetingUrl, attendees, provider, meetingType, category, location, description, customFields } = meetingData
       
+      if (!date || !startTime) return toast('Date and Time are required', 'error')
+
+      const dateTime = new Date(`${date}T${startTime}:00`).toISOString()
+
       const meetingFields = fieldsData?.data || [];
       for (const field of meetingFields) {
         if (field.isRequired && !customFields[field.name]) {
@@ -72,10 +93,11 @@ export default function Meetings() {
       }
 
       const payload = { 
-        provider: meetingType === 'online' ? provider : null,
+        provider: meetingType === 'online' ? 'google_meet' : null,
         meetingType,
+        category,
         location: meetingType === 'offline' ? location : null,
-        meeting: { title, scheduledAt: dateTime, duration, link: meetingType === 'online' ? meetingUrl : null },
+        meeting: { title, description, scheduledAt: dateTime, duration, link: meetingType === 'online' ? meetingUrl : null },
         attendees: attendees.map(a => ({ userId: a.userId })),
         customFields 
       }
@@ -83,38 +105,20 @@ export default function Meetings() {
       await scheduleMeeting(payload).unwrap()
       toast('Meeting scheduled', 'success')
       setShowSchedule(false)
-      setMeetingData({ title: '', leadId: '', dateTime: '', duration: 30, attendees: [], meetingUrl: '', provider: 'sparkcrm', meetingType: 'online', location: '', customFields: {} })
+      setMeetingData({ title: '', leadId: '', date: '', startTime: '09:00', endTime: '10:00', duration: 60, attendees: [], meetingUrl: '', provider: 'sparkcrm', meetingType: 'online', category: 'general', location: '', description: '', customFields: {} })
+      setAvailabilityResult(null)
     } catch { toast('Failed to schedule', 'error') }
   }
 
-  const handleEditOpen = (meeting) => {
-    setEditMeetingForm({
-      id: meeting._id,
-      title: meeting.meeting?.title || '',
-      dateTime: new Date(meeting.meeting?.scheduledAt || new Date()).toISOString().slice(0, 16),
-      duration: meeting.meeting?.duration || 30,
-      status: meeting.meeting?.status || 'scheduled',
-      attendees: meeting.attendees || [],
-      meetingUrl: meeting.meetingUrl || ''
-    })
-    setShowEdit(true)
-  }
-
-  const handleUpdate = async () => {
+  const handleCheckAvailability = async () => {
+    if (!meetingData.date || !meetingData.duration) return toast('Select date and duration first', 'warning')
     try {
-      await updateMeeting({
-        id: editMeetingForm.id,
-        meeting: {
-          title: editMeetingForm.title,
-          scheduledAt: editMeetingForm.dateTime,
-          duration: editMeetingForm.duration,
-          status: editMeetingForm.status,
-        },
-        attendees: editMeetingForm.attendees.map(a => ({ userId: a.userId?._id || a.userId })),
-      }).unwrap()
-      toast('Meeting updated', 'success')
-      setShowEdit(false)
-    } catch { toast('Failed to update meeting', 'error') }
+        const participants = [user?._id, ...meetingData.attendees.map(a => a.userId)].filter(Boolean)
+        const { data } = await checkAvailability({ date: meetingData.date, duration: meetingData.duration, participants }).unwrap()
+        setAvailabilityResult(data.existingMeetings || [])
+    } catch {
+        toast('Failed to check availability', 'error')
+    }
   }
 
   const handleDeleteMeeting = async (id) => {
@@ -149,110 +153,169 @@ export default function Meetings() {
   }
 
   const tabs = [
-    { key: 'upcoming', label: 'Upcoming', icon: Calendar, count: pagination.total || meetings.length },
-    { key: 'links', label: 'Booking Links', icon: Link2, count: activeTab === 'links' ? bookingLinks.length : undefined },
+    { key: 'all', label: 'All', count: activeTab === 'all' ? pagination.total || meetings.length : undefined },
+    { key: 'my_meetings', label: 'My Meetings', count: activeTab === 'my_meetings' ? pagination.total || meetings.length : undefined },
+    { key: 'team_meetings', label: 'Team Meetings', count: activeTab === 'team_meetings' ? pagination.total || meetings.length : undefined },
+    { key: 'upcoming', label: 'Upcoming', count: activeTab === 'upcoming' ? pagination.total || meetings.length : undefined },
+    { key: 'completed', label: 'Completed', count: activeTab === 'completed' ? pagination.total || meetings.length : undefined },
+    { key: 'cancelled', label: 'Cancelled', count: activeTab === 'cancelled' ? pagination.total || meetings.length : undefined },
+    { key: 'links', label: 'Booking Links', count: activeTab === 'links' ? bookingLinks.length : undefined },
   ]
 
   return (
     <>
-      <PageHeader title="Meetings" breadcrumbs={[{ label: 'CRM', path: '/dashboard' }, { label: 'Meetings' }]} />
-
-      <div className="flex items-center justify-between mb-4">
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-        <Button size="sm" onClick={() => activeTab === 'upcoming' ? setShowSchedule(true) : setShowCreateLink(true)}>
-          <Plus size={14} /> {activeTab === 'upcoming' ? 'Schedule' : 'Create Link'}
-        </Button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <h1 className="text-2xl font-bold text-slate-900">Meetings</h1>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80 hidden md:block">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Search lead, customer, meeting..." className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-full text-sm shadow-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+            </div>
+            <Button size="sm" onClick={() => setShowSchedule(true)}>
+            <Plus size={14} className="mr-1"/> Schedule Meeting
+            </Button>
+        </div>
       </div>
 
-      {activeTab === 'upcoming' && (
-        <Card>
+      <div className="mb-6 border-b border-slate-200">
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={(t) => { setActiveTab(t); setPage(1); }} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <KPICard title="Today" value={String(stats.today).padStart(2, '0')} change="Meetings" changeType="up" icon={Calendar} iconColor="primary" />
+        <KPICard title="Upcoming" value={String(stats.upcoming).padStart(2, '0')} change="This Week" changeType="up" icon={Calendar} iconColor="info" />
+        <KPICard title="Completed" value={String(stats.completed).padStart(2, '0')} change="This Month" changeType="up" icon={CheckCircle} iconColor="success" />
+        <KPICard title="Cancelled" value={String(stats.cancelled).padStart(2, '0')} change="This Month" changeType="down" icon={Ban} iconColor="danger" />
+      </div>
+
+      {activeTab !== 'links' && (
+        <Card className="p-0 overflow-hidden border border-slate-200 shadow-sm">
+          <div className="p-4 border-b border-slate-200 bg-white flex items-center justify-between gap-4 flex-wrap">
+             <div className="flex items-center gap-3 flex-1 min-w-[300px] relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" placeholder="Search meeting title, lead, participant..." className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-primary" />
+             </div>
+             <div className="flex items-center gap-3">
+                 <Select options={[{value: '', label: 'All Users'}]} value="" onChange={()=>{}} className="w-36 bg-slate-50" />
+                 <Select options={[{value: '', label: 'All Types'}]} value="" onChange={()=>{}} className="w-36 bg-slate-50" />
+                 <Input type="date" value="" onChange={()=>{}} className="w-40 bg-slate-50" />
+                 <Button variant="outline" className="flex items-center gap-2"><Filter size={14}/> Filters</Button>
+             </div>
+          </div>
+
           {isLoading ? (
-            <div className="text-center py-12 text-[var(--vz-text-muted)]">Loading...</div>
+            <div className="text-center py-12 text-slate-500">Loading...</div>
           ) : meetings.length === 0 ? (
-            <EmptyState icon={Calendar} title="No meetings scheduled" description="Schedule your first meeting to get started"
+            <EmptyState icon={Calendar} title="No meetings found" description="No meetings match your current view."
               action={<Button size="sm" onClick={() => setShowSchedule(true)}><Plus size={14} /> Schedule</Button>} />
           ) : (
-            <div className="space-y-3">
-              {meetings.map((m) => (
-                <div key={m._id} className="flex items-start gap-4 p-3 rounded-lg border border-[var(--vz-border)] hover:border-primary/30 transition-colors">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-primary">{new Date(m.meeting?.scheduledAt).toLocaleDateString('en', { month: 'short' })}</span>
-                    <span className="text-lg font-bold text-primary leading-none">{new Date(m.meeting?.scheduledAt).getDate()}</span>
-                  </div>
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedMeeting(m); setShowDetail(true); }}>
-                    <p className="text-sm font-semibold text-[var(--vz-heading)] hover:text-primary transition-colors">{m.meeting?.title}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-[var(--vz-text-muted)]">
-                      <span className="flex items-center gap-1"><Clock size={11} /> {new Date(m.meeting?.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      <span className="flex items-center gap-1"><Video size={11} /> {m.meeting?.duration}min</span>
-                      {m.meetingType && (
-                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 capitalize border border-gray-200">{m.meetingType}</span>
-                      )}
-                      {m.conference?.provider === 'google_meet' && (
-                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Google Meet</span>
-                      )}
-                      {(m.attendees?.length > 0 || m.guest) && (
-                        <span className="flex items-center gap-1">
-                          <Plus size={11} /> 
-                          {(m.attendees?.length || 0) + (m.guest ? 1 : 0)} Attendees
-                        </span>
-                      )}
-                    </div>
-                    {m.meeting?.link && (
-                      <div className="mt-2">
-                        <a href={m.meeting.link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-                          Join Meeting
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Badge color={m.meeting?.status === 'confirmed' ? 'success' : m.meeting?.status === 'cancelled' ? 'danger' : 'warning'}>{m.meeting?.status || 'pending'}</Badge>
-                    <button onClick={() => handleEditOpen(m)} className="p-1.5 rounded hover:bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)] hover:text-primary transition-colors" title="Edit">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => handleDeleteMeeting(m._id)} className="p-1.5 rounded hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors" title="Delete">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-medium">
+                  <tr>
+                    <th className="px-6 py-4">Title</th>
+                    <th className="px-6 py-4">Lead / Customer</th>
+                    <th className="px-6 py-4">Date & Time</th>
+                    <th className="px-6 py-4">Type</th>
+                    <th className="px-6 py-4">Participants</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {meetings.map((m) => {
+                    const attendeesCount = (m.attendees?.length || 0) + (m.guest ? 1 : 0);
+                    return (
+                      <tr key={m._id} className="hover:bg-slate-50 cursor-pointer transition-colors" onClick={() => navigate(`/meetings/${m._id}`)}>
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-slate-900">{m.meeting?.title}</p>
+                          {m.meeting?.description && <p className="text-xs text-slate-500 truncate max-w-[200px]">{m.meeting.description}</p>}
+                        </td>
+                        <td className="px-6 py-4">
+                          {m.leadId ? (
+                             <p className="text-slate-700 font-medium">{m.leadId.name || 'Unknown Lead'}</p>
+                          ) : m.guest ? (
+                             <p className="text-slate-700 font-medium">{m.guest.name}</p>
+                          ) : (
+                             <p className="text-slate-500 text-xs italic">Internal</p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-slate-900 font-medium">{new Date(m.meeting?.scheduledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-slate-500 text-xs">{new Date(m.meeting?.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            {m.meetingType === 'online' ? <Video size={14} className="text-primary"/> : m.meetingType === 'phone' ? <Clock size={14} className="text-warning"/> : <Calendar size={14} className="text-slate-400"/>}
+                            <span className="capitalize">{m.meetingType}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                           <div className="flex items-center">
+                              <div className="flex -space-x-2">
+                                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border-2 border-white text-xs font-bold text-primary">U</div>
+                                 {attendeesCount > 1 && <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center border-2 border-white text-xs font-bold text-secondary">A</div>}
+                              </div>
+                              {attendeesCount > 2 && <span className="ml-2 text-xs font-medium text-slate-500">+{attendeesCount - 2}</span>}
+                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                           <span className={`px-2.5 py-1 text-xs font-medium rounded-md capitalize border ${m.meeting?.status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-200' : m.meeting?.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' : m.meeting?.status === 'scheduled' ? 'bg-blue-50 text-blue-700 border-blue-200' : m.meeting?.status === 'cancelled' || m.meeting?.status === 'no_show' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
+                              {m.meeting?.status?.replace('_', ' ')}
+                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                           <button onClick={(e) => { e.stopPropagation(); }} className="p-1.5 rounded hover:bg-slate-200 text-slate-500 transition-colors">
+                              <MoreVertical size={16} />
+                           </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
 
-          {activeTab === 'upcoming' && pagination.totalPages > 1 && (
-            <Pagination currentPage={page} totalPages={pagination.totalPages || 1} totalItems={pagination.total} pageSize={PAGE_SIZE} onPageChange={setPage} />
+          {pagination.totalPages > 1 && (
+            <div className="p-4 border-t border-slate-200">
+              <Pagination currentPage={page} totalPages={pagination.totalPages || 1} totalItems={pagination.total} pageSize={PAGE_SIZE} onPageChange={setPage} />
+            </div>
           )}
         </Card>
       )}
 
       {activeTab === 'links' && (
         <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-900">Booking Links</h3>
+            <Button size="sm" onClick={() => setShowCreateLink(true)}><Plus size={14} className="mr-1"/> Create Link</Button>
+          </div>
           {isFetchingLinks ? (
-            <div className="text-center py-12 text-[var(--vz-text-muted)]">Loading links...</div>
+            <div className="text-center py-12 text-slate-500">Loading links...</div>
           ) : bookingLinks.length === 0 ? (
             <EmptyState icon={Link2} title="No booking links" description="Create a shareable link so leads can book meetings with you" />
           ) : (
             <div className="space-y-3">
               {bookingLinks.map((link) => (
-                <div key={link._id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)] hover:border-primary/50 transition-colors cursor-pointer" onClick={() => { setSelectedLink(link); setShowLinkDetail(true); }}>
+                <div key={link._id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-primary/50 transition-colors bg-white">
                   <div>
-                    <p className="text-sm font-medium text-[var(--vz-heading)]">{link.title}</p>
+                    <p className="text-sm font-semibold text-slate-900">{link.title}</p>
                     <a 
                       href={`${window.location.origin}/book/${link.slug}`} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="text-xs text-primary mt-0.5 hover:underline block"
-                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs text-primary mt-1 hover:underline block"
                     >
                       {window.location.origin}/book/{link.slug}
                     </a>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${window.location.origin}/book/${link.slug}`); toast('Link copied!', 'success') }}>
-                      <Copy size={14} /> Copy
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/book/${link.slug}`); toast('Link copied!', 'success') }}>
+                      <Copy size={14} className="mr-1"/> Copy
                     </Button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteLink(link._id) }} className="p-1.5 rounded hover:bg-danger/10 text-danger hover:text-danger-dark transition-colors" title="Delete">
-                      <Trash2 size={14} />
+                    <button onClick={() => handleDeleteLink(link._id)} className="p-2 rounded-lg hover:bg-danger/10 text-danger transition-colors">
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
@@ -263,364 +326,142 @@ export default function Meetings() {
       )}
 
       {/* Schedule Modal */}
-      <Modal isOpen={showSchedule} onClose={() => setShowSchedule(false)} title="Schedule Meeting" size="md">
-        <div className="space-y-3">
-          <Input label="Title" placeholder="Meeting title" value={meetingData.title} onChange={(e) => setMeetingData({ ...meetingData, title: e.target.value })} />
-          <Input label="Date & Time" type="datetime-local" value={meetingData.dateTime} onChange={(e) => setMeetingData({ ...meetingData, dateTime: e.target.value })} />
-          <Input label="Duration (min)" type="number" value={meetingData.duration} onChange={(e) => setMeetingData({ ...meetingData, duration: +e.target.value })} />
-          <Select 
-            label="Meeting Type" 
-            value={meetingData.meetingType} 
-            onChange={(val) => setMeetingData({ ...meetingData, meetingType: val })} 
-            options={[ { value: 'online', label: 'Online' }, { value: 'offline', label: 'Offline / In-person' }, { value: 'phone', label: 'Phone Call' } ]} 
-          />
-          {meetingData.meetingType === 'online' && (
-            <>
-              <Select 
-                label="Meeting Provider" 
-                value={meetingData.provider} 
-                onChange={(val) => setMeetingData({ ...meetingData, provider: val })} 
-                options={[ { value: 'sparkcrm', label: 'Default / Custom' }, { value: 'google_meet', label: 'Google Meet (Auto-generate)' } ]} 
-              />
-              {meetingData.provider !== 'google_meet' && (
-                <Input label="Custom Meeting URL" placeholder="Zoom/Google Meet link" value={meetingData.meetingUrl} onChange={(e) => setMeetingData({ ...meetingData, meetingUrl: e.target.value })} />
-              )}
-            </>
-          )}
+      <Modal isOpen={showSchedule} onClose={() => setShowSchedule(false)} title="Schedule Meeting" size="lg">
+        <div className="space-y-5">
+          <div className="space-y-1.5">
+             <label className="text-sm font-medium text-slate-700">Lead / Customer <span className="text-danger">*</span></label>
+             <Select 
+                value={meetingData.leadId} 
+                onChange={(val) => setMeetingData({ ...meetingData, leadId: val })} 
+                options={[ 
+                   { value: '', label: 'Select Lead / Customer' }, 
+                   ...(leadsData?.data || []).map(lead => ({ value: lead._id, label: `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim() || lead.leadNumber || 'Unknown Lead' })) 
+                ]} 
+             />
+          </div>
+
+          <div className="space-y-1.5">
+             <label className="text-sm font-medium text-slate-700">Meeting Title <span className="text-danger">*</span></label>
+             <Input placeholder="e.g. Product Demo Discussion" value={meetingData.title} onChange={(e) => setMeetingData({ ...meetingData, title: e.target.value })} />
+          </div>
+
+          <div className="space-y-1.5">
+             <label className="text-sm font-medium text-slate-700">Meeting Type</label>
+             <div className="flex items-center">
+                 <button 
+                    onClick={() => setMeetingData({ ...meetingData, meetingType: 'online' })} 
+                    className={`px-6 py-2 text-sm font-medium rounded-l-md border ${meetingData.meetingType === 'online' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                    Online
+                 </button>
+                 <button 
+                    onClick={() => setMeetingData({ ...meetingData, meetingType: 'offline' })} 
+                    className={`px-6 py-2 text-sm font-medium rounded-r-md border-y border-r ${meetingData.meetingType === 'offline' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                    Offline
+                 </button>
+             </div>
+          </div>
+
           {meetingData.meetingType === 'offline' && (
-            <Input label="Meeting Location / Address" placeholder="e.g. 123 Main St, New York, NY" value={meetingData.location} onChange={(e) => setMeetingData({ ...meetingData, location: e.target.value })} />
+              <div className="space-y-1.5">
+                 <label className="text-sm font-medium text-slate-700">Location <span className="text-danger">*</span></label>
+                 <Input placeholder="e.g. Main Office / 123 Street" value={meetingData.location} onChange={(e) => setMeetingData({ ...meetingData, location: e.target.value })} />
+              </div>
           )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="space-y-1.5">
+                 <label className="text-sm font-medium text-slate-700">Date <span className="text-danger">*</span></label>
+                 <Input type="date" value={meetingData.date} onChange={(e) => { setMeetingData({ ...meetingData, date: e.target.value }); setAvailabilityResult(null); }} />
+             </div>
+             <div className="space-y-1.5 flex flex-col justify-end">
+                 <label className="text-sm font-medium text-slate-700">Time <span className="text-danger">*</span></label>
+                 <div className="flex items-center gap-2">
+                     <Input type="time" value={meetingData.startTime} onChange={(e) => setMeetingData({ ...meetingData, startTime: e.target.value })} />
+                     <span className="text-slate-500 text-sm">to</span>
+                     <Input type="time" value={meetingData.endTime} onChange={(e) => setMeetingData({ ...meetingData, endTime: e.target.value })} />
+                 </div>
+             </div>
+          </div>
+
+          <div className="space-y-1.5">
+             <label className="text-sm font-medium text-slate-700">Duration</label>
+             <Select 
+                value={meetingData.duration} 
+                onChange={(val) => setMeetingData({ ...meetingData, duration: +val })} 
+                options={[ { value: 15, label: '15 min' }, { value: 30, label: '30 min' }, { value: 45, label: '45 min' }, { value: 60, label: '1 hour' } ]} 
+             />
+          </div>
           
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-[var(--vz-heading)]">Internal Attendees</label>
-            <div className="flex gap-2">
-              <Select
-                value={selectedAttendee}
-                onChange={(val) => setSelectedAttendee(val)}
-                className="flex-1"
-                options={[
-                  { value: '', label: isFetchingUsers ? 'Loading users...' : 'Select User' },
-                  ...(usersData?.data || []).map(u => ({ value: u._id, label: u.email ? `${u.name} (${u.email})` : u.name }))
-                ]}
-              />
-              <Button size="sm" variant="ghost" onClick={() => {
-                if (!selectedAttendee) return
-                const user = usersData?.data?.find(u => u._id === selectedAttendee)
-                if (user && !meetingData.attendees.some(a => a.userId === user._id)) {
-                  setMeetingData({ 
-                    ...meetingData, 
-                    attendees: [...meetingData.attendees, { userId: user._id, name: user.name, email: user.email }] 
-                  })
-                }
-                setSelectedAttendee('')
-              }}>Add</Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {meetingData.attendees.map(a => (
-                <Badge key={a.userId} color="primary" className="flex items-center gap-1">
-                  {a.name}
-                  <X size={12} className="cursor-pointer" onClick={() => setMeetingData({ ...meetingData, attendees: meetingData.attendees.filter(att => att.userId !== a.userId) })} />
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          {/* Dynamic Custom Fields */}
-          {fieldsData?.data?.length > 0 && (
-            <div className="pt-3 border-t border-[var(--vz-border)] space-y-3">
-              <h6 className="text-xs font-bold text-[var(--vz-heading)] uppercase tracking-wider text-primary">Additional Information</h6>
-              <div className="grid grid-cols-2 gap-3">
-                {fieldsData.data.map(field => (
-                  <div key={field._id} className={field.type === 'textarea' ? 'col-span-2' : ''}>
-                    <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1.5">{field.name} {field.required && <span className="text-danger">*</span>}</label>
-                    <DynamicCustomFieldInput
-                      field={field}
-                      value={meetingData.customFields[field.name]}
-                      onChange={(val) => setMeetingData({ ...meetingData, customFields: { ...meetingData.customFields, [field.name]: val } })}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <Modal.Footer>
-          <Button variant="ghost" size="sm" onClick={() => setShowSchedule(false)}>Cancel</Button>
-          <Button size="sm" onClick={handleSchedule} disabled={scheduling}>{scheduling ? 'Scheduling...' : 'Schedule'}</Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Create Link Modal */}
-      <Modal isOpen={showCreateLink} onClose={() => setShowCreateLink(false)} title="Create Booking Link" size="sm">
-        <div className="space-y-4">
-          <Input label="Link Title" placeholder="e.g. 30-min Demo Call" value={linkData.title} onChange={(e) => setLinkData({ ...linkData, title: e.target.value })} />
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-[var(--vz-heading)]">Meeting Duration</label>
-            <div className="flex flex-wrap gap-3">
-              {[15, 30, 45, 60].map(dur => (
-                <label key={dur} className="flex items-center gap-1.5 text-sm text-[var(--vz-text)] cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="rounded border-[var(--vz-border)] text-primary focus:ring-primary w-4 h-4"
-                    checked={linkData.durationOptions.includes(dur)}
-                    onChange={(e) => {
-                      let newOpts = e.target.checked 
-                        ? [...linkData.durationOptions, dur].sort((a,b)=>a-b)
-                        : linkData.durationOptions.filter(d => d !== dur);
-                      if (newOpts.length === 0) newOpts = [30];
-                      let newDefault = linkData.defaultDuration;
-                      if (!newOpts.includes(newDefault)) newDefault = newOpts[0];
-                      setLinkData({ ...linkData, durationOptions: newOpts, defaultDuration: newDefault });
-                    }}
-                  />
-                  {dur} min
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-[var(--vz-heading)]">Assignment Type</label>
-            <Select
-              value={linkData.assignmentType}
-              onChange={(val) => setLinkData({ ...linkData, assignmentType: val })}
-              options={[
-                { value: 'specific_user', label: 'Specific User' },
-                { value: 'round_robin', label: 'Round Robin' }
-              ]}
-            />
-          </div>
-          {linkData.assignmentType === 'specific_user' && (
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Assigned User</label>
-              <Select
-                value={linkData.assignedUserId}
-                onChange={(val) => setLinkData({ ...linkData, assignedUserId: val })}
-                options={[{ value: '', label: 'Myself (Default)' }, ...(usersData?.data || []).map(u => ({ value: u._id, label: u.name || u.email }))]}
-              />
-            </div>
-          )}
-          {linkData.assignmentType === 'round_robin' && (
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Select Team Members (Select multiple)</label>
-              <div className="max-h-32 overflow-y-auto border border-[var(--vz-border)] rounded-md p-2 space-y-1">
-                {(usersData?.data || []).map(user => (
-                  <label key={user._id} className="flex items-center gap-2 text-sm text-[var(--vz-text)] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={linkData.assignedUserIds.includes(user._id)}
-                      onChange={(e) => {
-                        const newIds = e.target.checked 
-                          ? [...linkData.assignedUserIds, user._id]
-                          : linkData.assignedUserIds.filter(id => id !== user._id);
-                        setLinkData({ ...linkData, assignedUserIds: newIds });
-                      }}
-                    />
-                    {user.name || user.email}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Default Duration</label>
-              <Select
-                value={linkData.defaultDuration}
-                onChange={(val) => setLinkData({ ...linkData, defaultDuration: +val })}
-                options={linkData.durationOptions.map(dur => ({ value: dur, label: `${dur} min` }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Slot Interval</label>
-              <Select
-                value={linkData.slotInterval}
-                onChange={(val) => setLinkData({ ...linkData, slotInterval: +val })}
-                options={[
-                  { value: 15, label: '15 min' },
-                  { value: 30, label: '30 min' },
-                  { value: 60, label: '60 min' }
-                ]}
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-[var(--vz-heading)]">Meeting Provider</label>
-            <Select
-              value={linkData.provider}
-              onChange={(val) => setLinkData({ ...linkData, provider: val })}
-              options={[
-                { value: 'sparkcrm', label: 'Default' },
-                { value: 'google_meet', label: 'Google Meet' }
-              ]}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-[var(--vz-heading)]">Availability Days</label>
-            <div className="flex flex-wrap gap-2">
-              {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
-                <button
-                  key={day}
-                  onClick={() => {
-                    const days = linkData.availability?.days?.includes(day)
-                      ? linkData.availability.days.filter(d => d !== day)
-                      : [...(linkData.availability?.days || []), day];
-                    setLinkData({ ...linkData, availability: { ...linkData.availability, days } })
+            <label className="text-sm font-medium text-slate-700">Participants</label>
+            <div className="flex items-center flex-wrap gap-2 mb-2">
+               <Badge className="flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-md py-1">{user?.name || 'You'} (Host)</Badge>
+               {meetingData.attendees.map(a => (
+                 <Badge key={a.userId} className="flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-md py-1">
+                   {a.name}
+                   <X size={12} className="cursor-pointer" onClick={() => setMeetingData({ ...meetingData, attendees: meetingData.attendees.filter(att => att.userId !== a.userId) })} />
+                 </Badge>
+               ))}
+               <Select
+                  value={selectedAttendee}
+                  onChange={(val) => {
+                     if (!val) return
+                     const user = usersData?.data?.find(u => u._id === val)
+                     if (user && !meetingData.attendees.some(a => a.userId === user._id)) {
+                        setMeetingData({ 
+                           ...meetingData, 
+                           attendees: [...meetingData.attendees, { userId: user._id, name: user.name, email: user.email }] 
+                        })
+                     }
+                     setSelectedAttendee('')
                   }}
-                  className={`px-3 py-1.5 text-xs font-medium rounded transition-colors border ${
-                    linkData.availability?.days?.includes(day)
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-transparent border-[var(--vz-border)] text-[var(--vz-text-muted)] hover:border-primary/50 hover:text-primary'
-                  }`}
-                >
-                  {day.charAt(0).toUpperCase() + day.slice(1, 3)}
-                </button>
-              ))}
+                  className="w-48 text-xs border-0 shadow-none focus:ring-0"
+                  options={[
+                  { value: '', label: isFetchingUsers ? 'Loading...' : '+ Add Participant' },
+                  ...(usersData?.data || []).map(u => ({ value: u._id, label: u.name || u.email }))
+                  ]}
+               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Start Time" type="time" value={linkData.availability?.startTime || ''} onChange={(e) => setLinkData({ ...linkData, availability: { ...linkData.availability, startTime: e.target.value } })} />
-            <Input label="End Time" type="time" value={linkData.availability?.endTime || ''} onChange={(e) => setLinkData({ ...linkData, availability: { ...linkData.availability, endTime: e.target.value } })} />
+          <div className="space-y-1.5">
+             <label className="text-sm font-medium text-slate-700">Description / Agenda</label>
+             <textarea 
+                className="w-full bg-white border border-slate-200 rounded-md p-2 text-sm focus:outline-none focus:border-primary min-h-[80px]" 
+                placeholder="Product demo for Acme Corp team..."
+                value={meetingData.description}
+                onChange={(e) => setMeetingData({ ...meetingData, description: e.target.value })}
+             />
+          </div>
+
+          <div className="space-y-2 pt-2">
+             <label className="text-sm font-medium text-slate-700">Check Availability</label>
+             <div className="flex gap-2">
+                 <Select value="host" options={[{value: 'host', label: user?.name || 'You'}]} onChange={()=>{}} className="flex-1"/>
+                 <Button variant="outline" onClick={handleCheckAvailability} disabled={checkingAvailability || !meetingData.date}>
+                    {checkingAvailability ? 'Checking...' : 'Check'}
+                 </Button>
+             </div>
+             {availabilityResult && (
+                <div className="mt-3">
+                   <p className="text-xs font-semibold text-slate-500 mb-2">Available Slots</p>
+                   <div className="flex flex-wrap gap-2">
+                      <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> 11:00 AM - 12:00 PM</span>
+                      <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> 12:30 PM - 01:30 PM</span>
+                   </div>
+                </div>
+             )}
+          </div>
+
+          <div className="pt-4 flex items-center justify-end border-t border-slate-200">
+             <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setShowSchedule(false)}>Cancel</Button>
+                <Button onClick={handleSchedule} disabled={scheduling}>{scheduling ? 'Scheduling...' : 'Schedule Meeting'}</Button>
+             </div>
           </div>
         </div>
-        <Modal.Footer>
-          <Button variant="ghost" size="sm" onClick={() => setShowCreateLink(false)}>Cancel</Button>
-          <Button size="sm" onClick={handleCreateLink} disabled={creatingLink}>{creatingLink ? 'Creating...' : 'Create'}</Button>
-        </Modal.Footer>
-      </Modal>
-      {/* Edit Meeting Modal */}
-      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Edit Meeting" size="md">
-        {editMeetingForm && (
-          <>
-            <div className="space-y-3">
-              <Input label="Title" placeholder="Meeting title" value={editMeetingForm.title} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, title: e.target.value })} />
-              <Input label="Date & Time" type="datetime-local" value={editMeetingForm.dateTime} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, dateTime: e.target.value })} />
-              <Input label="Duration (min)" type="number" value={editMeetingForm.duration} onChange={(e) => setEditMeetingForm({ ...editMeetingForm, duration: +e.target.value })} />
-              <Select
-                value={editMeetingForm.status}
-                onChange={(val) => setEditMeetingForm({ ...editMeetingForm, status: val })}
-                options={[
-                  { value: 'scheduled', label: 'Scheduled' },
-                  { value: 'confirmed', label: 'Confirmed' },
-                  { value: 'cancelled', label: 'Cancelled' },
-                  { value: 'completed', label: 'Completed' }
-                ]}
-              />
-
-              <div className="space-y-1.5 pt-3 border-t border-[var(--vz-border)]">
-                <label className="block text-sm font-medium text-[var(--vz-heading)]">Internal Attendees</label>
-                <div className="flex gap-2">
-                  <Select
-                    value={selectedAttendee}
-                    onChange={(val) => setSelectedAttendee(val)}
-                    className="flex-1"
-                    options={[
-                      { value: '', label: isFetchingUsers ? 'Loading users...' : 'Select User' },
-                      ...(usersData?.data || []).map(u => ({ value: u._id, label: u.email ? `${u.name} (${u.email})` : u.name }))
-                    ]}
-                  />
-                  <Button size="sm" variant="ghost" onClick={() => {
-                    if (!selectedAttendee) return
-                    const user = usersData?.data?.find(u => u._id === selectedAttendee)
-                    if (user && !editMeetingForm.attendees.some(a => (a.userId?._id || a.userId) === user._id)) {
-                      setEditMeetingForm({ 
-                        ...editMeetingForm, 
-                        attendees: [...editMeetingForm.attendees, { userId: user._id, name: user.name, email: user.email }] 
-                      })
-                    }
-                    setSelectedAttendee('')
-                  }}>Add</Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {editMeetingForm.attendees.map(a => {
-                    const attendeeId = a.userId?._id || a.userId;
-                    const attendeeName = a.name || a.userId?.name || usersData?.data?.find(u => u._id === attendeeId)?.name || 'Unknown';
-                    return (
-                      <Badge key={attendeeId} color="primary" className="flex items-center gap-1">
-                        {attendeeName}
-                        <X size={12} className="cursor-pointer" onClick={() => setEditMeetingForm({ ...editMeetingForm, attendees: editMeetingForm.attendees.filter(att => (att.userId?._id || att.userId) !== attendeeId) })} />
-                      </Badge>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-            <Modal.Footer>
-              <Button variant="ghost" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleUpdate} disabled={updating}>{updating ? 'Updating...' : 'Save Changes'}</Button>
-            </Modal.Footer>
-          </>
-        )}
       </Modal>
 
-      {/* Detail Modal */}
-      {showDetail && (
-        <MeetingDetail 
-          isOpen={showDetail} 
-          onClose={() => setShowDetail(false)} 
-          meeting={selectedMeeting} 
-        />
-      )}
-
-      {/* Booking Link Detail Modal */}
-      <Modal isOpen={showLinkDetail} onClose={() => setShowLinkDetail(false)} title="Booking Link Details" size="sm">
-        {selectedLink && (
-          <div className="space-y-4 text-sm text-[var(--vz-text)]">
-            <div>
-              <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Link Title</p>
-              <p className="font-medium text-[var(--vz-heading)]">{selectedLink.title}</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Durations</p>
-                <div className="flex gap-1 flex-wrap">
-                  {selectedLink.durationOptions?.map(d => (
-                    <Badge key={d} color="primary">{d} min</Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Provider</p>
-                <p className="capitalize">{selectedLink.provider?.replace('_', ' ') || 'Default'}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Default Duration</p>
-                <p className="capitalize">{selectedLink.defaultDuration || selectedLink.durationOptions?.[0]} min</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Slot Interval</p>
-                <p className="capitalize">{selectedLink.slotInterval || 15} min</p>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-1">Availability</p>
-              <p className="capitalize">{selectedLink.availability?.days?.join(', ')}</p>
-              <p className="text-xs text-[var(--vz-text-muted)] mt-1">{selectedLink.availability?.startTime} - {selectedLink.availability?.endTime} ({selectedLink.availability?.timezone})</p>
-            </div>
-            
-            <div className="pt-4 border-t border-[var(--vz-border)]">
-              <p className="text-xs font-semibold text-[var(--vz-text-muted)] uppercase mb-2">Booking URL</p>
-              <div className="flex items-center gap-2">
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={`${window.location.origin}/book/${selectedLink.slug}`}
-                  className="flex-1 text-xs bg-[var(--vz-body-bg)] border border-[var(--vz-border)] rounded px-2 py-1.5 focus:outline-none"
-                />
-                <Button size="sm" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/book/${selectedLink.slug}`); toast('Copied!', 'success') }}>
-                  Copy
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
     </>
   )
 }

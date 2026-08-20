@@ -10,11 +10,20 @@ const meetingSchema = new mongoose.Schema(
         meeting: {
             title: { type: String, required: true, trim: true },
             description: { type: String, default: '' },
+            agenda: [{
+                id: { type: String },
+                text: { type: String },
+                completed: { type: Boolean, default: false }
+            }],
             scheduledAt: { type: Date, required: true },
             duration: { type: Number, default: 30 }, // minutes
             link: { type: String, default: '' },
-            status: { type: String, enum: ['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show'], default: 'scheduled' },
+            status: { type: String, enum: ['scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'], default: 'scheduled' },
             notes: { type: String },
+            outcome: { type: String, enum: ['interested', 'very_interested', 'needs_follow_up', 'proposal_required', 'negotiation', 'won', 'lost', 'not_interested', 'other', null], default: null },
+            nextFollowUpDate: { type: Date },
+            nextFollowUpTime: { type: String },
+            followUpNotes: { type: String },
         },
         guest: {
             name: { type: String },
@@ -56,6 +65,7 @@ const meetingSchema = new mongoose.Schema(
         reminderSent: { type: Boolean, default: false },
 
         // ─── Integration ───
+        category: { type: String, enum: ['internal', 'lead_customer', 'general'], default: 'general' },
         meetingType: { type: String, enum: ['online', 'offline', 'phone'], default: 'online' },
         provider: { type: String },
         source: { type: String, enum: ['booking_link', 'manual'], default: 'manual' },

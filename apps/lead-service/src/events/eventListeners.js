@@ -298,7 +298,79 @@ const registerEventListeners = async () => {
         }
     });
 
-    console.log('✅ lead-service: 6 event listeners registered');
+    // ─── meeting.booked → Track scheduled meeting ───
+    await subscribeToEvents(EVENTS.MEETING_BOOKED, async (_channel, data) => {
+        try {
+            const { tenantId, leadId, meetingId, meetingTitle, scheduledAt, hostId } = data;
+            if (!leadId) return;
+            const lead = await Lead.findOneAndUpdate(
+                { _id: leadId, tenantId },
+                { 'lifecycle.lastActivityAt': new Date() },
+                { new: true }
+            );
+            if (!lead) return;
+            await recordLeadActivity({
+                tenantId,
+                branchId: lead.branchId,
+                leadId,
+                actorId: hostId,
+                actorType: 'user',
+                type: ACTIVITY_TYPES.MEETING_BOOKED,
+                title: 'Meeting scheduled',
+                description: `Meeting "${meetingTitle}" scheduled for ${new Date(scheduledAt).toLocaleString()}`,
+                metadata: { meetingId, ...data },
+            });
+        } catch (err) { console.error('❌ meeting.booked handler error:', err.message); }
+    });
+
+    // ─── meeting.completed → Track completed meeting ───
+    await subscribeToEvents(EVENTS.MEETING_COMPLETED, async (_channel, data) => {
+        try {
+            const { tenantId, leadId, meetingId, outcome } = data;
+            if (!leadId) return;
+            const lead = await Lead.findOneAndUpdate(
+                { _id: leadId, tenantId },
+                { 'lifecycle.lastActivityAt': new Date() },
+                { new: true }
+            );
+            if (!lead) return;
+            await recordLeadActivity({
+                tenantId,
+                branchId: lead.branchId,
+                leadId,
+                type: ACTIVITY_TYPES.MEETING_COMPLETED,
+                title: 'Meeting completed',
+                description: outcome ? `Outcome: ${outcome.replace('_', ' ')}` : 'Meeting completed',
+                metadata: { meetingId, ...data },
+            });
+        } catch (err) { console.error('❌ meeting.completed handler error:', err.message); }
+    });
+
+    // ─── meeting.cancelled / rescheduled / no_show ───
+    for (const [event, type, title] of [
+        [EVENTS.MEETING_CANCELLED, ACTIVITY_TYPES.MEETING_CANCELLED, 'Meeting cancelled'],
+        [EVENTS.MEETING_RESCHEDULED, ACTIVITY_TYPES.MEETING_RESCHEDULED, 'Meeting rescheduled'],
+        [EVENTS.MEETING_NO_SHOW, ACTIVITY_TYPES.MEETING_NO_SHOW, 'Meeting no show']
+    ]) {
+        await subscribeToEvents(event, async (_channel, data) => {
+            try {
+                const { tenantId, leadId, meetingId } = data;
+                if (!leadId) return;
+                const lead = await Lead.findOne({ _id: leadId, tenantId }).select('_id branchId');
+                if (!lead) return;
+                await recordLeadActivity({
+                    tenantId,
+                    branchId: lead.branchId,
+                    leadId,
+                    type,
+                    title,
+                    metadata: { meetingId, ...data },
+                });
+            } catch (err) { console.error(`❌ ${event} handler error:`, err.message); }
+        });
+    }
+
+    console.log('✅ lead-service: Event listeners registered');
 };
 
 module.exports = { registerEventListeners };

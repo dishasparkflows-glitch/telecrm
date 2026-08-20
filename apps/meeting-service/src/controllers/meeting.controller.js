@@ -13,7 +13,7 @@ const {
 const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { getUsersBulk } = require('../services/serviceClients/user.client');
-const { createOrFindLead } = require('../services/serviceClients/lead.client');
+const { createOrFindLead, getLeadsBulk } = require('../services/serviceClients/lead.client');
 const { validateCustomFields } = require('../utils/customFieldValidator');
 const { resolveBookingHost } = require('../services/assignmentResolver.service');
 
@@ -167,7 +167,9 @@ const getMeetings = asyncHandler(async (req, res) => {
         ];
     }
 
-    if (status) filter['meeting.status'] = status;
+    if (status) {
+        filter['meeting.status'] = { $in: status.split(',') };
+    }
     if (from || to) {
         filter['meeting.scheduledAt'] = {};
         if (from) {
@@ -186,7 +188,64 @@ const getMeetings = asyncHandler(async (req, res) => {
         Meeting.countDocuments(filter),
     ]);
 
+    // Populate lead details using bulk endpoint
+    const leadIds = Array.from(new Set(meetings.filter(m => m.leadId).map(m => String(m.leadId))));
+    if (leadIds.length > 0) {
+        const leads = await getLeadsBulk(tenantId, leadIds);
+        const leadMap = new Map(leads.map(l => [String(l._id), {
+            _id: l._id,
+            name: `${l.contact?.firstName || ''} ${l.contact?.lastName || ''}`.trim() || 'Unknown',
+            company: l.contact?.company || '',
+            phone: l.contact?.phone || ''
+        }]));
+        
+        meetings.forEach(m => {
+            if (m.leadId && leadMap.has(String(m.leadId))) {
+                m.leadId = leadMap.get(String(m.leadId));
+            }
+        });
+    }
+
     ApiResponse.paginated(res, meetings, { page, limit, total, totalPages: Math.ceil(total / limit) });
+});
+
+const getMeetingStats = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const filter = buildScopeFilter(req, { ownerField: 'hostId', module: 'meetings' });
+
+    if (filter.hostId) {
+        const ownerId = filter.hostId;
+        delete filter.hostId;
+        filter.$or = [
+            { hostId: ownerId },
+            { 'attendees.userId': ownerId },
+        ];
+    }
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const weekEnd = new Date(todayEnd);
+    weekEnd.setDate(weekEnd.getDate() + (7 - weekEnd.getDay()));
+
+    const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
+    const monthEnd = new Date(todayStart.getFullYear(), todayStart.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const [todayCount, upcomingCount, completedCount, cancelledCount] = await Promise.all([
+        Meeting.countDocuments({ ...filter, 'meeting.scheduledAt': { $gte: todayStart, $lte: todayEnd } }),
+        Meeting.countDocuments({ ...filter, 'meeting.scheduledAt': { $gt: todayEnd, $lte: weekEnd } }),
+        Meeting.countDocuments({ ...filter, 'meeting.status': 'completed', 'meeting.scheduledAt': { $gte: monthStart, $lte: monthEnd } }),
+        Meeting.countDocuments({ ...filter, 'meeting.status': { $in: ['cancelled', 'no_show'] }, 'meeting.scheduledAt': { $gte: monthStart, $lte: monthEnd } }),
+    ]);
+
+    ApiResponse.success(res, {
+        today: todayCount,
+        upcoming: upcomingCount,
+        completed: completedCount,
+        cancelled: cancelledCount,
+    });
 });
 
 const getMeeting = asyncHandler(async (req, res) => {
@@ -239,8 +298,22 @@ const getMeeting = asyncHandler(async (req, res) => {
             };
         }));
     }
+    
+    // Attach lead object
+    if (meeting.leadId) {
+        const leads = await getLeadsBulk(tenantId, [String(meeting.leadId)]);
+        if (leads.length > 0) {
+            const l = leads[0];
+            meeting.leadId = {
+                _id: l._id,
+                name: `${l.contact?.firstName || ''} ${l.contact?.lastName || ''}`.trim() || 'Unknown',
+                company: l.contact?.company || '',
+                phone: l.contact?.phone || ''
+            };
+        }
+    }
 
-    ApiResponse.success(res, meeting);
+    ApiResponse.success(res, meeting, 'Success');
 });
 
 const addMeetingComment = asyncHandler(async (req, res) => {
@@ -314,8 +387,25 @@ const updateMeeting = asyncHandler(async (req, res) => {
         await validateCustomFields(tenantId, 'Meeting', changes.customFields);
     }
 
+    const oldStatus = meeting.meeting?.status;
+    const oldScheduledAt = meeting.meeting?.scheduledAt ? new Date(meeting.meeting.scheduledAt).getTime() : null;
+    
     Object.assign(meeting, changes);
     await meeting.save();
+
+    const newStatus = meeting.meeting?.status;
+    const newScheduledAt = meeting.meeting?.scheduledAt ? new Date(meeting.meeting.scheduledAt).getTime() : null;
+
+    if (oldStatus !== newStatus) {
+        if (newStatus === 'cancelled') {
+            await publishEvent(EVENTS.MEETING_CANCELLED, { tenantId, meetingId, leadId: meeting.leadId });
+        } else if (newStatus === 'no_show') {
+            await publishEvent(EVENTS.MEETING_NO_SHOW, { tenantId, meetingId, leadId: meeting.leadId });
+        }
+    } else if (oldScheduledAt !== newScheduledAt && oldStatus !== 'cancelled') {
+        await publishEvent(EVENTS.MEETING_RESCHEDULED, { tenantId, meetingId, leadId: meeting.leadId, scheduledAt: meeting.meeting.scheduledAt });
+    }
+
     ApiResponse.success(res, meeting, 'Meeting updated');
 });
 
@@ -680,9 +770,66 @@ const getBookingAvailability = asyncHandler(async (req, res) => {
     });
 });
 
+const checkAvailability = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const { date, duration, participants } = req.body;
+    
+    if (!date) throw ApiError.badRequest('date is required');
+    if (!duration) throw ApiError.badRequest('duration is required');
+    if (!Array.isArray(participants)) throw ApiError.badRequest('participants must be an array of user IDs');
+
+    const targetDate = new Date(`${date}T00:00:00.000Z`); // parse date in UTC
+    const startOfDay = new Date(targetDate);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    const existingMeetings = await Meeting.find({
+        tenantId,
+        $or: [
+            { hostId: { $in: participants } },
+            { 'attendees.userId': { $in: participants } }
+        ],
+        'meeting.status': { $in: ['scheduled', 'confirmed'] },
+        'meeting.scheduledAt': { $gte: startOfDay, $lt: endOfDay },
+    }).select('meeting.scheduledAt meeting.duration hostId attendees meeting.title').lean();
+
+    ApiResponse.success(res, { existingMeetings });
+});
+
+const completeMeeting = asyncHandler(async (req, res) => {
+    const tenantId = req.headers['x-tenant-id'];
+    const meetingId = requireObjectId(req.params.id, 'meeting ID');
+    const { outcome, notes, nextFollowUpDate, nextFollowUpTime, followUpNotes } = req.body;
+
+    const meeting = await Meeting.findOne({ _id: meetingId, tenantId });
+    if (!meeting) throw ApiError.notFound('Meeting not found');
+    if (!canAccessMeeting(req, meeting)) {
+        throw ApiError.forbidden('You do not have access to this meeting');
+    }
+
+    meeting.meeting.status = 'completed';
+    if (outcome !== undefined) meeting.meeting.outcome = outcome;
+    if (notes !== undefined) meeting.meeting.notes = notes;
+    if (nextFollowUpDate !== undefined) meeting.meeting.nextFollowUpDate = nextFollowUpDate;
+    if (nextFollowUpTime !== undefined) meeting.meeting.nextFollowUpTime = nextFollowUpTime;
+    if (followUpNotes !== undefined) meeting.meeting.followUpNotes = followUpNotes;
+
+    await meeting.save();
+
+    await publishEvent(EVENTS.MEETING_COMPLETED, {
+        tenantId,
+        meetingId: meeting._id,
+        leadId: meeting.leadId,
+        outcome: meeting.meeting.outcome
+    });
+
+    ApiResponse.success(res, meeting, 'Meeting marked as completed');
+});
+
 module.exports = {
     scheduleMeeting,
     getMeetings,
+    getMeetingStats,
     getMeeting,
     updateMeeting,
     deleteMeeting,
@@ -700,5 +847,7 @@ module.exports = {
     googleAuthStatus,
     googleDisconnect,
     googleGetCalendars,
-    getBookingAvailability
+    getBookingAvailability,
+    checkAvailability,
+    completeMeeting
 };

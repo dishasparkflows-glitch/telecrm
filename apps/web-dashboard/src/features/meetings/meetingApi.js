@@ -9,6 +9,10 @@ export const meetingApi = baseApi.injectEndpoints({
             }),
             providesTags: [{ type: 'Meeting', id: 'LIST' }],
         }),
+        getMeetingStats: builder.query({
+            query: () => '/meetings/stats',
+            providesTags: [{ type: 'Meeting', id: 'STATS' }, { type: 'Meeting', id: 'LIST' }],
+        }),
         getMeeting: builder.query({
             query: (id) => `/meetings/${id}`,
             providesTags: (result, error, id) => [{ type: 'Meeting', id }],
@@ -28,6 +32,21 @@ export const meetingApi = baseApi.injectEndpoints({
                 body: data,
             }),
             invalidatesTags: [{ type: 'Meeting', id: 'LIST' }],
+        }),
+        completeMeeting: builder.mutation({
+            query: ({ id, ...data }) => ({
+                url: `/meetings/${id}/complete`,
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: [{ type: 'Meeting', id: 'LIST' }],
+        }),
+        checkAvailability: builder.mutation({
+            query: (data) => ({
+                url: '/meetings/check-availability',
+                method: 'POST',
+                body: data,
+            }),
         }),
         getBookingLinks: builder.query({
             query: () => '/meetings/booking-links',
@@ -125,4 +144,7 @@ export const {
     useGetGoogleAuthStatusQuery,
     useDisconnectGoogleMutation,
     useGetGoogleCalendarsQuery,
+    useCompleteMeetingMutation,
+    useCheckAvailabilityMutation,
+    useGetMeetingStatsQuery,
 } = meetingApi

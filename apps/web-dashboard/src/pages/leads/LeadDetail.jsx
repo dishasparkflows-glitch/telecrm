@@ -268,6 +268,7 @@ export default function LeadDetail() {
                 <span className="text-[var(--vz-text)]">{lead.meta?.createdAt || lead.createdAt ? new Date(lead.meta?.createdAt || lead.createdAt).toLocaleDateString() : '—'}</span>
               </div>
             </div>
+          </Card>
 
           <Card>
             <div className="flex gap-2 mt-4 pt-4 border-t border-[var(--vz-border)]">
