@@ -220,13 +220,25 @@ const getCallRecording = asyncHandler(async (req, res) => {
  * Get call logs with filters
  */
 const getCallLogs = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 25, leadId, status, direction } = req.query;
+    const { page = 1, limit = 25, leadId, status, direction, from, to } = req.query;
     const tenantId = req.headers['x-tenant-id'];
 
     const filter = buildScopeFilter(req, { ownerField: 'userId', module: 'calls' });
     if (leadId) filter.leadId = leadId;
     if (status) filter['call.status'] = status;
     if (direction) filter['call.direction'] = direction;
+    
+    if (from || to) {
+        filter['call.initiatedAt'] = {};
+        if (from) {
+            const fromDate = new Date(from);
+            if (!Number.isNaN(fromDate.getTime())) filter['call.initiatedAt'].$gte = fromDate;
+        }
+        if (to) {
+            const toDate = new Date(to);
+            if (!Number.isNaN(toDate.getTime())) filter['call.initiatedAt'].$lte = toDate;
+        }
+    }
 
     const safeLimit = Math.min(Math.max(parseInt(limit) || 25, 1), 100);
     const safePage = Math.max(parseInt(page) || 1, 1);
