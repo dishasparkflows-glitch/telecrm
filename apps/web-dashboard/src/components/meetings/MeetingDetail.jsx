@@ -97,12 +97,16 @@ export default function MeetingDetail() {
 
   const handleCompleteMeeting = async () => {
     try {
+      let nextFollowUpAt = undefined;
+      if (completeData.nextFollowUpDate) {
+        nextFollowUpAt = new Date(`${completeData.nextFollowUpDate}T${completeData.nextFollowUpTime || '09:00'}:00`).toISOString();
+      }
+
       await completeMeeting({
         id: meeting._id,
         outcome: completeData.outcome || undefined,
         notes: completeData.notes || undefined,
-        nextFollowUpDate: completeData.nextFollowUpDate || undefined,
-        nextFollowUpTime: completeData.nextFollowUpTime || undefined,
+        nextFollowUpAt,
         followUpNotes: completeData.followUpNotes || undefined
       }).unwrap()
 
@@ -369,8 +373,8 @@ export default function MeetingDetail() {
                           <div>
                               <p className="text-xs font-semibold text-slate-500 mb-1">Next Follow-up</p>
                               <div className="flex items-center gap-2 text-sm text-slate-700">
-                                  {meeting.meeting?.nextFollowUpDate ? (
-                                      <><Calendar size={14} className="text-slate-400"/> {new Date(meeting.meeting.nextFollowUpDate).toLocaleDateString()}</>
+                                  {meeting.meeting?.nextFollowUpAt ? (
+                                      <><Calendar size={14} className="text-slate-400"/> {new Date(meeting.meeting.nextFollowUpAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</>
                                   ) : '-'}
                               </div>
                           </div>
@@ -384,16 +388,16 @@ export default function MeetingDetail() {
                   <h3 className="text-sm font-bold text-slate-900 mb-4">Follow-up & Tasks</h3>
                   <div className="space-y-3 mb-4">
                       {/* Assuming we might fetch tasks related to this meeting later. Mocking for now based on design */}
-                      {meeting.meeting?.nextFollowUpDate && (
+                      {meeting.meeting?.nextFollowUpAt && (
                       <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
                           <div className="mt-0.5 w-4 h-4 rounded border border-slate-300"></div>
                           <div className="flex-1">
                               <p className="text-sm font-medium text-slate-700">Follow-up Meeting</p>
-                              <p className="text-xs text-slate-500 mt-0.5">{user?.name} • {new Date(meeting.meeting.nextFollowUpDate).toLocaleDateString()}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">{user?.name} • {new Date(meeting.meeting.nextFollowUpAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</p>
                           </div>
                       </div>
                       )}
-                      {!meeting.meeting?.nextFollowUpDate && (
+                      {!meeting.meeting?.nextFollowUpAt && (
                           <p className="text-sm text-slate-500 italic">No tasks created.</p>
                       )}
                   </div>

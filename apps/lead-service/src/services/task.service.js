@@ -11,6 +11,10 @@ const createTask = async (tenantId, userId, data) => {
     let leadNumber = null;
     let branchId = null;
 
+    if (!data.assignedTo) {
+        throw ApiError.badRequest('Assigned User is required');
+    }
+
     if (data.leadId) {
         const lead = await Lead.findOne({ _id: data.leadId, tenantId }).lean();
         if (!lead) throw ApiError.notFound('Lead not found');
@@ -23,7 +27,10 @@ const createTask = async (tenantId, userId, data) => {
         tenantId,
         branchId: branchId || data.branchId || null,
         leadNumber,
-        createdBy: userId
+        meta: {
+            ...(data.meta || {}),
+            createdBy: userId
+        }
     });
 
     if (task.leadId) {
@@ -39,6 +46,16 @@ const createTask = async (tenantId, userId, data) => {
         });
     }
 
+    await publishEvent(EVENTS.TASK_CREATED, {
+        tenantId,
+        taskId: task._id,
+        assignedTo: task.assignedTo || null,
+        leadId: task.leadId,
+        title: task.details?.title,
+        dueDate: task.dueDate,
+        reminder: task.details?.reminder
+    });
+
     // Publish event for notifications (assigned user)
     if (task.assignedTo) {
         await publishEvent(EVENTS.TASK_ASSIGNED, {
@@ -47,7 +64,8 @@ const createTask = async (tenantId, userId, data) => {
             assignedTo: task.assignedTo,
             leadId: task.leadId,
             title: task.details?.title,
-            dueDate: task.dueDate
+            dueDate: task.dueDate,
+            reminder: task.details?.reminder
         });
     }
 
@@ -64,6 +82,10 @@ const updateTask = async (tenantId, taskId, userId, data) => {
     const previousAssignee = task.assignedTo?.toString();
     const previousStatus = task.details?.status;
     const previousAttachments = task.attachments || [];
+
+    if (data.assignedTo === "") {
+        throw ApiError.badRequest('Assigned User is required');
+    }
 
     // Remove protected fields from update data
     delete data.tenantId;
@@ -109,7 +131,31 @@ const updateTask = async (tenantId, taskId, userId, data) => {
                 title: isCompleted ? 'Task completed' : 'Task status changed',
                 description: isCompleted ? `Completed task: ${task.details?.title}` : `Task "${task.details?.title}" status changed to ${task.details?.status}`
             });
+
+            await publishEvent(isCompleted ? EVENTS.TASK_COMPLETED : 'task.updated', {
+                tenantId,
+                taskId: task._id,
+                assignedTo: task.assignedTo || null,
+                leadId: task.leadId,
+                title: task.details?.title,
+                status: task.details?.status,
+                dueDate: task.dueDate,
+                reminder: task.details?.reminder
+            });
         }
+    } else if (data.details?.status && data.details?.status !== previousStatus) {
+        // If not attached to a lead, still publish the task event
+        const isCompleted = task.details?.status === 'COMPLETED';
+        await publishEvent(isCompleted ? EVENTS.TASK_COMPLETED : 'task.updated', {
+            tenantId,
+            taskId: task._id,
+            assignedTo: task.assignedTo || null,
+            leadId: null,
+            title: task.details?.title,
+            status: task.details?.status,
+            dueDate: task.dueDate,
+            reminder: task.details?.reminder
+        });
     }
 
     // Notify new assignee if changed
@@ -133,7 +179,8 @@ const updateTask = async (tenantId, taskId, userId, data) => {
             assignedTo: task.assignedTo,
             leadId: task.leadId,
             title: task.details?.title,
-            dueDate: task.dueDate
+            dueDate: task.dueDate,
+            reminder: task.details?.reminder
         });
     }
 

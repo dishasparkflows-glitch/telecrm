@@ -4,6 +4,19 @@ const { sendInApp } = require('../channels/inApp.channel');
 const { sendTemplateEmail } = require('../channels/email.channel');
 const { sendPushToUser } = require('../channels/push.channel');
 
+const getReminderDate = (dueDateStr, reminderOption) => {
+    if (!dueDateStr) return null;
+    const date = new Date(dueDateStr);
+    if (isNaN(date.getTime())) return null;
+
+    let offsetMinutes = 0;
+    if (reminderOption === '15 minutes before') offsetMinutes = 15;
+    else if (reminderOption === '30 minutes before') offsetMinutes = 30;
+    else if (reminderOption === '1 hour before') offsetMinutes = 60;
+    
+    return new Date(date.getTime() - offsetMinutes * 60000);
+};
+
 /**
  * Wire up event listeners for notification-service
  */
@@ -119,6 +132,17 @@ const registerEventListeners = async () => {
         }
     });
 
+    // ─── Lead created → broadcast to UI ───
+    await subscribeToEvents(EVENTS.LEAD_CREATED, async (_channel, data) => {
+        try {
+            const { tenantId, leadId, assignedTo } = data;
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'lead_created', { leadId, assignedTo });
+        } catch (err) {
+            console.error('❌ lead.created notification error:', err.message);
+        }
+    });
+
     // ─── Lead assigned → notify assigned user ───
     await subscribeToEvents(EVENTS.LEAD_ASSIGNED, async (_channel, data) => {
         try {
@@ -142,6 +166,8 @@ const registerEventListeners = async () => {
                 body: 'A new lead has been assigned to you',
                 data: { type: 'lead_assigned', leadId, actionUrl: `/leads/${leadId}` },
             });
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'lead_assigned', { leadId, assignedTo });
         } catch (err) {
             console.error('❌ lead.assigned notification error:', err.message);
         }
@@ -190,6 +216,8 @@ const registerEventListeners = async () => {
                     data: { type: 'meeting_booked', meetingId, actionUrl: '/meetings' },
                 });
             }
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'meeting_booked', { meetingId, scheduledAt });
         } catch (err) {
             console.error('❌ meeting.booked notification error:', err.message);
         }
@@ -263,6 +291,176 @@ const registerEventListeners = async () => {
             }
         } catch (err) {
             console.error('❌ call.recording_ready notification error:', err.message);
+        }
+    });
+
+    // ─── Tasks Notifications ───
+    await subscribeToEvents(EVENTS.TASK_ASSIGNED, async (_channel, data) => {
+        try {
+            const { tenantId, taskId, assignedTo, title, leadId } = data;
+            if (!assignedTo) return;
+            await Reminder.updateMany(
+                { tenantId, taskId, type: 'task_due', status: 'pending' },
+                { $set: { userId: assignedTo } }
+            );
+            await sendInApp(tenantId, assignedTo, {
+                title: 'Task Assigned',
+                message: `You have been assigned a task: ${title || 'No title'}`,
+                type: 'info',
+                actionUrl: leadId ? `/leads/${leadId}` : `/tasks`,
+                actionType: 'task',
+                data: { taskId }
+            });
+            await sendPushToUser({
+                tenantId,
+                userId: assignedTo,
+                title: 'Task Assigned',
+                body: `You have been assigned a task: ${title || 'No title'}`,
+                data: { type: 'task_assigned', taskId, actionUrl: leadId ? `/leads/${leadId}` : `/tasks` },
+            });
+        } catch (err) {
+            console.error('❌ task.assigned notification error:', err.message);
+        }
+    });
+
+    await subscribeToEvents(EVENTS.TASK_CREATED, async (_channel, data) => {
+        try {
+            const { tenantId, taskId, assignedTo, title, leadId } = data;
+            // Only notify if someone specific is assigned, but TASK_ASSIGNED usually handles it.
+            // But we emit realtime so UI updates if there's a listener.
+            if (assignedTo && data.dueDate) {
+                await Reminder.findOneAndUpdate(
+                    { tenantId, taskId, type: 'task_due' },
+                    {
+                        $set: {
+                            userId: assignedTo,
+                            title: 'Task Due',
+                            message: `Your task "${title || 'No title'}" is due.`,
+                            actionUrl: leadId ? `/leads/${leadId}` : `/tasks`,
+                            dueAt: getReminderDate(data.dueDate, data.reminder) || new Date(data.dueDate),
+                            status: 'pending',
+                            processingAt: null,
+                            sentAt: null,
+                            attempts: 0,
+                            lastError: '',
+                        },
+                    },
+                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                );
+            }
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'task_created', { taskId, title, leadId, assignedTo });
+        } catch (err) {
+            console.error('❌ task.created notification error:', err.message);
+        }
+    });
+
+    await subscribeToEvents('task.updated', async (_channel, data) => {
+        try {
+            const { tenantId, taskId, assignedTo, title, leadId, status } = data;
+            
+            if (status === 'COMPLETED' || status === 'CANCELLED') {
+                await Reminder.updateOne(
+                    { tenantId, taskId, type: 'task_due', status: { $in: ['pending', 'processing'] } },
+                    { $set: { status: 'cancelled', processingAt: null } }
+                );
+            } else if (data.dueDate && assignedTo) {
+                await Reminder.findOneAndUpdate(
+                    { tenantId, taskId, type: 'task_due' },
+                    {
+                        $set: {
+                            userId: assignedTo,
+                            title: 'Task Due',
+                            message: `Your task "${title || 'No title'}" is due.`,
+                            actionUrl: leadId ? `/leads/${leadId}` : `/tasks`,
+                            dueAt: getReminderDate(data.dueDate, data.reminder) || new Date(data.dueDate),
+                            status: 'pending',
+                            processingAt: null,
+                            sentAt: null,
+                            attempts: 0,
+                            lastError: '',
+                        },
+                    },
+                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                );
+            } else if (data.dueDate === null) {
+                await Reminder.updateOne(
+                    { tenantId, taskId, type: 'task_due', status: { $in: ['pending', 'processing'] } },
+                    { $set: { status: 'cancelled', processingAt: null } }
+                );
+            }
+
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'task_updated', { taskId, title, status, leadId, assignedTo });
+        } catch (err) {
+            console.error('❌ task.updated notification error:', err.message);
+        }
+    });
+
+    await subscribeToEvents(EVENTS.TASK_COMPLETED, async (_channel, data) => {
+        try {
+            const { tenantId, taskId, assignedTo, title, leadId } = data;
+            if (assignedTo) {
+                await sendInApp(tenantId, assignedTo, {
+                    title: 'Task Completed',
+                    message: `Task completed: ${title || 'No title'}`,
+                    type: 'success',
+                    actionUrl: leadId ? `/leads/${leadId}` : `/tasks`,
+                    actionType: 'task',
+                    data: { taskId }
+                });
+            }
+            await Reminder.updateOne(
+                { tenantId, taskId, type: 'task_due', status: { $in: ['pending', 'processing'] } },
+                { $set: { status: 'cancelled', processingAt: null } }
+            );
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'task_completed', { taskId, title, leadId, assignedTo });
+        } catch (err) {
+            console.error('❌ task.completed notification error:', err.message);
+        }
+    });
+
+    // ─── Meeting Updates Notifications ───
+    await subscribeToEvents(EVENTS.MEETING_CANCELLED, async (_channel, data) => {
+        try {
+            const { tenantId, meetingId, leadId } = data;
+            // In a real app we'd fetch the meeting host or just emit real-time
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'meeting_cancelled', { meetingId, leadId });
+        } catch (err) {
+            console.error('❌ meeting.cancelled notification error:', err.message);
+        }
+    });
+
+    await subscribeToEvents(EVENTS.MEETING_RESCHEDULED, async (_channel, data) => {
+        try {
+            const { tenantId, meetingId, leadId, scheduledAt } = data;
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'meeting_rescheduled', { meetingId, leadId, scheduledAt });
+        } catch (err) {
+            console.error('❌ meeting.rescheduled notification error:', err.message);
+        }
+    });
+
+    await subscribeToEvents(EVENTS.MEETING_COMPLETED, async (_channel, data) => {
+        try {
+            const { tenantId, meetingId, leadId } = data;
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'meeting_completed', { meetingId, leadId });
+        } catch (err) {
+            console.error('❌ meeting.completed notification error:', err.message);
+        }
+    });
+
+    // ─── Lead Stage Changed Notification ───
+    await subscribeToEvents(EVENTS.LEAD_STAGE_CHANGED, async (_channel, data) => {
+        try {
+            const { tenantId, leadId, stage } = data;
+            const realtimeService = require('../services/realtime.service');
+            realtimeService.emitToTenant(tenantId, 'lead_stage_changed', { leadId, stage });
+        } catch (err) {
+            console.error('❌ lead.stage_changed notification error:', err.message);
         }
     });
 

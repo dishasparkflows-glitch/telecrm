@@ -94,10 +94,16 @@ export default function Meetings() {
 
       const payload = { 
         provider: meetingType === 'online' ? 'google_meet' : null,
-        meetingType,
         category,
-        location: meetingType === 'offline' ? location : null,
-        meeting: { title, description, scheduledAt: dateTime, duration, link: meetingType === 'online' ? meetingUrl : null },
+        meeting: { 
+            title, 
+            description, 
+            scheduledAt: dateTime, 
+            duration, 
+            link: meetingType === 'online' ? meetingUrl : null,
+            meetingType,
+            location: meetingType === 'offline' ? location : null
+        },
         attendees: attendees.map(a => ({ userId: a.userId })),
         customFields 
       }
@@ -246,8 +252,8 @@ export default function Meetings() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1.5 text-slate-700">
-                            {m.meetingType === 'online' ? <Video size={14} className="text-primary"/> : m.meetingType === 'phone' ? <Clock size={14} className="text-warning"/> : <Calendar size={14} className="text-slate-400"/>}
-                            <span className="capitalize">{m.meetingType}</span>
+                            {m.meeting?.meetingType === 'online' ? <Video size={14} className="text-primary"/> : m.meeting?.meetingType === 'phone' ? <Clock size={14} className="text-warning"/> : <Calendar size={14} className="text-slate-400"/>}
+                            <span className="capitalize">{m.meeting?.meetingType}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">

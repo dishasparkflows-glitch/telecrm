@@ -3,6 +3,9 @@ import { useDispatch } from 'react-redux';
 import { useSocketEvent } from './useSocketEvent';
 import { notificationApi, useRegisterDeviceMutation } from '../features/notifications/notificationApi';
 import { callApi } from '../features/calls/callApi';
+import { tasksApi } from '../features/tasks/tasksApi';
+import { meetingApi } from '../features/meetings/meetingApi';
+import { leadApi } from '../features/leads/leadApi';
 import { closeDialer } from '../slices/uiSlice';
 import { requestFirebaseNotificationPermission, onMessageListener } from '../utils/firebase';
 
@@ -63,6 +66,14 @@ export function useNotificationsSocket() {
         console.log('🔔 Real-time notification received:', notification);
         dispatch(notificationApi.util.invalidateTags([{ type: 'Notification', id: 'LIST' }]));
         window.dispatchEvent(new CustomEvent('app:notification', { detail: notification }));
+
+        // Show native Chrome notification
+        if (Notification.permission === 'granted') {
+            new Notification(notification?.notification?.title || notification?.title || 'New Notification', {
+                body: notification?.notification?.message || notification?.message || '',
+                icon: '/vite.svg'
+            });
+        }
     });
 
     useSocketEvent('call_recording_ready', (data) => {
@@ -76,6 +87,22 @@ export function useNotificationsSocket() {
         // Safety net: ensure dialer closes even if Dialer component listener missed the event
         dispatch(closeDialer());
     });
+
+    // ─── Tasks Sockets ───
+    useSocketEvent('task_created', () => dispatch(tasksApi.util.invalidateTags([{ type: 'Task', id: 'LIST' }])));
+    useSocketEvent('task_updated', () => dispatch(tasksApi.util.invalidateTags([{ type: 'Task', id: 'LIST' }])));
+    useSocketEvent('task_completed', () => dispatch(tasksApi.util.invalidateTags([{ type: 'Task', id: 'LIST' }])));
+
+    // ─── Meetings Sockets ───
+    useSocketEvent('meeting_booked', () => dispatch(meetingApi.util.invalidateTags([{ type: 'Meeting', id: 'LIST' }])));
+    useSocketEvent('meeting_cancelled', () => dispatch(meetingApi.util.invalidateTags([{ type: 'Meeting', id: 'LIST' }])));
+    useSocketEvent('meeting_rescheduled', () => dispatch(meetingApi.util.invalidateTags([{ type: 'Meeting', id: 'LIST' }])));
+    useSocketEvent('meeting_completed', () => dispatch(meetingApi.util.invalidateTags([{ type: 'Meeting', id: 'LIST' }])));
+
+    // ─── Leads Sockets ───
+    useSocketEvent('lead_created', () => dispatch(leadApi.util.invalidateTags([{ type: 'Lead', id: 'LIST' }])));
+    useSocketEvent('lead_assigned', () => dispatch(leadApi.util.invalidateTags([{ type: 'Lead', id: 'LIST' }])));
+    useSocketEvent('lead_stage_changed', () => dispatch(leadApi.util.invalidateTags([{ type: 'Lead', id: 'LIST' }])));
 
     return null; // Return value not needed anymore, kept for backwards compatibility
 }

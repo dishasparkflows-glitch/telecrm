@@ -67,12 +67,42 @@ const registerDevice = asyncHandler(async (req, res) => {
         throw ApiError.badRequest('deviceId, token, and a valid platform are required');
     }
 
-    await DeviceToken.updateMany({ token, $or: [{ tenantId: { $ne: tenantId } }, { userId: { $ne: userId } }] }, { $set: { isActive: false } });
-    const device = await DeviceToken.findOneAndUpdate(
-        { tenantId, userId, deviceId },
-        { $set: { token, platform, appVersion: appVersion || '', isActive: true, lastSeenAt: new Date(), lastError: '' } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    let device = await DeviceToken.findOne({ token });
+    if (device) {
+        // Resolve unique index conflicts ({ tenantId, userId, deviceId })
+        if (device.deviceId !== deviceId || String(device.userId) !== String(userId) || String(device.tenantId) !== String(tenantId)) {
+            const conflict = await DeviceToken.findOne({ tenantId, userId, deviceId });
+            if (conflict && String(conflict._id) !== String(device._id)) {
+                await DeviceToken.deleteOne({ _id: conflict._id });
+            }
+        }
+        
+        device.tenantId = tenantId;
+        device.userId = userId;
+        device.deviceId = deviceId;
+        device.platform = platform;
+        device.appVersion = appVersion || '';
+        device.isActive = true;
+        device.lastSeenAt = new Date();
+        device.lastError = '';
+        await device.save();
+    } else {
+        let existingDevice = await DeviceToken.findOne({ tenantId, userId, deviceId });
+        if (existingDevice) {
+            existingDevice.token = token;
+            existingDevice.platform = platform;
+            existingDevice.appVersion = appVersion || '';
+            existingDevice.isActive = true;
+            existingDevice.lastSeenAt = new Date();
+            existingDevice.lastError = '';
+            device = await existingDevice.save();
+        } else {
+            device = await DeviceToken.create({
+                tenantId, userId, deviceId, token, platform, appVersion: appVersion || '', isActive: true
+            });
+        }
+    }
+
     ApiResponse.success(res, { deviceId: device.deviceId, platform: device.platform, isActive: device.isActive }, 'Push notification device registered');
 });
 

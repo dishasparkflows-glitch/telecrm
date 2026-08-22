@@ -5,8 +5,9 @@ const reminderSchema = new mongoose.Schema(
         tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
         branchId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
         userId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-        leadId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-        type: { type: String, enum: ['lead_follow_up'], default: 'lead_follow_up' },
+        leadId: { type: mongoose.Schema.Types.ObjectId, index: true },
+        taskId: { type: mongoose.Schema.Types.ObjectId, index: true },
+        type: { type: String, enum: ['lead_follow_up', 'task_due'], default: 'lead_follow_up' },
         title: { type: String, required: true },
         message: { type: String, required: true },
         actionUrl: { type: String, default: '' },
@@ -28,7 +29,14 @@ const reminderSchema = new mongoose.Schema(
     { timestamps: { createdAt: 'meta.createdAt', updatedAt: 'meta.updatedAt' }, versionKey: false }
 );
 
-reminderSchema.index({ tenantId: 1, leadId: 1, type: 1 }, { unique: true });
+reminderSchema.index(
+    { tenantId: 1, leadId: 1, type: 1 },
+    { unique: true, partialFilterExpression: { leadId: { $exists: true, $ne: null } } }
+);
+reminderSchema.index(
+    { tenantId: 1, taskId: 1, type: 1 },
+    { unique: true, partialFilterExpression: { taskId: { $exists: true, $ne: null } } }
+);
 reminderSchema.index({ status: 1, dueAt: 1, processingAt: 1 });
 
 module.exports = mongoose.model('Reminder', reminderSchema);

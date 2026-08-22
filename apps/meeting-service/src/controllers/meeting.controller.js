@@ -111,8 +111,9 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
                 if (!meetingData.meeting) meetingData.meeting = {};
                 meetingData.meeting.link = gEvent.hangoutLink;
             } catch (err) {
-                console.error('Failed to create google calendar event:', err);
-                throw ApiError.internal('Failed to schedule meeting on Google Calendar');
+                const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Unknown error';
+                console.error('Failed to create google calendar event:', errorMessage);
+                throw ApiError.internal(`Failed to schedule meeting on Google Calendar: ${errorMessage}`);
             }
         } else {
             throw ApiError.badRequest('You must connect your Google Calendar in Settings first');
@@ -759,7 +760,7 @@ const checkAvailability = asyncHandler(async (req, res) => {
 const completeMeeting = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const meetingId = requireObjectId(req.params.id, 'meeting ID');
-    const { outcome, notes, nextFollowUpDate, nextFollowUpTime, followUpNotes } = req.body;
+    const { outcome, notes, nextFollowUpAt, followUpNotes } = req.body;
 
     const meeting = await Meeting.findOne({ _id: meetingId, tenantId });
     if (!meeting) throw ApiError.notFound('Meeting not found');
@@ -770,8 +771,7 @@ const completeMeeting = asyncHandler(async (req, res) => {
     meeting.meeting.status = 'completed';
     if (outcome !== undefined) meeting.meeting.outcome = outcome;
     if (notes !== undefined) meeting.meeting.notes = notes;
-    if (nextFollowUpDate !== undefined) meeting.meeting.nextFollowUpDate = nextFollowUpDate;
-    if (nextFollowUpTime !== undefined) meeting.meeting.nextFollowUpTime = nextFollowUpTime;
+    if (nextFollowUpAt !== undefined) meeting.meeting.nextFollowUpAt = nextFollowUpAt;
     if (followUpNotes !== undefined) meeting.meeting.followUpNotes = followUpNotes;
 
     await meeting.save();

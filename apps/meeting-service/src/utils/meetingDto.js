@@ -3,7 +3,7 @@ const { ApiError } = require('@sparkcrm/shared-utils');
 
 const MEETING_CREATE_FIELDS = Object.freeze([
     'leadId', 'meeting', 'guest', 'attendees', 'customFields',
-    'location', 'provider', 'meetingType', 'category'
+    'provider', 'category'
 ]);
 const MEETING_UPDATE_FIELDS = Object.freeze([...MEETING_CREATE_FIELDS, 'status']);
 const ATTENDEE_FIELDS = Object.freeze(['userId', 'role', 'status']);
@@ -50,7 +50,7 @@ function sanitizeMeeting(input, allowedFields) {
     }
     if (meeting.meeting !== undefined) {
         if (!isPlainObject(meeting.meeting)) throw ApiError.badRequest('meeting must be an object');
-        meeting.meeting = pickStrictObject(meeting.meeting, ['title', 'description', 'agenda', 'scheduledAt', 'duration', 'status', 'notes', 'link', 'outcome', 'nextFollowUpDate', 'nextFollowUpTime', 'followUpNotes'], 'meeting');
+        meeting.meeting = pickStrictObject(meeting.meeting, ['title', 'description', 'agenda', 'scheduledAt', 'duration', 'status', 'notes', 'link', 'outcome', 'nextFollowUpAt', 'followUpNotes', 'meetingType', 'location'], 'meeting');
         if (meeting.meeting.agenda !== undefined) {
             if (!Array.isArray(meeting.meeting.agenda)) throw ApiError.badRequest('meeting.agenda must be an array');
             meeting.meeting.agenda = meeting.meeting.agenda.map((item, index) => {
