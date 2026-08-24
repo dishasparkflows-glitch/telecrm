@@ -16,6 +16,7 @@ const workerConnection = new IORedis(env.REDIS_URL, {
         return transientErrors.some((e) => err.message.includes(e)) ? 2 : false;
     },
 });
+workerConnection.on('error', () => {});
 
 const automationWorker = new Worker('AutomationActionQueue', async (job) => {
     const { logId, tenantId, node, triggerData } = job.data;
@@ -160,5 +161,7 @@ automationWorker.on('failed', async (job, err) => {
         }
     }
 });
+
+automationWorker.on('error', () => {});
 
 module.exports = { automationWorker };

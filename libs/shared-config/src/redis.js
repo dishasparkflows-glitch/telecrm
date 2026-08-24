@@ -11,9 +11,7 @@ let subscriberReady = false;
  */
 const buildRetryStrategy = (label) => (times) => {
     const delay = Math.min(times * 500, 10000);
-    if (times % 5 === 0) {
-        console.warn(`⚠️  Redis ${label}: reconnect attempt #${times} (delay ${delay}ms)`);
-    }
+    // Suppress console.warn to keep terminal clean when Redis is intentionally stopped
     return delay;
 };
 
@@ -49,7 +47,7 @@ const getRedisClient = (url) => {
         redisClient.on('connect', () => { clientReady = true; });
         redisClient.on('error', (err) => {
             clientReady = false;
-            if (process.env.NODE_ENV !== 'production') {
+            if (process.env.NODE_ENV !== 'production' && !err.message.includes('ECONNREFUSED')) {
                 console.warn('⚠️  Redis client error:', err.message);
             }
         });
@@ -58,7 +56,9 @@ const getRedisClient = (url) => {
         redisClient.on('reconnecting', () => { clientReady = false; });
 
         redisClient.connect().catch((err) => {
-            console.warn('⚠️  Redis client initial connect failed (will retry):', err.message);
+            if (!err.message.includes('ECONNREFUSED')) {
+                console.warn('⚠️  Redis client initial connect failed (will retry):', err.message);
+            }
         });
     }
     return redisClient;
@@ -87,7 +87,7 @@ const getRedisSubscriber = (url) => {
         redisSubscriber.on('connect', () => { subscriberReady = true; });
         redisSubscriber.on('error', (err) => {
             subscriberReady = false;
-            if (process.env.NODE_ENV !== 'production') {
+            if (process.env.NODE_ENV !== 'production' && !err.message.includes('ECONNREFUSED')) {
                 console.warn('⚠️  Redis subscriber error:', err.message);
             }
         });
@@ -96,7 +96,9 @@ const getRedisSubscriber = (url) => {
         redisSubscriber.on('reconnecting', () => { subscriberReady = false; });
 
         redisSubscriber.connect().catch((err) => {
-            console.warn('⚠️  Redis subscriber initial connect failed (will retry):', err.message);
+            if (!err.message.includes('ECONNREFUSED')) {
+                console.warn('⚠️  Redis subscriber initial connect failed (will retry):', err.message);
+            }
         });
     }
     return redisSubscriber;

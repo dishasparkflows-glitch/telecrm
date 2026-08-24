@@ -201,7 +201,7 @@ export default function CallLogs() {
         <KPICard title="Total Calls" value={stats.totalCalls || 0} icon={Phone} iconColor="primary" />
         <KPICard title="Connected" value={stats.connected || 0} icon={PhoneIncoming} iconColor="success" />
         <KPICard title="Missed" value={stats.missed || 0} icon={PhoneMissed} iconColor="danger" />
-        <KPICard title="Avg Duration" value={stats.avgDuration || '0s'} icon={Clock} iconColor="info" />
+        <KPICard title="Avg Duration" value={stats.avgDuration != null ? `${Number(stats.avgDuration).toFixed(1).replace(/\\.0$/, '')}s` : '0s'} icon={Clock} iconColor="info" />
       </div>
 
       {/* Table */}

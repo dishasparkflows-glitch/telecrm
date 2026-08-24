@@ -14,8 +14,11 @@ const getLockClient = () => {
             retryStrategy: (times) => Math.min(times * 500, 10000),
             lazyConnect: true,
         });
+        lockClient.on('error', () => {});
         lockClient.connect().catch((err) => {
-            console.warn('⚠️  Automation lock Redis unavailable:', err.message);
+            if (!err.message.includes('ECONNREFUSED')) {
+                console.warn('⚠️  Automation lock Redis unavailable:', err.message);
+            }
         });
     }
     return lockClient;

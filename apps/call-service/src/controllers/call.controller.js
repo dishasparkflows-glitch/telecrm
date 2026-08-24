@@ -5,6 +5,22 @@ const callingApi = require('../services/callingApi.service');
 const { findLeadByPhone } = require('../services/leadLookup.service');
 const { getEnrichedCallLogs } = require('../services/callQuery.service');
 const { normalizeMobileCallEntry } = require('../utils/mobileCallParser');
+const mongoose = require('mongoose');
+
+async function getAgentMobile(req, userId) {
+    let mobile = req.headers['x-user-mobile'];
+    if (!mobile && userId && mongoose.Types.ObjectId.isValid(userId)) {
+        try {
+            const user = await mongoose.connection.db.collection('users').findOne({ _id: new mongoose.Types.ObjectId(userId) });
+            if (user && user.contact && user.contact.mobileNumber) {
+                mobile = user.contact.mobileNumber;
+            }
+        } catch (err) {
+            console.error('Error fetching user mobile number:', err);
+        }
+    }
+    return mobile;
+}
 
 /**
  * POST /api/calls/initiate
@@ -28,7 +44,7 @@ const initiateCall = asyncHandler(async (req, res) => {
     const branchId  = req.headers['x-user-branch-id'] || req.headers['x-branch-id'];
 
     const virtualNumber = req.headers['x-tenant-calling-number'];
-    const agentMobile   = req.headers['x-user-mobile'];
+    const agentMobile   = await getAgentMobile(req, userId);
     const isImpersonating = req.headers['x-is-impersonating'] === 'true';
 
     const { leadId } = req.body;
@@ -124,6 +140,8 @@ const syncMobileCalls = asyncHandler(async (req, res) => {
     if (!calls.length) throw ApiError.badRequest('calls must contain at least one call log');
 
     const results = { created: 0, duplicates: 0, errors: [] };
+    const callerMobile = await getAgentMobile(req, callerId);
+
     for (const entry of calls) {
         try {
             const { externalCallId, remoteNumber, type, startedAt, duration } = normalizeMobileCallEntry(entry);
@@ -135,7 +153,7 @@ const syncMobileCalls = asyncHandler(async (req, res) => {
             }
 
             const lead = entry.leadId ? { _id: entry.leadId } : await findLeadByPhone(tenantId, remoteNumber);
-            const localNumber = String(entry.simPhoneNumber || req.headers['x-user-mobile'] || 'mobile');
+            const localNumber = String(entry.simPhoneNumber || callerMobile || 'mobile');
 
             const callLog = await CallLog.create({
                 tenantId,

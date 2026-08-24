@@ -14,8 +14,10 @@ const reminderConnection = new IORedis(env.REDIS_URL, {
         return transientErrors.some((e) => err.message.includes(e)) ? 2 : false;
     },
 });
+reminderConnection.on('error', () => {});
 
 const workerConnection = reminderConnection.duplicate();
+workerConnection.on('error', () => {});
 
 const REMINDER_QUEUE_NAME = 'ReminderQueue';
 
@@ -92,6 +94,7 @@ const registerCronJobs = async () => {
 
     try {
         reminderQueue = new Queue(REMINDER_QUEUE_NAME, { connection: reminderConnection });
+        reminderQueue.on('error', () => {});
 
         // Remove any existing repeatable jobs to avoid duplicates on restart
         const repeatableJobs = await reminderQueue.getRepeatableJobs();
@@ -120,6 +123,7 @@ const registerCronJobs = async () => {
             },
             { connection: workerConnection }
         );
+        reminderWorker.on('error', () => {});
 
         reminderWorker.on('failed', (job, err) => {
             console.error('❌ Reminder job failed:', err.message);
@@ -131,8 +135,10 @@ const registerCronJobs = async () => {
         const cleanupQueue = new Queue('NotificationCleanupQueue', {
             connection: reminderConnection.duplicate(),
         });
+        cleanupQueue.on('error', () => {});
 
         const cleanupWorkerConn = reminderConnection.duplicate();
+        cleanupWorkerConn.on('error', () => {});
         const cleanupWorker = new Worker(
             'NotificationCleanupQueue',
             async () => {
@@ -147,6 +153,7 @@ const registerCronJobs = async () => {
             },
             { connection: cleanupWorkerConn }
         );
+        cleanupWorker.on('error', () => {});
 
         cleanupWorker.on('failed', (job, err) => {
             console.error('❌ Cleanup job failed:', err.message);

@@ -11,9 +11,9 @@ export default function CalendarSidebar({
     upcomingEvents 
 }) {
     const filterOptions = [
-        { key: 'meetings', label: 'Meetings', color: 'bg-primary' },
-        { key: 'tasks', label: 'Tasks', color: 'bg-blue-500' },
-        { key: 'followups', label: 'Follow-ups', color: 'bg-orange-500' }
+        { key: 'meetings', label: 'Meetings', color: 'bg-blue-500' },
+        { key: 'tasks', label: 'Tasks', color: 'bg-green-500' },
+        { key: 'followups', label: 'Follow-ups', color: 'bg-amber-500' }
     ];
 
     const toggleFilter = (key) => {

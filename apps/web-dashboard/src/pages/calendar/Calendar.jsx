@@ -131,6 +131,15 @@ export default function Calendar() {
             </div>
             
             <div className="flex-1 flex gap-6 overflow-hidden h-[calc(100vh-140px)]">
+                <div className="w-[300px] shrink-0 h-full overflow-y-auto hidden lg:block">
+                    <CalendarSidebar 
+                        selectedDate={selectedDate}
+                        onDateSelect={setSelectedDate}
+                        filters={filters}
+                        onFilterChange={setFilters}
+                        upcomingEvents={upcomingEvents}
+                    />
+                </div>
                 <div className="flex-1 h-full min-w-0">
                     <MainCalendar 
                         events={filteredEvents}
@@ -140,15 +149,6 @@ export default function Calendar() {
                         onViewChange={setCurrentView}
                         onNavigate={(newDate) => setSelectedDate(newDate)}
                         onDateChange={handleDateChange}
-                    />
-                </div>
-                <div className="w-[300px] shrink-0 h-full overflow-y-auto hidden lg:block">
-                    <CalendarSidebar 
-                        selectedDate={selectedDate}
-                        onDateSelect={setSelectedDate}
-                        filters={filters}
-                        onFilterChange={setFilters}
-                        upcomingEvents={upcomingEvents}
                     />
                 </div>
             </div>

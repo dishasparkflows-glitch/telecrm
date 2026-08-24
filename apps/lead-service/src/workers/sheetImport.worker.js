@@ -7,12 +7,14 @@ const { createOrUpdateLeadFromSource } = require('../services/leadIngestion.serv
 const crypto = require('crypto');
 
 const redisOptions = {
-    maxRetriesPerRequest: null,
+    maxRetriesPerRequest: null, 
     retryStrategy: (times) => Math.min(times * 500, 10000),
 };
 
 const workerConnection = new IORedis(env.REDIS_URL, redisOptions);
+workerConnection.on('error', () => {});
 const queueConnection = new IORedis(env.REDIS_URL, redisOptions);
+queueConnection.on('error', () => {});
 
 const sheetImportQueue = new Queue('SheetImportQueue', { connection: queueConnection });
 
@@ -195,5 +197,8 @@ sheetImportWorker.on('failed', async (job, err) => {
         );
     }
 });
+
+sheetImportWorker.on('error', () => {});
+sheetImportQueue.on('error', () => {});
 
 module.exports = { sheetImportWorker, sheetImportQueue };

@@ -11,6 +11,7 @@ const queueConnection = new IORedis(env.REDIS_URL, {
         return transientErrors.some((e) => err.message.includes(e)) ? 2 : false;
     },
 });
+queueConnection.on('error', () => {});
 
 const automationQueue = new Queue('AutomationActionQueue', {
     connection: queueConnection,
@@ -61,5 +62,7 @@ const enqueueAction = async (logId, tenantId, node, triggerData, ruleGraph = nul
         delay: delayMs,
     });
 };
+
+automationQueue.on('error', () => {});
 
 module.exports = { automationQueue, enqueueAction, queueConnection };

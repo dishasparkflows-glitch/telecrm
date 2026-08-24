@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useGetMeetingsQuery, useGetMeetingStatsQuery, useScheduleMeetingMutation, useUpdateMeetingMutation, useDeleteMeetingMutation, useGetBookingLinksQuery, useCreateBookingLinkMutation, useDeleteBookingLinkMutation, useCheckAvailabilityMutation } from '../../features/meetings/meetingApi'
+import { meetingApi, useGetMeetingsQuery, useGetMeetingStatsQuery, useScheduleMeetingMutation, useDeleteMeetingMutation, useGetBookingLinksQuery, useCreateBookingLinkMutation, useDeleteBookingLinkMutation, useCheckAvailabilityMutation } from '../../features/meetings/meetingApi'
 import { useGetAllUsersListQuery } from '../../features/users/userApi'
 import { useGetActiveLeadsQuery } from '../../features/leads/leadApi'
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi'
@@ -62,6 +62,8 @@ export default function Meetings() {
   const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery(undefined, { skip: !showSchedule && !showCreateLink })
   const { data: leadsData } = useGetActiveLeadsQuery({ page: 1, limit: 100 }, { skip: !showSchedule })
   const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Meeting' }, { skip: !showSchedule })
+  const { data: googleStatusResp, isFetching: googleStatusLoading } = meetingApi.endpoints.getGoogleAuthStatus.useQuery(undefined, { skip: !showSchedule })
+  const googleConnected = googleStatusResp?.data?.connected || false;
   
   const [scheduleMeeting, { isLoading: scheduling }] = useScheduleMeetingMutation()
   const [deleteMeeting] = useDeleteMeetingMutation()
@@ -367,6 +369,13 @@ export default function Meetings() {
              </div>
           </div>
 
+          {meetingData.meetingType === 'online' && !googleStatusLoading && !googleConnected && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-md p-3 text-sm flex items-start gap-2">
+                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                 <p>You must connect your Google Calendar in Settings to schedule online meetings.</p>
+              </div>
+          )}
+
           {meetingData.meetingType === 'offline' && (
               <div className="space-y-1.5">
                  <label className="text-sm font-medium text-slate-700">Location <span className="text-danger">*</span></label>
@@ -462,7 +471,7 @@ export default function Meetings() {
           <div className="pt-4 flex items-center justify-end border-t border-slate-200">
              <div className="flex gap-2">
                 <Button variant="ghost" onClick={() => setShowSchedule(false)}>Cancel</Button>
-                <Button onClick={handleSchedule} disabled={scheduling}>{scheduling ? 'Scheduling...' : 'Schedule Meeting'}</Button>
+                <Button onClick={handleSchedule} disabled={scheduling || (meetingData.meetingType === 'online' && !googleConnected)}>{scheduling ? 'Scheduling...' : 'Schedule Meeting'}</Button>
              </div>
           </div>
         </div>

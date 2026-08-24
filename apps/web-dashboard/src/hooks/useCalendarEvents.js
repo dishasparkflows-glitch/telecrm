@@ -6,22 +6,25 @@ import { useGetFollowUpsQuery } from '../features/leads/followUpApi';
 export function useCalendarEvents(dateRange) {
     const { from, to } = dateRange;
 
+    const fromDate = from ? from.split('T')[0] : from;
+    const toDate = to ? to.split('T')[0] : to;
+
     // Fetch Meetings
     const { data: meetingsData, isLoading: meetingsLoading, error: meetingsError } = useGetMeetingsQuery(
-        { from, to, limit: 1000 },
-        { skip: !from || !to }
+        { from: fromDate, to: toDate },
+        { skip: !fromDate || !toDate }
     );
 
     // Fetch Tasks
     const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useListTasksQuery(
-        { from, to, limit: 1000 },
-        { skip: !from || !to }
+        { from: fromDate, to: toDate },
+        { skip: !fromDate || !toDate }
     );
 
     // Fetch Follow-ups
     const { data: followUpsData, isLoading: followUpsLoading, error: followUpsError } = useGetFollowUpsQuery(
-        { from, to, limit: 1000 },
-        { skip: !from || !to }
+        { from: fromDate, to: toDate },
+        { skip: !fromDate || !toDate }
     );
 
     const events = useMemo(() => {
@@ -35,25 +38,9 @@ export function useCalendarEvents(dateRange) {
                 const start = new Date(m.meeting.scheduledAt);
                 const end = new Date(start.getTime() + (m.meeting.duration || 30) * 60000);
                 
-                let bgColor = '#f3f4f6';
-                let textColor = '#374151';
-                let borderColor = '#e5e7eb';
-                
-                if (m.leadId) {
-                    bgColor = '#f0fdf4'; // green-50
-                    textColor = '#15803d'; // green-700
-                    borderColor = '#bbf7d0'; // green-200
-                } else {
-                    bgColor = '#faf5ff'; // purple-50
-                    textColor = '#7e22ce'; // purple-700
-                    borderColor = '#e9d5ff'; // purple-200
-                }
-
-                if (m.meeting.title?.toLowerCase().includes('demo') || m.meeting.title?.toLowerCase().includes('discussion')) {
-                    bgColor = '#fefce8'; // yellow-50
-                    textColor = '#a16207'; // yellow-700
-                    borderColor = '#fef08a'; // yellow-200
-                }
+                let bgColor = '#eff6ff'; // blue-50
+                let textColor = '#1d4ed8'; // blue-700
+                let borderColor = '#bfdbfe'; // blue-200
 
                 result.push({
                     id: `meeting-${m._id}`,
@@ -84,9 +71,9 @@ export function useCalendarEvents(dateRange) {
                     title: t.title || 'Task',
                     start: start,
                     end: end,
-                    backgroundColor: '#eff6ff',
-                    borderColor: '#bfdbfe',
-                    textColor: '#1d4ed8',
+                    backgroundColor: '#f0fdf4', // green-50
+                    borderColor: '#bbf7d0', // green-200
+                    textColor: '#15803d', // green-700
                     extendedProps: {
                         type: 'task',
                         data: t
@@ -108,9 +95,9 @@ export function useCalendarEvents(dateRange) {
                     title: `Follow-up: ${f.leadId?.name || 'Lead'}`,
                     start: start,
                     end: end,
-                    backgroundColor: '#fff7ed', // orange-50
-                    borderColor: '#fed7aa', // orange-200
-                    textColor: '#c2410c', // orange-700
+                    backgroundColor: '#fffbeb', // amber-50
+                    borderColor: '#fde68a', // amber-200
+                    textColor: '#b45309', // amber-700
                     extendedProps: {
                         type: 'followup',
                         data: f

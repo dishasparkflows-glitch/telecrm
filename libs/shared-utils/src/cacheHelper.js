@@ -10,6 +10,7 @@ try {
         maxRetriesPerRequest: null,
         lazyConnect: true,
     });
+    redisClient.on('error', () => {});
 } catch (error) {
     console.warn('⚠️ Could not initialize Redis client in cacheHelper:', error.message);
 }

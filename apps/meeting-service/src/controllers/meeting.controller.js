@@ -155,7 +155,7 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
 
 const getMeetings = asyncHandler(async (req, res) => {
     const { status, from, to } = req.query;
-    const { page, limit, skip } = pagination(req.query);
+    const { page, limit, skip } = pagination(req.query, 25, 1000);
     const tenantId = req.headers['x-tenant-id'];
     const filter = buildScopeFilter(req, { ownerField: 'hostId', module: 'meetings' });
 

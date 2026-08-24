@@ -26,6 +26,9 @@ const initializeSocket = (server) => {
     try {
         const pubClient = getRedisClient();
         const subClient = pubClient.duplicate();
+        subClient.on('error', (err) => {
+            console.warn('⚠️ Socket.IO Redis subClient error:');
+        });
         io.adapter(createAdapter(pubClient, subClient));
         console.log('✅ Socket.IO Redis adapter initialized');
     } catch (err) {
