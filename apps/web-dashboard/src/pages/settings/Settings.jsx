@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSelector } from 'react-redux'
-import { ROLES } from '../../utils/constants'
+import { ROLES, REMINDER_OPTIONS } from '../../utils/constants'
 import {
   useGetProfileQuery,
   useUpdateSettingsMutation,
@@ -71,6 +71,10 @@ import {
   useRevokeAllTrustedDevicesMutation
 } from '../../features/auth/authApi'
 import { meetingApi } from '../../features/meetings/meetingApi'
+import {
+  useGetReminderSettingsQuery,
+  useUpdateReminderSettingsMutation
+} from '../../features/notifications/notificationApi'
 import TwoFactorSetupModal from './TwoFactorSetupModal'
 import EmailTemplates from './EmailTemplates'
 import GoogleFormSetup from './GoogleFormSetup'
@@ -129,7 +133,13 @@ import {
   Megaphone,
   X,
   RefreshCw,
-  Calendar
+  Calendar,
+  Bell,
+  ClipboardList,
+  ChevronDown,
+  Settings as SettingsIcon,
+  HelpCircle,
+  Link2
 } from 'lucide-react'
 
 // Tab Item Component for Vertical Sidebar
@@ -233,6 +243,33 @@ export default function Settings() {
   const refStats = refStatsData?.data || {}
 
   const [leadSourceTab, setLeadSourceTab] = useState('meta_lead_ads')
+
+  // Notification & Reminders
+  const { data: reminderSettingsResp, isLoading: remindersLoading } = useGetReminderSettingsQuery(undefined, { skip: activeTab !== 'notifications_reminders' })
+  const [updateReminderSettings, { isLoading: savingReminders }] = useUpdateReminderSettingsMutation()
+  
+  const defaultRemindersData = reminderSettingsResp?.data?.defaultReminders || {
+    meeting: { enabled: true, offsetMinutes: 60 },
+    followUp: { enabled: true, offsetMinutes: 15 },
+    task: { enabled: true, offsetMinutes: 30 }
+  }
+
+  const [reminderForm, setReminderForm] = useState(defaultRemindersData)
+
+  useEffect(() => {
+    if (reminderSettingsResp?.data) {
+      setReminderForm(reminderSettingsResp.data.defaultReminders)
+    }
+  }, [reminderSettingsResp])
+
+  const handleSaveReminders = async () => {
+    try {
+      await updateReminderSettings({ defaultReminders: reminderForm }).unwrap()
+      toast('Reminder settings saved successfully', 'success')
+    } catch (err) {
+      toast('Failed to save reminder settings', 'error')
+    }
+  }
 
   // Google Forms & Sheets Queries
   const currentGoogleIntegrationType = leadSourceTab === 'google_forms' ? 'GOOGLE_FORMS' : 'GOOGLE_SHEETS'
@@ -806,54 +843,25 @@ export default function Settings() {
   }
 
   return (
-    <div className="relative">
-      {/* Cover Header */}
-      <div className="absolute top-0 left-0 right-0 h-48 sm:h-64 rounded-xl overflow-hidden shadow-lg">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary to-purple-600 opacity-90" />
-        <img 
-          src="/brain/e22d2c29-07fb-4348-8234-c132012d3c8e/settings_cover_banner_1771673225857.png" 
-          alt="Cover" 
-          className="w-full h-full object-cover mix-blend-overlay"
-        />
-        <div className="absolute bottom-4 right-4 group">
-          <Button variant="soft-primary" size="sm" className="bg-white/10 text-white border-white/20 hover:bg-white/20 backdrop-blur-md">
-            <Camera size={14} className="mr-1.5" /> Edit Cover
-          </Button>
+    <div className="relative pb-10">
+      
+      {/* Page Header */}
+      <div className="flex items-center gap-3 mb-6 bg-[var(--vz-card-bg)] p-4 rounded-xl shadow-sm border border-[var(--vz-border)]">
+        <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+          <SettingsIcon size={24} />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-[var(--vz-heading)] mb-1">Settings</h1>
+          <p className="text-sm text-[var(--vz-text-muted)]">Manage your CRM preferences and configurations</p>
         </div>
       </div>
 
-      <div className="relative pt-32 sm:pt-48 pb-10">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
-          {/* Left Sidebar - Profile Summary & Tabs */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="!p-0 overflow-hidden text-center">
-              <div className="pt-8 pb-6 px-4">
-                <div className="relative inline-block mb-3">
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                  {companyForm.logo ? (
-                    <img src={companyForm.logo} alt="Company Logo" className="w-24 h-24 rounded-full border-4 border-[var(--vz-card-bg)] shadow-lg mx-auto object-cover" />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full border-4 border-[var(--vz-card-bg)] bg-primary/10 flex items-center justify-center text-3xl font-bold text-primary shadow-lg mx-auto">
-                      {companyForm.companyName?.charAt(0)?.toUpperCase() || 'C'}
-                    </div>
-                  )}
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingLogo}
-                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[var(--vz-card-bg)] border border-[var(--vz-border)] flex items-center justify-center text-primary shadow hover:bg-primary/5 transition-colors disabled:opacity-50">
-                    {isUploadingLogo ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
-                  </button>
-                </div>
-                <h4 className="text-base font-bold text-[var(--vz-heading)]">{companyForm.companyName || 'Company Name'}</h4>
-                <p className="text-xs text-[var(--vz-text-muted)] mt-1">{profile.planSlug?.toUpperCase() || 'STARTER'} PLAN</p>
-                <div className="flex items-center justify-center gap-2 mt-4">
-                  <Badge color="success">Trial Active</Badge>
-                  <span className="text-xs text-[var(--vz-text-muted)]">24 Days Left</span>
-                </div>
-              </div>
-
-              <div className="border-t border-[var(--vz-border)] p-2">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* Left Sidebar - Tabs */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="!p-0 overflow-hidden text-center">
+            <div className="p-2">
                 <TabItem icon={Building2} label="Company Details" active={activeTab === 'company'} onClick={() => setActiveTab('company')} />
                 {/* <TabItem icon={Users} label="Team Management" active={activeTab === 'users'} onClick={() => setActiveTab('users')} count={users.length} /> */}
                 <TabItem icon={GitBranch} label="Pipeline Stages" active={activeTab === 'pipeline'} onClick={() => setActiveTab('pipeline')} />
@@ -867,7 +875,24 @@ export default function Settings() {
                 {currentUser?.role === ROLES.SUPER_ADMIN && (
                   <TabItem icon={MessageCircle} label="WhatsApp Setup" active={activeTab === 'whatsapp'} onClick={() => setActiveTab('whatsapp')} />
                 )}
-                <TabItem icon={Gift} label="Referral Rewards" active={activeTab === 'referral'} onClick={() => setActiveTab('referral')} />
+                <TabItem icon={Gift} label="Referral Program" active={activeTab === 'referral'} onClick={() => setActiveTab('referral')} />
+                
+                <button
+                  onClick={() => setActiveTab('notifications_reminders')}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg mt-2 ${
+                    activeTab === 'notifications_reminders'
+                      ? 'bg-primary/10 text-primary border-l-4 border-primary'
+                      : 'text-[var(--vz-text-muted)] hover:bg-[var(--vz-body-bg)] hover:text-[var(--vz-heading)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Bell size={18} className={activeTab === 'notifications_reminders' ? 'text-primary' : 'text-[var(--vz-text-muted)]'} />
+                    <span>Notifications & Reminders</span>
+                  </div>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                    NEW
+                  </span>
+                </button>
               </div>
             </Card>
 
@@ -1753,90 +1778,338 @@ export default function Settings() {
 
             {/* 6. Referral */}
             {activeTab === 'referral' && (
-              <Card>
-                 <Card.Header>
-                  <Card.Title>Referral Program</Card.Title>
-                  <p className="text-xs text-[var(--vz-text-muted)]">Invite friends and earn rewards on every subscription</p>
-                </Card.Header>
-                <div className="space-y-6">
-                   {/* Top: Refer and Earn Banner */}
-                   <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-                     <div className="absolute inset-0 bg-black/10 mix-blend-overlay"></div>
-                     <div className="relative z-10 flex-1">
-                       <div className="flex items-center gap-3 mb-2">
-                         <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                           <Gift size={24} className="text-white" />
-                         </div>
-                         <h4 className="text-2xl font-black tracking-tight">Refer & Earn</h4>
-                       </div>
-                       <p className="text-white/90 text-sm leading-relaxed max-w-md">
-                         Sharing is caring. Give your friends 1 free month of SparkCRM and get <strong className="text-white font-bold">1 free month</strong> credited to your account when they subscribe!
-                       </p>
-                     </div>
-                     
-                     <div className="relative z-10 w-full md:w-auto md:min-w-[380px]">
-                       <div className="flex flex-col gap-2 p-3 bg-black/20 rounded-xl border border-white/20 backdrop-blur-md shadow-inner">
-                         <span className="text-[10px] uppercase tracking-wider font-bold text-white/70 ml-1">Your Unique Link</span>
-                         <div className="flex items-center gap-2">
-                           <input 
-                              readOnly 
-                              value={referralLink} 
-                              placeholder="Generating your link..." 
-                              className="bg-black/20 border border-white/10 rounded-lg outline-none text-white font-medium text-sm flex-1 px-3 py-2.5 placeholder:text-white/40 truncate shadow-inner focus:border-white/30 transition-colors" 
-                           />
-                           <button 
-                             onClick={() => { 
-                               if (referralLink) {
-                                 navigator.clipboard.writeText(referralLink); 
-                                 toast('Link copied!', 'success');
-                               } else {
-                                 toast('Link not ready yet', 'error');
-                               }
-                             }}
-                             className="p-2.5 rounded-lg bg-white text-purple-700 hover:bg-gray-100 transition-all font-bold shadow-md flex items-center justify-center gap-2 active:scale-95"
-                           >
-                             <Copy size={16} />
-                             <span className="hidden sm:inline text-sm">Copy</span>
-                           </button>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-
-                   {/* Bottom: Stats */}
-                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="p-5 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-body-bg)] flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                        <Users2 className="text-indigo-500 mb-3 group-hover:scale-110 transition-transform duration-300" size={28} />
-                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-widest font-bold mb-1">Total Referrals</p>
-                        <p className="text-3xl font-black text-[var(--vz-heading)]">{refStats.totalReferrals || 0}</p>
-                      </div>
-                      <div className="p-5 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-body-bg)] flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                        <CheckCircle2 className="text-emerald-500 mb-3 group-hover:scale-110 transition-transform duration-300" size={28} />
-                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-widest font-bold mb-1">Converted</p>
-                        <p className="text-3xl font-black text-[var(--vz-heading)]">{refStats.converted || 0}</p>
-                      </div>
-                      <div className="p-5 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-body-bg)] flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                        <div className="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
-                          <Gift size={120} />
-                        </div>
-                        <CreditCard className="text-purple-500 mb-3 group-hover:scale-110 transition-transform duration-300" size={28} />
-                        <p className="text-[10px] text-[var(--vz-text-muted)] uppercase tracking-widest font-bold mb-1">Rewards Earned</p>
-                        <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">
-                           {refStats.rewardsEarned || 0}
-                        </p>
-                        <div className="mt-1 text-[10px] text-[var(--vz-text-muted)] font-medium">Free Months Applied</div>
-                      </div>
-                   </div>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-[var(--vz-heading)]">Referral Program</h3>
+                  <p className="text-sm text-[var(--vz-text-muted)] mt-1">Invite friends and earn rewards on every subscription</p>
                 </div>
-              </Card>
+                
+                {/* Top Banner */}
+                <div className="bg-[#4a148c] rounded-2xl overflow-hidden relative shadow-lg">
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-900 via-violet-900 to-[#7b1fa2]"></div>
+                  {/* Decorative elements - stars, dots */}
+                  <div className="absolute top-8 left-12 w-2 h-2 rounded-full bg-yellow-400"></div>
+                  <div className="absolute bottom-8 left-1/4 w-1.5 h-1.5 rounded-full bg-blue-300"></div>
+                  <div className="absolute top-1/2 left-[30%] w-1.5 h-1.5 rounded-full bg-pink-300"></div>
+                  
+                  <div className="relative z-10 p-8 flex flex-col lg:flex-row items-center justify-between gap-8">
+                    <div className="flex items-center gap-6">
+                      <div className="shrink-0 relative">
+                        {/* Box graphic placeholder */}
+                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-2xl border border-white/10 relative">
+                          <Gift size={40} className="text-white relative z-10" />
+                          <div className="absolute top-0 w-full h-1/2 bg-white/10 rounded-t-xl"></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                           <Gift size={20} className="text-white/80" />
+                           <h2 className="text-2xl font-bold text-white">Refer & Earn Rewards!</h2>
+                        </div>
+                        <p className="text-white/80 text-sm max-w-md leading-relaxed">
+                          Share SparkCRM with your friends and get 1 free month credited to your account when they subscribe.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="w-full lg:w-auto min-w-[340px]">
+                      <div className="border border-white/10 rounded-xl p-4">
+                        <p className="text-[10px] text-white font-bold tracking-widest uppercase mb-2">Your Unique Link</p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={referralLink}
+                            className="bg-white/10 border border-white/10 rounded-lg outline-none text-white font-medium text-sm flex-1 px-4 py-2.5 placeholder:text-white/40 truncate"
+                          />
+                          <button
+                            onClick={() => { 
+                              if (referralLink) {
+                                navigator.clipboard.writeText(referralLink); 
+                                toast('Link copied!', 'success');
+                              }
+                            }}
+                            className="bg-white text-indigo-900 font-semibold px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 transition-colors shrink-0"
+                          >
+                            <Copy size={16} />
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white border border-gray-100 rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
+                    <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4">
+                      <Users2 size={24} />
+                    </div>
+                    <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Total Referrals</div>
+                    <div className="text-3xl font-black text-gray-900">{refStats.totalReferrals || 0}</div>
+                    <div className="text-xs text-gray-500 mt-1">Friends invited</div>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
+                    <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-4">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Converted</div>
+                    <div className="text-3xl font-black text-gray-900">{refStats.converted || 0}</div>
+                    <div className="text-xs text-gray-500 mt-1">Successfully joined</div>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
+                    <div className="w-14 h-14 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 mb-4">
+                      <Gift size={24} />
+                    </div>
+                    <div className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-1">Rewards Earned</div>
+                    <div className="text-3xl font-black text-gray-900">{refStats.rewardsEarned || 0}</div>
+                    <div className="text-xs text-gray-500 mt-1">Free months applied</div>
+                  </div>
+                </div>
+
+                {/* 2 Cols: How it works & Recent Referrals */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* How it works */}
+                  <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+                    <h4 className="font-bold text-gray-900 mb-6">How it works</h4>
+                    <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[1.15rem] before:-translate-x-px before:h-full before:w-0.5 before:bg-gray-100">
+                       
+                       <div className="relative flex items-start gap-4">
+                         <div className="w-10 h-10 rounded-full bg-indigo-50 border-4 border-white flex items-center justify-center text-indigo-500 shrink-0 z-10 shadow-sm">
+                           <Link2 size={16} />
+                         </div>
+                         <div className="pt-1.5">
+                           <h5 className="text-sm font-bold text-gray-900">1. Share Your Link</h5>
+                           <p className="text-xs text-gray-500 mt-1 leading-relaxed">Share your unique referral link with your friends.</p>
+                         </div>
+                       </div>
+                       
+                       <div className="relative flex items-start gap-4">
+                         <div className="w-10 h-10 rounded-full bg-blue-50 border-4 border-white flex items-center justify-center text-blue-500 shrink-0 z-10 shadow-sm">
+                           <Users2 size={16} />
+                         </div>
+                         <div className="pt-1.5">
+                           <h5 className="text-sm font-bold text-gray-900">2. Friend Joins</h5>
+                           <p className="text-xs text-gray-500 mt-1 leading-relaxed">Your friend signs up using your link and subscribes.</p>
+                         </div>
+                       </div>
+                       
+                       <div className="relative flex items-start gap-4">
+                         <div className="w-10 h-10 rounded-full bg-fuchsia-50 border-4 border-white flex items-center justify-center text-fuchsia-500 shrink-0 z-10 shadow-sm">
+                           <Gift size={16} />
+                         </div>
+                         <div className="pt-1.5">
+                           <h5 className="text-sm font-bold text-gray-900">3. Earn Reward</h5>
+                           <p className="text-xs text-gray-500 mt-1 leading-relaxed">You get 1 free month added to your account!</p>
+                         </div>
+                       </div>
+
+                    </div>
+                  </div>
+
+                  {/* Recent Referrals */}
+                  <div className="lg:col-span-2 bg-white border border-gray-100 rounded-xl p-6 shadow-sm flex flex-col">
+                    <div className="flex items-center justify-between mb-6">
+                      <h4 className="font-bold text-gray-900">Recent Referrals</h4>
+                      <button className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 px-3 py-1.5 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-colors">View All</button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-x-auto">
+                      <table className="w-full text-left text-sm min-w-[500px]">
+                        <thead>
+                          <tr className="border-b border-gray-100 text-gray-500 text-xs">
+                            <th className="pb-3 font-medium">Email</th>
+                            <th className="pb-3 font-medium">Joined On</th>
+                            <th className="pb-3 font-medium">Status</th>
+                            <th className="pb-3 font-medium">Reward</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {refStats.recentReferrals?.length > 0 ? (
+                            refStats.recentReferrals.map((ref, idx) => (
+                              <tr key={idx} className="border-b border-gray-50 last:border-0">
+                                <td className="py-3 text-gray-900 font-medium">{ref.email}</td>
+                                <td className="py-3 text-gray-500">{new Date(ref.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric'})}</td>
+                                <td className="py-3">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${ref.status === 'converted' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
+                                    {ref.status === 'converted' ? 'Converted' : 'Pending'}
+                                  </span>
+                                </td>
+                                <td className="py-3 text-gray-500">{ref.reward || '-'}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr className="border-b border-gray-50 last:border-0">
+                              <td className="py-3 text-gray-900 font-medium">john@example.com</td>
+                              <td className="py-3 text-gray-500">19 Aug 2024</td>
+                              <td className="py-3">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-600">
+                                  Pending
+                                </span>
+                              </td>
+                              <td className="py-3 text-gray-500">-</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                      
+                      {(!refStats.recentReferrals || refStats.recentReferrals.length === 0) && (
+                        <div className="flex flex-col items-center justify-center mt-8 mb-4 text-center">
+                          <div className="w-12 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center mb-3 text-gray-400">
+                            <Mail size={24} />
+                          </div>
+                          <p className="text-sm font-bold text-gray-900">No more referrals yet</p>
+                          <p className="text-xs text-gray-500 mt-1">Invite more friends and start earning!</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* WhatsApp Setup — Super Admin only */}
             {activeTab === 'whatsapp' && <WhatsAppSetupTab toast={toast} />}
 
+            {/* Notifications & Reminders */}
+            {activeTab === 'notifications_reminders' && (
+              <div className="space-y-6">
+                 <div>
+                   <h3 className="text-lg font-bold text-[var(--vz-heading)]">Notifications & Reminders</h3>
+                   <p className="text-sm text-[var(--vz-text-muted)] mt-1">Configure default reminders for meetings, follow-ups and tasks.</p>
+                 </div>
+
+                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pt-4">
+                   {/* Left Col - Settings */}
+                   <div className="xl:col-span-2 space-y-6">
+                     <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-4 flex gap-3 text-sm text-indigo-700">
+                       <Info size={18} className="shrink-0 mt-0.5" />
+                       <div>
+                         <p className="font-bold mb-1 text-indigo-900">Default Activity Reminders</p>
+                         <p>These reminders are automatically selected when creating new activities.<br/><span className="opacity-80">Users can change the reminder for individual activities when needed.</span></p>
+                       </div>
+                     </div>
+
+                     <div>
+                       <div className="space-y-3">
+                         {remindersLoading ? (
+                           <div className="py-10 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></div>
+                         ) : (
+                           <>
+                             {/* Meeting */}
+                             <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-xl hover:border-primary/30 transition-colors shadow-sm gap-4">
+                               <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+                                   <Calendar size={20} />
+                                 </div>
+                                 <div>
+                                   <h5 className="font-semibold text-[var(--vz-heading)]">Meeting</h5>
+                                   <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">Set the default reminder for meetings.</p>
+                                 </div>
+                               </div>
+                               <div className="sm:ml-auto">
+                                 <Select
+                                   value={reminderForm.meeting.offsetMinutes}
+                                   onChange={(val) => setReminderForm({ ...reminderForm, meeting: { ...reminderForm.meeting, offsetMinutes: Number(val) } })}
+                                   options={REMINDER_OPTIONS.map(opt => ({ label: opt.label, value: opt.offsetMinutes }))}
+                                   className="w-48"
+                                 />
+                               </div>
+                             </div>
+
+                             {/* Follow-up */}
+                             <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-xl hover:border-primary/30 transition-colors shadow-sm gap-4">
+                               <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500 shrink-0">
+                                   <PhoneCall size={20} />
+                                 </div>
+                                 <div>
+                                   <h5 className="font-semibold text-[var(--vz-heading)]">Follow-up</h5>
+                                   <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">Set the default reminder for follow-ups.</p>
+                                 </div>
+                               </div>
+                               <div className="sm:ml-auto">
+                                 <Select
+                                   value={reminderForm.followUp.offsetMinutes}
+                                   onChange={(val) => setReminderForm({ ...reminderForm, followUp: { ...reminderForm.followUp, offsetMinutes: Number(val) } })}
+                                   options={REMINDER_OPTIONS.map(opt => ({ label: opt.label, value: opt.offsetMinutes }))}
+                                   className="w-48"
+                                 />
+                               </div>
+                             </div>
+
+                             {/* Task */}
+                             <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-xl hover:border-primary/30 transition-colors shadow-sm gap-4">
+                               <div className="flex items-center gap-4">
+                                 <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500 shrink-0">
+                                   <ClipboardList size={20} />
+                                 </div>
+                                 <div>
+                                   <h5 className="font-semibold text-[var(--vz-heading)]">Task</h5>
+                                   <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">Set the default reminder for tasks.</p>
+                                 </div>
+                               </div>
+                               <div className="sm:ml-auto">
+                                 <Select
+                                   value={reminderForm.task.offsetMinutes}
+                                   onChange={(val) => setReminderForm({ ...reminderForm, task: { ...reminderForm.task, offsetMinutes: Number(val) } })}
+                                   options={REMINDER_OPTIONS.map(opt => ({ label: opt.label, value: opt.offsetMinutes }))}
+                                   className="w-48"
+                                 />
+                               </div>
+                             </div>
+                           </>
+                         )}
+                       </div>
+                     </div>
+
+                     <div className="flex justify-end pt-4">
+                       <Button onClick={handleSaveReminders} disabled={savingReminders || remindersLoading}>
+                         {savingReminders ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
+                         {savingReminders ? 'Saving...' : 'Save Changes'}
+                       </Button>
+                     </div>
+                   </div>
+
+                   {/* Right Col - Help */}
+                   <div className="xl:col-span-1 space-y-4">
+                     <Card className="bg-[var(--vz-body-bg)] border-[var(--vz-border)] shadow-sm">
+                       <Card.Header className="pb-3">
+                         <div className="flex items-center gap-2 text-amber-500">
+                           <Info size={18}/>
+                           <h4 className="font-bold text-sm text-[var(--vz-heading)]">About Reminders</h4>
+                         </div>
+                       </Card.Header>
+                       <p className="text-xs text-[var(--vz-text-muted)] mb-4 px-1 leading-relaxed">Reminders help you and your team stay on track by getting notified about important activities.</p>
+                       <ul className="space-y-4">
+                         <li className="flex items-start gap-2.5 text-xs text-[var(--vz-text-muted)] leading-relaxed">
+                           <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                             <CheckCircle2 size={10} className="text-emerald-600"/>
+                           </div>
+                           <span>Reminders are sent based on activity date and time</span>
+                         </li>
+                         <li className="flex items-start gap-2.5 text-xs text-[var(--vz-text-muted)] leading-relaxed">
+                           <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                             <CheckCircle2 size={10} className="text-emerald-600"/>
+                           </div>
+                           <span>Users can override reminder while creating activities</span>
+                         </li>
+                         <li className="flex items-start gap-2.5 text-xs text-[var(--vz-text-muted)] leading-relaxed">
+                           <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                             <CheckCircle2 size={10} className="text-emerald-600"/>
+                           </div>
+                           <span>You can configure notification channels separately</span>
+                         </li>
+                       </ul>
+                     </Card>
+                   </div>
+                 </div>
+              </div>
+            )}
+
           </div>
         </div>
-      </div>
 
       {/* Modals */}
       <TwoFactorSetupModal 

@@ -1,20 +1,24 @@
 const { EVENTS, subscribeToEvents } = require('@sparkcrm/shared-events');
 const Reminder = require('../models/Reminder');
+const ReminderSettings = require('../models/ReminderSettings');
 const { sendInApp } = require('../channels/inApp.channel');
 const { sendTemplateEmail } = require('../channels/email.channel');
 const { sendPushToUser } = require('../channels/push.channel');
 
-const getReminderDate = (dueDateStr, reminderOption) => {
-    if (!dueDateStr) return null;
-    const date = new Date(dueDateStr);
-    if (isNaN(date.getTime())) return null;
-
-    let offsetMinutes = 0;
-    if (reminderOption === '15 minutes before') offsetMinutes = 15;
-    else if (reminderOption === '30 minutes before') offsetMinutes = 30;
-    else if (reminderOption === '1 hour before') offsetMinutes = 60;
+const getReminderOffset = async (tenantId, userId, activityType, customReminder) => {
+    let offsetMinutes = activityType === 'meeting' ? 60 : activityType === 'followUp' ? 15 : 30;
     
-    return new Date(date.getTime() - offsetMinutes * 60000);
+    if (customReminder) {
+        if (!customReminder.enabled) return null;
+        return customReminder.offsetMinutes;
+    }
+
+    const settings = await ReminderSettings.findOne({ tenantId, userId });
+    if (settings?.defaultReminders?.[activityType]) {
+        if (!settings.defaultReminders[activityType].enabled) return null;
+        return settings.defaultReminders[activityType].offsetMinutes;
+    }
+    return offsetMinutes;
 };
 
 /**
@@ -108,6 +112,15 @@ const registerEventListeners = async () => {
                 );
                 return;
             }
+            const offsetMinutes = await getReminderOffset(tenantId, assignedTo, 'followUp', data.reminder);
+            if (offsetMinutes === null) {
+                // Delete pending reminders if any
+                await Reminder.deleteMany({ tenantId, leadId, type: 'lead_follow_up' });
+                return;
+            }
+
+            const dueAt = new Date(new Date(followUpAt).getTime() - offsetMinutes * 60000);
+
             await Reminder.findOneAndUpdate(
                 { tenantId, leadId, type: 'lead_follow_up' },
                 {
@@ -117,7 +130,7 @@ const registerEventListeners = async () => {
                         title: 'Lead follow-up due',
                         message: `Follow up with ${leadName || 'this lead'}`,
                         actionUrl: `/leads/${leadId}`,
-                        dueAt: new Date(followUpAt),
+                        dueAt,
                         status: 'pending',
                         processingAt: null,
                         sentAt: null,
@@ -216,12 +229,102 @@ const registerEventListeners = async () => {
                     data: { type: 'meeting_booked', meetingId, actionUrl: '/meetings' },
                 });
             }
+
+            // Create reminder
+            if (scheduledAt) {
+                for (const userId of usersToNotify) {
+                    if (!userId) continue;
+                    const offsetMinutes = await getReminderOffset(tenantId, userId, 'meeting', data.reminder);
+                    if (offsetMinutes !== null) {
+                        const dueAt = new Date(new Date(scheduledAt).getTime() - offsetMinutes * 60000);
+                        await Reminder.findOneAndUpdate(
+                            { tenantId, meetingId, userId, type: 'meeting_reminder' },
+                            {
+                                $set: {
+                                    branchId: data.branchId || null,
+                                    title: 'Upcoming Meeting',
+                                    message: `Meeting "${meetingTitle || 'Scheduled Meeting'}" starts soon`,
+                                    actionUrl: `/meetings/${meetingId}`,
+                                    dueAt,
+                                    status: 'pending',
+                                    processingAt: null,
+                                    sentAt: null,
+                                    attempts: 0,
+                                    lastError: '',
+                                }
+                            },
+                            { upsert: true, new: true, setDefaultsOnInsert: true }
+                        );
+                    }
+                }
+            }
+
             const realtimeService = require('../services/realtime.service');
             realtimeService.emitToTenant(tenantId, 'meeting_booked', { meetingId, scheduledAt });
         } catch (err) {
             console.error('❌ meeting.booked notification error:', err.message);
         }
     });
+
+    // ─── Task Created / Assigned → Notify assigned user and Schedule Reminder ───
+    const handleTaskEvent = async (eventName, data) => {
+        try {
+            const { tenantId, taskId, assignedTo, title, dueDate, reminder } = data;
+            
+            // Send In-App & Push Notification if newly assigned
+            if (eventName === EVENTS.TASK_ASSIGNED && assignedTo) {
+                await sendInApp(tenantId, assignedTo, {
+                    title: 'New Task Assigned',
+                    message: `You have been assigned a new task: ${title || 'Task'}`,
+                    type: 'info',
+                    actionUrl: '/tasks',
+                    actionType: 'task',
+                });
+                await sendPushToUser({
+                    tenantId,
+                    userId: assignedTo,
+                    title: 'New Task Assigned',
+                    body: `You have been assigned a new task: ${title || 'Task'}`,
+                    data: { type: 'task_assigned', actionUrl: '/tasks' },
+                });
+            }
+
+            // Create reminder
+            if (dueDate && assignedTo) {
+                const offsetMinutes = await getReminderOffset(tenantId, assignedTo, 'task', reminder);
+                if (offsetMinutes !== null) {
+                    const dueAt = new Date(new Date(dueDate).getTime() - offsetMinutes * 60000);
+                    
+                    await Reminder.findOneAndUpdate(
+                        { tenantId, taskId, type: 'task_due' },
+                        {
+                            $set: {
+                                userId: assignedTo,
+                                title: 'Task Due Soon',
+                                message: `Task "${title || 'Untitled'}" is due soon`,
+                                actionUrl: '/tasks',
+                                dueAt,
+                                status: 'pending',
+                                processingAt: null,
+                                sentAt: null,
+                                attempts: 0,
+                                lastError: '',
+                            }
+                        },
+                        { upsert: true, new: true, setDefaultsOnInsert: true }
+                    );
+                } else {
+                    // Delete pending reminders if offset is null (disabled)
+                    await Reminder.deleteMany({ tenantId, taskId, type: 'task_due' });
+                }
+            }
+        } catch (err) {
+            console.error(`❌ ${eventName} notification error:`, err.message);
+        }
+    };
+
+    await subscribeToEvents(EVENTS.TASK_CREATED, (channel, data) => handleTaskEvent(EVENTS.TASK_CREATED, data));
+    await subscribeToEvents(EVENTS.TASK_ASSIGNED, (channel, data) => handleTaskEvent(EVENTS.TASK_ASSIGNED, data));
 
     // ─── Payment success → notify admin ───
     await subscribeToEvents(EVENTS.PAYMENT_SUCCESS, async (_channel, data) => {

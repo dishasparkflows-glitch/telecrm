@@ -7,6 +7,8 @@ import Button from '../../../components/ui/Button'
 import { useCreateTaskMutation, useUpdateTaskMutation } from '../../../features/tasks/tasksApi'
 import { useGetActiveLeadsQuery } from '../../../features/leads/leadApi'
 import { useGetUploadUrlMutation, useGetDownloadUrlMutation } from '../../../features/uploads/uploadApi'
+import { useGetReminderSettingsQuery } from '../../../features/notifications/notificationApi'
+import { REMINDER_OPTIONS } from '../../../utils/constants'
 import { useToast } from '../../../components/ui/Toast'
 
 const SectionTitle = ({ children, number }) => (
@@ -66,8 +68,16 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
     const toast = useToast()
     const fileInputRef = useRef(null)
     const [isUploading, setIsUploading] = useState(false)
+    const { data: reminderSettingsResp } = useGetReminderSettingsQuery(undefined, { skip: !isOpen || !!taskToEdit })
 
     const buildFormData = (task) => {
+        let defaultReminder = 30; // fallback
+        if (reminderSettingsResp?.data?.defaultReminders?.task) {
+            const taskSettings = reminderSettingsResp.data.defaultReminders.task;
+            if (!taskSettings.enabled) defaultReminder = null;
+            else defaultReminder = taskSettings.offsetMinutes;
+        }
+        
         if (!task) return {
             title: '',
             description: '',
@@ -78,11 +88,24 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
             taskType: 'Follow-up',
             dueDate: '',
             dueTime: '',
-            reminder: '15 minutes before',
+            reminder: defaultReminder,
             attachments: [],
             internalNote: ''
         };
         const dateObj = task.dueDate ? new Date(task.dueDate) : null;
+        
+        let existingReminder = task.details?.reminder || task.reminder;
+        if (typeof existingReminder === 'object' && existingReminder !== null) {
+            existingReminder = existingReminder.enabled ? existingReminder.offsetMinutes : null;
+        } else if (typeof existingReminder === 'string') {
+            if (existingReminder === '15 minutes before') existingReminder = 15;
+            else if (existingReminder === '30 minutes before') existingReminder = 30;
+            else if (existingReminder === '1 hour before') existingReminder = 60;
+            else existingReminder = defaultReminder;
+        } else if (existingReminder === undefined) {
+            existingReminder = defaultReminder;
+        }
+
         return {
             title: task.details?.title || task.title || '',
             description: task.details?.description || task.description || '',
@@ -93,7 +116,7 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
             taskType: task.details?.taskType || task.taskType || 'Follow-up',
             dueDate: dateObj ? dateObj.toISOString().slice(0, 10) : '',
             dueTime: dateObj ? dateObj.toISOString().slice(11, 16) : '',
-            reminder: task.details?.reminder || task.reminder || '15 minutes before',
+            reminder: existingReminder,
             attachments: task.attachments || [],
             internalNote: task.internalNote || ''
         };
@@ -182,7 +205,7 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
                     taskType: rawSubmitData.taskType,
                     status: rawSubmitData.status,
                     priority: rawSubmitData.priority,
-                    reminder: rawSubmitData.reminder,
+                    reminder: rawSubmitData.reminder !== null ? { enabled: true, offsetMinutes: Number(rawSubmitData.reminder) } : { enabled: false },
                 },
                 leadId: rawSubmitData.leadId || null,
                 assignedTo: rawSubmitData.assignedTo,
@@ -406,7 +429,7 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
                 {/* Schedule */}
                 <div>
                     <SectionTitle number="4">Schedule</SectionTitle>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
                             type="date"
                             label="Due Date *"
@@ -420,17 +443,6 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
                             required
                             value={formData.dueTime}
                             onChange={e => setFormData({...formData, dueTime: e.target.value})}
-                        />
-                        <Select
-                            label="Reminder"
-                            value={formData.reminder}
-                            onChange={val => setFormData({...formData, reminder: val})}
-                            options={[
-                                { value: 'At time of event', label: 'At time of event' },
-                                { value: '15 minutes before', label: '15 minutes before' },
-                                { value: '30 minutes before', label: '30 minutes before' },
-                                { value: '1 hour before', label: '1 hour before' },
-                            ]}
                         />
                     </div>
                 </div>

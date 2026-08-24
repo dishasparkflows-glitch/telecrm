@@ -26,16 +26,15 @@ const syncNextFollowUp = async (tenantId, leadId) => {
         );
         
         // Emit to notification-service
-        // Adjust the reminder time by subtracting reminderMinutesBefore
-        const followUpAtMs = new Date(nextFollowUp.scheduledAt).getTime();
-        const notifyAtMs = followUpAtMs - (nextFollowUp.reminderMinutesBefore * 60000);
-        
         await publishEvent(EVENTS.LEAD_FOLLOWUP_SCHEDULED, {
             tenantId,
             branchId: nextFollowUp.branchId,
             leadId,
             assignedTo: nextFollowUp.assignedUserId,
-            followUpAt: new Date(notifyAtMs), // the actual trigger time
+            followUpAt: nextFollowUp.scheduledAt,
+            reminder: nextFollowUp.reminderMinutesBefore !== null && nextFollowUp.reminderMinutesBefore >= 0
+                ? { enabled: true, offsetMinutes: nextFollowUp.reminderMinutesBefore }
+                : { enabled: false },
             leadName: lead.fullName || 'this lead'
         });
     } else {

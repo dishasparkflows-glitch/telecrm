@@ -602,7 +602,9 @@ const getMe = asyncHandler(async (req, res) => {
     const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
 
     const userObj = user.toJSON();
-    userObj.avatar = await getPresignedDownloadUrl(userObj.avatar);
+    if (userObj.contact?.avatar) {
+        userObj.contact.avatar = await getPresignedDownloadUrl(userObj.contact.avatar);
+    }
 
     ApiResponse.success(res, {
         user: { ...userObj, role: roleSlug },
@@ -900,7 +902,9 @@ const login2FA = asyncHandler(async (req, res) => {
     });
 
     const userObj = user.toJSON();
-    userObj.avatar = await getPresignedDownloadUrl(userObj.avatar);
+    if (userObj.contact?.avatar) {
+        userObj.contact.avatar = await getPresignedDownloadUrl(userObj.contact.avatar);
+    }
 
     ApiResponse.success(res, {
         user: { ...userObj, role: roleSlug || 'agent' },

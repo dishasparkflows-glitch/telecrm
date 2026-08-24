@@ -80,11 +80,6 @@ export default function MainCalendar({
         return (
             <div className="flex flex-col h-full overflow-hidden">
                 <div className="text-[11px] font-medium truncate leading-tight text-inherit">{event.title}</div>
-                {event.resource?.type === 'meeting' && (
-                    <div className="text-[10px] opacity-90 mt-0.5 truncate leading-tight text-inherit">
-                        {event.resource.data?.leadId?.name || 'Internal'}
-                    </div>
-                )}
             </div>
         );
     };

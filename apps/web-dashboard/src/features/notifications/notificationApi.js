@@ -39,6 +39,18 @@ export const notificationApi = baseApi.injectEndpoints({
                 body: data,
             }),
         }),
+        getReminderSettings: builder.query({
+            query: () => '/notifications/reminder-settings',
+            providesTags: ['Tenant'],
+        }),
+        updateReminderSettings: builder.mutation({
+            query: (data) => ({
+                url: '/notifications/reminder-settings',
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Tenant'],
+        }),
     }),
 })
 
@@ -48,4 +60,6 @@ export const {
     useMarkAllReadMutation,
     useDeleteNotificationMutation,
     useRegisterDeviceMutation,
+    useGetReminderSettingsQuery,
+    useUpdateReminderSettingsMutation,
 } = notificationApi

@@ -7,7 +7,8 @@ const reminderSchema = new mongoose.Schema(
         userId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
         leadId: { type: mongoose.Schema.Types.ObjectId, index: true },
         taskId: { type: mongoose.Schema.Types.ObjectId, index: true },
-        type: { type: String, enum: ['lead_follow_up', 'task_due'], default: 'lead_follow_up' },
+        meetingId: { type: mongoose.Schema.Types.ObjectId, index: true },
+        type: { type: String, enum: ['lead_follow_up', 'task_due', 'meeting_reminder'], default: 'lead_follow_up' },
         title: { type: String, required: true },
         message: { type: String, required: true },
         actionUrl: { type: String, default: '' },
@@ -36,6 +37,10 @@ reminderSchema.index(
 reminderSchema.index(
     { tenantId: 1, taskId: 1, type: 1 },
     { unique: true, partialFilterExpression: { taskId: { $exists: true, $ne: null } } }
+);
+reminderSchema.index(
+    { tenantId: 1, meetingId: 1, userId: 1, type: 1 },
+    { unique: true, partialFilterExpression: { meetingId: { $exists: true, $ne: null } } }
 );
 reminderSchema.index({ status: 1, dueAt: 1, processingAt: 1 });
 

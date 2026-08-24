@@ -7,6 +7,7 @@ import { useGetAllUsersListQuery } from '../../../features/users/userApi'
 import { useScheduleFollowUpMutation } from '../../../features/leads/followUpApi'
 import { useToast } from '../../../components/ui/Toast'
 import { useSelector } from 'react-redux'
+import { useGetReminderSettingsQuery } from '../../../features/notifications/notificationApi'
 
 const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
     const { addToast } = useToast()
@@ -15,15 +16,30 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
     const users = usersData?.data || []
 
     const [scheduleFollowUp, { isLoading }] = useScheduleFollowUpMutation()
+    const { data: reminderSettingsResp } = useGetReminderSettingsQuery(undefined, { skip: !isOpen })
+
+    let defaultReminder = 15;
+    if (reminderSettingsResp?.data?.defaultReminders?.followUp) {
+        const followUpSettings = reminderSettingsResp.data.defaultReminders.followUp;
+        if (!followUpSettings.enabled) defaultReminder = -1; // -1 to indicate disabled
+        else defaultReminder = followUpSettings.offsetMinutes;
+    }
 
     const [form, setForm] = useState({
         type: 'call',
         scheduledDate: '',
         scheduledTime: '',
         assignedUserId: lead?.assignedTo || '',
-        reminderMinutesBefore: 15,
+        reminderMinutesBefore: defaultReminder,
         note: ''
     })
+
+    // Update form when defaults load if the form hasn't been modified yet
+    React.useEffect(() => {
+        if (isOpen && reminderSettingsResp?.data) {
+            setForm(prev => ({ ...prev, reminderMinutesBefore: defaultReminder }));
+        }
+    }, [reminderSettingsResp, isOpen]);
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -95,19 +111,6 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
                     required
                 />
 
-                <Select
-                    label="Reminder"
-                    value={form.reminderMinutesBefore}
-                    onChange={(val) => setForm(prev => ({ ...prev, reminderMinutesBefore: val }))}
-                    options={[
-                        { value: 0, label: 'At time of follow-up' },
-                        { value: 5, label: '5 minutes before' },
-                        { value: 15, label: '15 minutes before' },
-                        { value: 30, label: '30 minutes before' },
-                        { value: 60, label: '1 hour before' },
-                        { value: 1440, label: '1 day before' },
-                    ]}
-                />
 
                 <Input
                     label="Note"

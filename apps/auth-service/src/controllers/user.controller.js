@@ -185,11 +185,9 @@ const getUsers = asyncHandler(async (req, res) => {
             const userObj = u.toJSON();
             userObj.roleId = roleMap.get(String(userObj.roleId)) || userObj.roleId;
             userObj.branchId = branchMap.get(String(userObj.branchId)) || userObj.branchId;
-            if (userObj.profile?.avatar) {
-                const avatar = userObj.profile?.avatar;
-                const presigned = await getPresignedDownloadUrl(avatar);
-                userObj.avatar = presigned;
-                if (userObj.profile) userObj.profile.avatar = presigned;
+            if (userObj.contact?.avatar) {
+                const presigned = await getPresignedDownloadUrl(userObj.contact.avatar);
+                userObj.contact.avatar = presigned;
             }
             return userObj;
         })
@@ -223,7 +221,7 @@ const getAllUsersList = asyncHandler(async (req, res) => {
         filter.isActive = true;
         if (branchId) filter.branchId = branchId;
 
-        const users = await User.find(filter).select('_id contact.name contact.email roleId branchId profile.avatar').sort({ 'contact.name': 1 });
+        const users = await User.find(filter).select('_id contact.name contact.email roleId branchId contact.avatar').sort({ 'contact.name': 1 });
 
     const tenantId = req.headers['x-tenant-id'];
     const roleIds = [...new Set(users.map(u => u.roleId).filter(Boolean).map(String))];
@@ -246,8 +244,8 @@ const getAllUsersList = asyncHandler(async (req, res) => {
             branchId: branchMap.get(String(u.branchId)) || u.branchId
         };
         
-        if (u.profile?.avatar) {
-            userObj.avatar = await getPresignedDownloadUrl(u.profile.avatar);
+        if (u.contact?.avatar) {
+            userObj.contact.avatar = await getPresignedDownloadUrl(u.contact.avatar);
         }
         
         return userObj;

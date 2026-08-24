@@ -202,8 +202,8 @@ export default function Topbar() {
             className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[var(--vz-input-bg)] transition-colors"
           >
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
-              {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              {user?.contact?.avatar ? (
+                <img src={user.contact.avatar} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 user?.name?.[0] || 'A'
               )}
