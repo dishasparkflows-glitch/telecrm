@@ -19,6 +19,7 @@ router.post('/google/disconnect', ctrl.googleDisconnect);
 router.get('/google/calendars', ctrl.googleGetCalendars);
 
 router.get('/', ctrl.getMeetings);
+router.get('/calendar', ctrl.getCalendarMeetings);
 router.get('/stats', ctrl.getMeetingStats);
 router.post('/schedule', ctrl.scheduleMeeting);
 router.post('/check-availability', ctrl.checkAvailability);

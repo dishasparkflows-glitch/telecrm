@@ -1,21 +1,45 @@
 import React, { useState, useMemo } from 'react';
-import PageHeader from '../../components/layout/PageHeader';
 import CalendarSidebar from '../../components/calendar/CalendarSidebar';
 import MainCalendar from '../../components/calendar/MainCalendar';
 import { useCalendarEvents } from '../../hooks/useCalendarEvents';
 import Button from '../../components/ui/Button';
 import { Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
-import { startOfWeek, endOfWeek, format, startOfMonth, endOfMonth, addDays, addWeeks, addMonths } from 'date-fns';
+import { startOfWeek, endOfWeek, format, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, startOfDay, endOfDay } from 'date-fns';
+
+const ViewButton = ({ view, label, currentView, setCurrentView }) => (
+    <button 
+        onClick={() => setCurrentView(view)}
+        className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            currentView === view 
+                ? 'bg-white text-primary shadow-sm' 
+                : 'text-slate-600 hover:text-slate-900'
+        }`}
+    >
+        {label}
+    </button>
+);
 
 export default function Calendar() {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [currentView, setCurrentView] = useState('week');
     
-    // By default load the current month window
-    const [dateRange, setDateRange] = useState({
-        from: startOfMonth(new Date()).toISOString(),
-        to: endOfMonth(new Date()).toISOString()
-    });
+    const dateRange = useMemo(() => {
+        let from, to;
+        if (currentView === 'day') {
+            from = startOfDay(selectedDate);
+            to = endOfDay(selectedDate);
+        } else if (currentView === 'week') {
+            from = startOfWeek(selectedDate, { weekStartsOn: 1 });
+            to = endOfWeek(selectedDate, { weekStartsOn: 1 });
+        } else {
+            from = startOfMonth(selectedDate);
+            to = endOfMonth(selectedDate);
+        }
+        return {
+            from: from.toISOString(),
+            to: to.toISOString()
+        };
+    }, [selectedDate, currentView]);
 
     const [filters, setFilters] = useState({
         meetings: true,
@@ -40,10 +64,6 @@ export default function Calendar() {
             .filter(e => new Date(e.start) >= now)
             .sort((a, b) => new Date(a.start) - new Date(b.start));
     }, [filteredEvents]);
-
-    const handleDateChange = (range) => {
-        setDateRange(range);
-    };
 
     const handleNavigate = (action) => {
         let newDate = new Date(selectedDate);
@@ -76,19 +96,6 @@ export default function Calendar() {
         }
     };
 
-    const ViewButton = ({ view, label }) => (
-        <button 
-            onClick={() => setCurrentView(view)}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                currentView === view 
-                    ? 'bg-white text-primary shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900'
-            }`}
-        >
-            {label}
-        </button>
-    );
-
     return (
         <div className="flex flex-col h-full -m-6 p-6 bg-slate-50">
             <div className="flex items-center justify-between mb-4">
@@ -113,10 +120,10 @@ export default function Calendar() {
 
                 <div className="flex items-center gap-4">
                     <div className="flex bg-slate-200/60 p-0.5 rounded-lg border border-slate-200/50">
-                        <ViewButton view="day" label="Day" />
-                        <ViewButton view="week" label="Week" />
-                        <ViewButton view="month" label="Month" />
-                        <ViewButton view="agenda" label="Agenda" />
+                        <ViewButton view="day" label="Day" currentView={currentView} setCurrentView={setCurrentView} />
+                        <ViewButton view="week" label="Week" currentView={currentView} setCurrentView={setCurrentView} />
+                        <ViewButton view="month" label="Month" currentView={currentView} setCurrentView={setCurrentView} />
+                        <ViewButton view="agenda" label="Agenda" currentView={currentView} setCurrentView={setCurrentView} />
                     </div>
 
                     <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
@@ -148,7 +155,6 @@ export default function Calendar() {
                         currentDate={selectedDate}
                         onViewChange={setCurrentView}
                         onNavigate={(newDate) => setSelectedDate(newDate)}
-                        onDateChange={handleDateChange}
                     />
                 </div>
             </div>

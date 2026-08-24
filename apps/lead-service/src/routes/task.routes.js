@@ -3,6 +3,7 @@ const router = express.Router();
 const taskController = require('../controllers/task.controller');
 
 router.get('/', taskController.getTasks);
+router.get('/calendar', taskController.getCalendarTasks);
 router.get('/stats', taskController.getTaskStats);
 
 router.post('/', taskController.createTask);

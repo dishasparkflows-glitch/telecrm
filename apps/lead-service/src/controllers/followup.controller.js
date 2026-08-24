@@ -67,6 +67,31 @@ const getFollowUps = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/follow-ups/calendar
+ */
+const getCalendarFollowUps = asyncHandler(async (req, res) => {
+    const { fromDate, toDate, from, to } = req.query;
+    const filter = buildScopeFilter(req, { ownerField: 'assignedUserId', module: 'leads' });
+
+    // Handle both from/to and fromDate/toDate query params just in case
+    const effectiveFrom = from || fromDate;
+    const effectiveTo = to || toDate;
+
+    if (effectiveFrom || effectiveTo) {
+        filter.scheduledAt = {};
+        if (effectiveFrom) filter.scheduledAt.$gte = new Date(effectiveFrom);
+        if (effectiveTo) filter.scheduledAt.$lte = new Date(effectiveTo);
+    }
+
+    const followUps = await FollowUp.find(filter)
+        .select('_id scheduledAt leadId assignedUserId type')
+        .populate('leadId', 'name')
+        .lean();
+
+    ApiResponse.success(res, followUps);
+});
+
+/**
  * GET /api/follow-ups/stats
  */
 const getFollowUpStats = asyncHandler(async (req, res) => {
@@ -149,5 +174,6 @@ module.exports = {
     createFollowUp,
     completeFollowUp,
     rescheduleFollowUp,
-    cancelFollowUp
+    cancelFollowUp,
+    getCalendarFollowUps
 };

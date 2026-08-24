@@ -12,6 +12,13 @@ export const followUpApi = baseApi.injectEndpoints({
                     ? [...result.data.map(({ _id }) => ({ type: 'FollowUp', id: _id })), { type: 'FollowUp', id: 'LIST' }]
                     : [{ type: 'FollowUp', id: 'LIST' }],
         }),
+        getCalendarFollowUps: builder.query({
+            query: (params) => ({
+                url: '/follow-ups/calendar',
+                params,
+            }),
+            providesTags: [{ type: 'FollowUp', id: 'LIST' }],
+        }),
         getFollowUpStats: builder.query({
             query: () => '/follow-ups/stats',
             providesTags: [{ type: 'FollowUp', id: 'STATS' }],
@@ -68,6 +75,7 @@ export const followUpApi = baseApi.injectEndpoints({
 
 export const {
     useGetFollowUpsQuery,
+    useGetCalendarFollowUpsQuery,
     useGetFollowUpStatsQuery,
     useScheduleFollowUpMutation,
     useCompleteFollowUpMutation,

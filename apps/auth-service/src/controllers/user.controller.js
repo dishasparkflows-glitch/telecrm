@@ -245,7 +245,7 @@ const getAllUsersList = asyncHandler(async (req, res) => {
         };
         
         if (u.contact?.avatar) {
-            userObj.contact.avatar = await getPresignedDownloadUrl(u.contact.avatar);
+            userObj.avatar = await getPresignedDownloadUrl(u.contact.avatar);
         }
         
         return userObj;

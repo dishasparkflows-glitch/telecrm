@@ -210,6 +210,76 @@ const getMeetings = asyncHandler(async (req, res) => {
     ApiResponse.paginated(res, meetings, { page, limit, total, totalPages: Math.ceil(total / limit) });
 });
 
+const getCalendarMeetings = asyncHandler(async (req, res) => {
+    const { from, to } = req.query;
+    const tenantId = req.headers['x-tenant-id'];
+    const filter = buildScopeFilter(req, { ownerField: 'hostId', module: 'meetings' });
+
+    if (filter.hostId) {
+        const ownerId = filter.hostId;
+        delete filter.hostId;
+        filter.$or = [
+            { hostId: ownerId },
+            { 'attendees.userId': ownerId },
+        ];
+    }
+
+    if (from || to) {
+        filter['meeting.scheduledAt'] = {};
+        if (from) {
+            const fromDate = new Date(from);
+            if (!Number.isNaN(fromDate.getTime())) {
+                filter['meeting.scheduledAt'].$gte = fromDate;
+            }
+        }
+        if (to) {
+            const toDate = new Date(to);
+            if (!Number.isNaN(toDate.getTime())) {
+                filter['meeting.scheduledAt'].$lte = toDate;
+            }
+        }
+    }
+
+    // Explicitly select only necessary fields
+    const meetings = await Meeting.find(filter)
+        .select('_id meeting.scheduledAt meeting.duration meeting.title meeting.meetingType meeting.location meeting.description conference.meetingUrl meeting.link leadId hostId')
+        .lean();
+
+    // Populate lead details using bulk endpoint
+    const leadIds = Array.from(new Set(meetings.filter(m => m.leadId).map(m => String(m.leadId))));
+    if (leadIds.length > 0) {
+        const leads = await getLeadsBulk(tenantId, leadIds);
+        const leadMap = new Map(leads.map(l => [String(l._id), {
+            _id: l._id,
+            name: `${l.contact?.firstName || ''} ${l.contact?.lastName || ''}`.trim() || 'Unknown'
+        }]));
+        
+        meetings.forEach(m => {
+            if (m.leadId && leadMap.has(String(m.leadId))) {
+                m.leadId = leadMap.get(String(m.leadId));
+            }
+        });
+    }
+
+    // Populate host details
+    const hostIds = Array.from(new Set(meetings.filter(m => m.hostId).map(m => String(m.hostId))));
+    if (hostIds.length > 0) {
+        const users = await getUsersBulk(tenantId, hostIds);
+        const userMap = new Map(users.map(u => [String(u._id), {
+            _id: u._id,
+            name: u.contact?.name || 'Unknown User'
+        }]));
+        
+        meetings.forEach(m => {
+            if (m.hostId && userMap.has(String(m.hostId))) {
+                m.hostId = userMap.get(String(m.hostId));
+            }
+        });
+    }
+
+    ApiResponse.success(res, meetings);
+});
+
 const getMeetingStats = asyncHandler(async (req, res) => {
     const tenantId = req.headers['x-tenant-id'];
     const filter = buildScopeFilter(req, { ownerField: 'hostId', module: 'meetings' });
@@ -789,6 +859,7 @@ const completeMeeting = asyncHandler(async (req, res) => {
 module.exports = {
     scheduleMeeting,
     getMeetings,
+    getCalendarMeetings,
     getMeetingStats,
     getMeeting,
     updateMeeting,

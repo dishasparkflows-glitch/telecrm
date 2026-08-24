@@ -85,6 +85,39 @@ const getTasks = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/tasks/calendar
+ */
+const getCalendarTasks = asyncHandler(async (req, res) => {
+    const { from, to } = req.query;
+    const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'tasks' });
+
+    if (from || to) {
+        filter.dueDate = {};
+        if (from) {
+            const fromDate = new Date(from);
+            if (!Number.isNaN(fromDate.getTime())) {
+                filter.dueDate.$gte = fromDate;
+            }
+        }
+        if (to) {
+            const toDate = new Date(to);
+            if (!Number.isNaN(toDate.getTime())) {
+                filter.dueDate.$lte = toDate;
+            }
+        }
+    }
+
+    const tasks = await Task.find(filter)
+        .select('_id dueDate details.title leadId')
+        .lean();
+
+    // The calendar only needs `leadId` as a string/ObjectId for navigation, but we can populate if needed.
+    // For now, returning the selected fields as requested.
+    
+    ApiResponse.success(res, { tasks });
+});
+
+/**
  * GET /api/tasks/stats
  */
 const getTaskStats = asyncHandler(async (req, res) => {
@@ -150,6 +183,7 @@ const deleteTask = asyncHandler(async (req, res) => {
 
 module.exports = {
     getTasks,
+    getCalendarTasks,
     getTaskStats,
     createTask,
     updateTask,

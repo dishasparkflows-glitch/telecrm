@@ -9,6 +9,13 @@ export const meetingApi = baseApi.injectEndpoints({
             }),
             providesTags: [{ type: 'Meeting', id: 'LIST' }],
         }),
+        getCalendarMeetings: builder.query({
+            query: (params) => ({
+                url: '/meetings/calendar',
+                params,
+            }),
+            providesTags: [{ type: 'Meeting', id: 'LIST' }],
+        }),
         getMeetingStats: builder.query({
             query: () => '/meetings/stats',
             providesTags: [{ type: 'Meeting', id: 'STATS' }, { type: 'Meeting', id: 'LIST' }],
@@ -128,6 +135,7 @@ export const meetingApi = baseApi.injectEndpoints({
 
 export const {
     useGetMeetingsQuery,
+    useGetCalendarMeetingsQuery,
     useGetMeetingQuery,
     useScheduleMeetingMutation,
     useUpdateMeetingMutation,

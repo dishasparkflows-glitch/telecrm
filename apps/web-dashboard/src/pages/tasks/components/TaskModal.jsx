@@ -436,6 +436,7 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
                             required
                             value={formData.dueDate}
                             onChange={e => setFormData({...formData, dueDate: e.target.value})}
+                            minDate={new Date()}
                         />
                         <Input
                             type="time"

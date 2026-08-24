@@ -56,6 +56,7 @@ const RescheduleFollowUpModal = ({ isOpen, onClose, followUp, lead }) => {
                         type="date"
                         value={form.newDate}
                         onChange={(e) => setForm(prev => ({ ...prev, newDate: e.target.value }))}
+                        minDate={new Date()}
                         required
                     />
                     <Input

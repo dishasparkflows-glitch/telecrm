@@ -92,6 +92,7 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
                         type="date"
                         value={form.scheduledDate}
                         onChange={(e) => setForm(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                        minDate={new Date()}
                         required
                     />
                     <Input

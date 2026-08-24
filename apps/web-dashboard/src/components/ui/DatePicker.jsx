@@ -3,7 +3,7 @@ import Calendar from 'react-calendar';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import 'react-calendar/dist/Calendar.css';
 
-export default function DatePicker({ value, onChange, placeholder, disabled }) {
+export default function DatePicker({ value, onChange, placeholder, disabled, minDate }) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
@@ -81,6 +81,7 @@ export default function DatePicker({ value, onChange, placeholder, disabled }) {
                         <Calendar
                             onChange={handleDateChange}
                             value={date}
+                            minDate={minDate}
                             prevLabel={<ChevronLeft size={16} />}
                             nextLabel={<ChevronRight size={16} />}
                             prev2Label={null}
@@ -186,13 +187,11 @@ export default function DatePicker({ value, onChange, placeholder, disabled }) {
                             border-radius: 9999px;
                         }
                         .custom-calendar-wrapper .react-calendar__month-view__days {
-                            display: grid !important;
-                            grid-template-columns: repeat(7, 1fr);
-                            gap: 2px;
+                            /* Removed grid to allow native flex margin-inline-start for first day offset */
                         }
                         .custom-calendar-wrapper .react-calendar__tile {
-                            max-width: initial !important;
-                            flex: initial !important;
+                            /* Keep native flex basis */
+                            padding: 0.5rem;
                         }
                     `}} />
                 </div>

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { useGetMeetingsQuery } from '../features/meetings/meetingApi';
-import { useListTasksQuery } from '../features/tasks/tasksApi';
-import { useGetFollowUpsQuery } from '../features/leads/followUpApi';
+import { useGetCalendarMeetingsQuery } from '../features/meetings/meetingApi';
+import { useGetCalendarTasksQuery } from '../features/tasks/tasksApi';
+import { useGetCalendarFollowUpsQuery } from '../features/leads/followUpApi';
 
 export function useCalendarEvents(dateRange) {
     const { from, to } = dateRange;
@@ -10,19 +10,19 @@ export function useCalendarEvents(dateRange) {
     const toDate = to ? to.split('T')[0] : to;
 
     // Fetch Meetings
-    const { data: meetingsData, isLoading: meetingsLoading, error: meetingsError } = useGetMeetingsQuery(
+    const { data: meetingsData, isLoading: meetingsLoading, error: meetingsError } = useGetCalendarMeetingsQuery(
         { from: fromDate, to: toDate },
         { skip: !fromDate || !toDate }
     );
 
     // Fetch Tasks
-    const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useListTasksQuery(
+    const { data: tasksData, isLoading: tasksLoading, error: tasksError } = useGetCalendarTasksQuery(
         { from: fromDate, to: toDate },
         { skip: !fromDate || !toDate }
     );
 
     // Fetch Follow-ups
-    const { data: followUpsData, isLoading: followUpsLoading, error: followUpsError } = useGetFollowUpsQuery(
+    const { data: followUpsData, isLoading: followUpsLoading, error: followUpsError } = useGetCalendarFollowUpsQuery(
         { from: fromDate, to: toDate },
         { skip: !fromDate || !toDate }
     );
@@ -68,7 +68,7 @@ export function useCalendarEvents(dateRange) {
 
                 result.push({
                     id: `task-${t._id}`,
-                    title: t.title || 'Task',
+                    title: t.details?.title || t.title || 'Task',
                     start: start,
                     end: end,
                     backgroundColor: '#f0fdf4', // green-50

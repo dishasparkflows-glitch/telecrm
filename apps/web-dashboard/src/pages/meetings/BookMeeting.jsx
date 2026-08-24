@@ -192,6 +192,7 @@ export default function BookMeeting() {
                     type="date" 
                     value={selectedDate || ''} 
                     onChange={e => { setSelectedDate(e.target.value); setSelectedTime(null); }}
+                    minDate={new Date()}
                     min={new Date().toISOString().split('T')[0]}
                     className="w-full"
                   />

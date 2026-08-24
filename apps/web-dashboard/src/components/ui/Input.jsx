@@ -25,6 +25,7 @@ export default function Input({
             onChange={onChange} 
             placeholder={placeholder} 
             disabled={disabled}
+            minDate={props.minDate}
           />
         ) : type === 'time' ? (
           <TimePicker 

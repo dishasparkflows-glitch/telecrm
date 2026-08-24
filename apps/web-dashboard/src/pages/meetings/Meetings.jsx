@@ -386,7 +386,7 @@ export default function Meetings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div className="space-y-1.5">
                  <label className="text-sm font-medium text-slate-700">Date <span className="text-danger">*</span></label>
-                 <Input type="date" value={meetingData.date} onChange={(e) => { setMeetingData({ ...meetingData, date: e.target.value }); setAvailabilityResult(null); }} />
+                 <Input type="date" value={meetingData.date} onChange={(e) => { setMeetingData({ ...meetingData, date: e.target.value }); setAvailabilityResult(null); }} minDate={new Date()} />
              </div>
              <div className="space-y-1.5 flex flex-col justify-end">
                  <label className="text-sm font-medium text-slate-700">Time <span className="text-danger">*</span></label>

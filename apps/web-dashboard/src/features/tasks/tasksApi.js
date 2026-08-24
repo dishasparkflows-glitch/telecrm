@@ -9,6 +9,13 @@ export const tasksApi = baseApi.injectEndpoints({
       }),
       providesTags: ['Task'],
     }),
+    getCalendarTasks: builder.query({
+      query: (params) => ({
+        url: '/tasks/calendar',
+        params,
+      }),
+      providesTags: ['Task'],
+    }),
     getTaskStats: builder.query({
       query: () => '/tasks/stats',
       providesTags: ['TaskStats'],
@@ -49,6 +56,7 @@ export const tasksApi = baseApi.injectEndpoints({
 
 export const {
   useListTasksQuery,
+  useGetCalendarTasksQuery,
   useGetTaskStatsQuery,
   useCreateTaskMutation,
   useUpdateTaskMutation,
