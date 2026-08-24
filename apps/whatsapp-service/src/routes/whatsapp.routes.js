@@ -22,6 +22,7 @@ const requireSuperAdmin = (req, res, next) => {
 };
 
 // ─── Chat & Inbox ── (all users)
+router.get('/stats', ctrl.getUsageStats);
 router.get('/messages/:id/media', ctrl.getMessageMedia);
 router.post('/messages/:id/reply', ctrl.replyToMessage);
 router.post('/messages/:id/forward', ctrl.forwardMessage);

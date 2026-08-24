@@ -802,6 +802,32 @@ const deleteChatbotRule = asyncHandler(async (req, res) => {
     const rule = await ChatbotRule.findOneAndDelete({ _id: req.params.id, tenantId });
     if (!rule) throw ApiError.notFound('Rule not found');
     ApiResponse.success(res, null, 'Rule deleted');
+    res.status(204).send();
+});
+
+// ─── Usage Stats ──
+const getUsageStats = asyncHandler(async (req, res) => {
+    const tenantId = req.tenant.id;
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const used = await WhatsappMessage.countDocuments({
+        tenantId,
+        'meta.createdAt': { $gte: startOfMonth }
+    });
+
+    const nextMonth = new Date(startOfMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    res.json({
+        success: true,
+        data: {
+            used,
+            total: 2000, // Default limit for now
+            resetDate: nextMonth
+        }
+    });
 });
 
 module.exports = {
@@ -809,4 +835,5 @@ module.exports = {
     getMessageMedia, getChat, getTeamInbox, getInboxChat, markInboxRead, broadcast,
     getTemplates, getApprovedTemplates, createTemplate, updateTemplate, deleteTemplate, syncTemplatesFromMeta,
     getChatbotRules, createChatbotRule, updateChatbotRuleFn, deleteChatbotRule,
+    getUsageStats,
 };

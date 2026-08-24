@@ -198,6 +198,10 @@ export const whatsappApi = baseApi.injectEndpoints({
             query: () => '/whatsapp/config',
             providesTags: [{ type: 'WhatsApp', id: 'CONFIG' }],
         }),
+        getWhatsAppStats: builder.query({
+            query: () => '/whatsapp/stats',
+            providesTags: ['WhatsAppStats'],
+        }),
         saveWhatsAppConfig: builder.mutation({
             query: (data) => ({
                 url: '/whatsapp/config',
@@ -274,6 +278,7 @@ export const {
     useMarkInboxReadMutation,
     // WhatsApp Setup
     useGetWhatsAppConfigQuery,
+    useGetWhatsAppStatsQuery,
     useSaveWhatsAppConfigMutation,
     useTestWhatsAppConfigMutation,
     useDeleteWhatsAppConfigMutation,

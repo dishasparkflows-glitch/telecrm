@@ -24,8 +24,8 @@ const initializeSocket = (server) => {
     // Without this, Socket.IO uses an in-memory adapter and events published
     // to Redis are only emitted to users connected to THIS process.
     try {
-        const pubClient = getRedisClient();
-        const subClient = pubClient.duplicate();
+        const pubClient = getRedisClient().duplicate({ enableOfflineQueue: true });
+        const subClient = getRedisClient().duplicate({ enableOfflineQueue: true });
         subClient.on('error', (err) => {
             console.warn('⚠️ Socket.IO Redis subClient error:');
         });

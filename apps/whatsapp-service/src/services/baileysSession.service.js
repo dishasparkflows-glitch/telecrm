@@ -10,7 +10,7 @@ const path = require('path');
 const fs   = require('fs');
 
 // Baileys uses ESM — import it dynamically to stay CJS-compatible
-let makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestWaWebVersion, jidNormalizedUser, generateMessageIDV2, downloadMediaMessage;
+let makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestWaWebVersion, jidNormalizedUser, generateMessageIDV2, downloadMediaMessage, extractMessageContent;
 let cachedWaVersion = null;
 let cachedWaVersionAt = 0;
 
@@ -25,6 +25,7 @@ const loadBaileys = async () => {
     jidNormalizedUser      = baileys.jidNormalizedUser;
     generateMessageIDV2    = baileys.generateMessageIDV2;
     downloadMediaMessage   = baileys.downloadMediaMessage;
+    extractMessageContent  = baileys.extractMessageContent;
 };
 
 const getCurrentWaVersion = async () => {
@@ -314,17 +315,18 @@ const createSession = async (tenantId, userId, options = {}) => {
                 continue;
             }
 
+            const actualMsg = extractMessageContent(msg.message) || msg.message;
             const mediaEntries = [
-                ['image', msg.message?.imageMessage],
-                ['video', msg.message?.videoMessage],
-                ['audio', msg.message?.audioMessage],
-                ['document', msg.message?.documentMessage],
+                ['image', actualMsg?.imageMessage],
+                ['video', actualMsg?.videoMessage],
+                ['audio', actualMsg?.audioMessage],
+                ['document', actualMsg?.documentMessage],
             ];
             const [messageType, mediaMessage] = mediaEntries.find(([, value]) => value) || ['text', null];
             const caption = mediaMessage?.caption || '';
             const content =
-                msg.message?.conversation ||
-                msg.message?.extendedTextMessage?.text ||
+                actualMsg?.conversation ||
+                actualMsg?.extendedTextMessage?.text ||
                 caption ||
                 (messageType !== 'text' ? `[${messageType[0].toUpperCase()}${messageType.slice(1)}]` : '[Message]');
 

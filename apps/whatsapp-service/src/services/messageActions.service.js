@@ -109,8 +109,19 @@ function assertForwardable(source) {
     return true;
 }
 
+function unwrapBaileysMessage(msg) {
+    if (!msg) return msg;
+    if (msg.ephemeralMessage?.message) return unwrapBaileysMessage(msg.ephemeralMessage.message);
+    if (msg.viewOnceMessage?.message) return unwrapBaileysMessage(msg.viewOnceMessage.message);
+    if (msg.viewOnceMessageV2?.message) return unwrapBaileysMessage(msg.viewOnceMessageV2.message);
+    if (msg.viewOnceMessageV2Extension?.message) return unwrapBaileysMessage(msg.viewOnceMessageV2Extension.message);
+    if (msg.documentWithCaptionMessage?.message) return unwrapBaileysMessage(msg.documentWithCaptionMessage.message);
+    return msg;
+}
+
 function extractBaileysContent(message) {
     if (!message) return { type: 'text', content: '' };
+    message = unwrapBaileysMessage(message);
     const mediaEntries = [
         ['image', message.imageMessage],
         ['video', message.videoMessage],
@@ -127,7 +138,7 @@ function extractBaileysContent(message) {
 }
 
 function extractBaileysReplyContext(waMessage) {
-    const content = waMessage?.message || {};
+    const content = unwrapBaileysMessage(waMessage?.message || {});
     const node = content.extendedTextMessage || content.imageMessage || content.videoMessage || content.audioMessage || content.documentMessage;
     const contextInfo = node?.contextInfo;
     if (!contextInfo?.stanzaId) return null;

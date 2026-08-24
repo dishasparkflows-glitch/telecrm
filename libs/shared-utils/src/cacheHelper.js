@@ -7,8 +7,9 @@ let redisClient = null;
 
 try {
     redisClient = new Redis(redisUrl, {
-        maxRetriesPerRequest: null,
-        lazyConnect: true,
+        maxRetriesPerRequest: 3,
+        lazyConnect: false,
+        enableOfflineQueue: false,
     });
     redisClient.on('error', () => {});
 } catch (error) {

@@ -120,7 +120,6 @@ function ConvRow({ conv, active, onClick }) {
 export default function TeamInbox() {
   const toast = useToast()
   const dispatch = useDispatch()
-  const token = useSelector((state) => state.auth.token)
 
   const [selectedPhone, setSelectedPhone] = useState(null)
   const [search, setSearch] = useState('')

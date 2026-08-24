@@ -37,6 +37,7 @@ const getRedisClient = (url) => {
             retryStrategy: buildRetryStrategy('client'),
             lazyConnect: true,
             enableReadyCheck: true,
+            enableOfflineQueue: false,
             reconnectOnError,
         });
 
@@ -77,6 +78,7 @@ const getRedisSubscriber = (url) => {
             retryStrategy: buildRetryStrategy('subscriber'),
             lazyConnect: true,
             enableReadyCheck: true,
+            enableOfflineQueue: false,
             reconnectOnError,
         });
 
@@ -115,10 +117,9 @@ const publishRealtimeEvent = async ({ type, tenantId, userId, event, data }) => 
 
     const publisher = getRedisClient();
 
-    // Wait up to 3s for Redis to become ready — same pattern as publishEvent.
-    // Without this wait, events fired during service startup (when Redis is
-    // still connecting) are silently dropped even though Redis comes up moments later.
-    if (!isRedisReady()) {
+    // Wait up to 3s for Redis to become ready — but only if it's currently in the initial connecting phase.
+    // If it's reconnecting or closed, fail fast to prevent blocking API requests for 3s per event.
+    if (!isRedisReady() && publisher.status === 'connecting') {
         await Promise.race([
             new Promise((resolve) => publisher.once('ready', resolve)),
             new Promise((resolve) => setTimeout(resolve, 3000)),

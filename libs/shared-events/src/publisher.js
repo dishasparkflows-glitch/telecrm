@@ -12,7 +12,7 @@ const publishEvent = async (event, data) => {
         // readiness check happened first, so a service's first event could never
         // initialize Redis and was always discarded.
         const redis = getRedisClient();
-        if (!isRedisReady()) {
+        if (!isRedisReady() && redis.status === 'connecting') {
             await Promise.race([
                 new Promise((resolve) => redis.once('ready', resolve)),
                 new Promise((resolve) => setTimeout(resolve, 3000)),

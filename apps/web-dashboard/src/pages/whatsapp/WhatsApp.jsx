@@ -2,9 +2,8 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useSocketEvent } from '../../hooks/useSocketEvent'
-import { useSocket } from '../../contexts/SocketContext'
 import { ROLES } from '../../utils/constants'
-import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useGetApprovedTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
+import { whatsappApi, useGetChatQuery, useSendMessageMutation, useReplyToMessageMutation, useBroadcastMutation, useGetTemplatesQuery, useGetApprovedTemplatesQuery, useCreateTemplateMutation, useUpdateTemplateMutation, useDeleteTemplateMutation, useGetChatbotRulesQuery, useCreateChatbotRuleMutation, useUpdateChatbotRuleMutation, useDeleteChatbotRuleMutation, useSyncTemplatesMutation, useGetWhatsAppConfigQuery, useGetWhatsAppStatsQuery, useGetQRStatusQuery, useQrConnectMutation, useQrDisconnectMutation, flattenMessage } from '../../features/whatsapp/whatsappApi'
 import { useGetActiveLeadsQuery, useGetLeadQuery } from '../../features/leads/leadApi'
 import PageHeader from '../../components/layout/PageHeader'
 import Card from '../../components/ui/Card'
@@ -20,7 +19,7 @@ import ChatComposer from '../../components/whatsapp/ChatComposer'
 import MessageMedia from '../../components/whatsapp/MessageMedia'
 import MessageActions from '../../components/whatsapp/MessageActions'
 import Select from '../../components/ui/Select'
-import { MessageSquare, Search, Bot, FileText, Plus, Pencil, Trash2, Megaphone, Users, CheckCircle2, RefreshCw, Lock, AlertCircle, Variable, Eye, Info, Check, Clock, X, Phone, ChevronDown, QrCode, Wifi, WifiOff, Smartphone, LogOut, Loader2 } from 'lucide-react'
+import { MessageSquare, Search, Bot, FileText, Plus, Pencil, Trash2, Megaphone, Users, CheckCircle2, RefreshCw, Lock, AlertCircle, Variable, Eye, Info, Check, Clock, X, Phone, ChevronDown, QrCode, Wifi, WifiOff, Smartphone, LogOut, Loader2, MoreVertical } from 'lucide-react'
 
 // ── WhatsApp QR Connect Panel (Baileys) ───────────────────────────────────────
 // Shown to each agent when the tenant is in QR mode.
@@ -29,11 +28,9 @@ const WA_SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin
 
 function QRConnectPanel() {
   const toast = useToast()
-  const token = useSelector((state) => state.auth.token)
   const [qrImage, setQrImage] = useState(null)      // base64 PNG QR code
   const [wsStatus, setWsStatus] = useState('idle')  // idle | connecting | qr_pending | connected | reconnecting
   const [connectedPhone, setConnectedPhone] = useState(null)
-  const socketRef = useRef(null)
   const { data: statusResp, refetch: refetchStatus } = useGetQRStatusQuery(undefined, {
     pollingInterval: wsStatus === 'connected' ? 60000 : 5000,
     skipPollingIfUnfocused: true,
@@ -46,7 +43,7 @@ function QRConnectPanel() {
   const serverPhone  = statusResp?.data?.phone
   const serverQR     = statusResp?.data?.qr
 
-  const { socket, isConnected: isGlobalConnected } = useSocket()
+  
   
   // Use global socket event hooks
   useSocketEvent('connect_error', (error) => {
@@ -100,7 +97,6 @@ function QRConnectPanel() {
 
   const handleConnect = async () => {
     try {
-      connectSocket()   // set up socket BEFORE calling connect so we get the QR event
       setWsStatus('connecting')
       setQrImage(null)
       await qrConnect().unwrap()
@@ -118,8 +114,6 @@ function QRConnectPanel() {
       setQrImage(null)
       setWsStatus('idle')
       setConnectedPhone(null)
-      socketRef.current?.disconnect()
-      socketRef.current = null
       toast('WhatsApp disconnected', 'success')
       refetchStatus()
       setDisconnectConfirm(false)
@@ -131,112 +125,157 @@ function QRConnectPanel() {
   const isConnected    = wsStatus === 'connected'
   const isQRPending    = wsStatus === 'qr_pending'
   const isConnecting   = wsStatus === 'connecting' || connecting
-  const isReconnecting = wsStatus === 'reconnecting'
 
   return (
-    <div className="mb-4">
-      <Card>
-        <div className="flex items-center justify-between p-4">
-          {/* Left: status info */}
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              isConnected ? 'bg-emerald-100' : isQRPending ? 'bg-amber-100' : 'bg-[var(--vz-body-bg)]'
-            }`}>
-              {isConnected
-                ? <Wifi size={20} className="text-emerald-600" />
-                : isQRPending || isConnecting
-                ? <QrCode size={20} className="text-amber-600" />
-                : <WifiOff size={20} className="text-[var(--vz-text-muted)]" />}
-            </div>
-            <div>
-              <p className="text-sm font-bold text-[var(--vz-heading)] flex items-center gap-2">
-                <Smartphone size={13} className="text-[var(--vz-text-muted)]" /> My WhatsApp Connection
-                {isConnected && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Connected
-                  </span>
-                )}
-                {isReconnecting && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                    Reconnecting...
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">
-                {isConnected
-                  ? `Sending from +${connectedPhone || serverPhone}`
-                  : isQRPending
-                  ? 'Scan the QR code below with your WhatsApp'
-                  : isConnecting
-                  ? 'Generating QR code...'
-                  : 'Connect your personal WhatsApp number'}
-              </p>
-            </div>
-          </div>
+    <Card className="flex flex-col items-center justify-center p-4 text-center">
+      <div className="flex justify-between items-start w-full mb-2">
+        <p className="text-[11px] font-bold text-[var(--vz-heading)]">WhatsApp Connection</p>
+        <button className="text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)]"><MoreVertical size={14} /></button>
+      </div>
 
-          {/* Right: action button */}
-          {isConnected
-            ? <Button size="sm" variant="ghost" onClick={() => setDisconnectConfirm(true)} disabled={disconnecting}
-                className="text-danger hover:bg-danger/10">
-                {disconnecting ? <Loader2 size={13} className="animate-spin mr-1" /> : <LogOut size={13} className="mr-1" />}
-                Disconnect
-              </Button>
-            : !isQRPending && (
-              <Button size="sm" onClick={handleConnect} disabled={isConnecting}>
-                {isConnecting
-                  ? <><Loader2 size={13} className="animate-spin mr-1" /> Starting...</>
-                  : <><QrCode size={13} className="mr-1" /> Connect WhatsApp</>}
-              </Button>
-            )}
+      <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${
+        isConnected ? 'bg-emerald-100 text-emerald-500' : isQRPending ? 'bg-amber-100 text-amber-500' : 'bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)]'
+      }`}>
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+        </svg>
+     </div>
+
+      <p className="text-xs font-semibold text-[var(--vz-heading)] mb-1">My WhatsApp Connection</p>
+      
+      <div className="flex items-center gap-1.5 mb-2">
+        {isConnected ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
+            Connected
+          </span>
+        ) : isQRPending ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-700">
+            Scan QR
+          </span>
+        ) : isConnecting ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)]">
+            <Loader2 size={10} className="animate-spin" /> Connecting...
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-[var(--vz-body-bg)] text-[var(--vz-text-muted)]">
+            Disconnected
+          </span>
+        )}
+      </div>
+
+      <p className="text-xs text-[var(--vz-text-muted)] mb-4">
+        {isConnected ? `+${connectedPhone || serverPhone}` : 'Not connected'}
+      </p>
+
+      {isConnected && (
+        <div className="flex items-center gap-2 text-[10px] mb-4">
+          <span className="text-[var(--vz-text-muted)]">Quality</span>
+          <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-semibold">Good</span>
         </div>
+      )}
 
-        {/* QR code image area */}
-        {isQRPending && qrImage && (
-          <div className="border-t border-[var(--vz-border)] p-6 flex flex-col items-center gap-4">
-            <div className="p-3 bg-white rounded-2xl shadow-md">
-              <img src={qrImage} alt="WhatsApp QR Code" className="w-52 h-52" />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-[var(--vz-heading)] mb-1">Scan with your phone</p>
-              <ol className="text-xs text-[var(--vz-text-muted)] space-y-0.5">
-                <li>1. Open WhatsApp on your phone</li>
-                <li>2. Tap ⋮ (or Settings) → <strong>Linked Devices</strong></li>
-                <li>3. Tap <strong>Link a Device</strong> and scan this QR</li>
-              </ol>
-              <p className="text-[10px] text-[var(--vz-text-muted)] mt-2 italic">QR code expires in ~60 seconds. A new one will appear automatically.</p>
-            </div>
-            <Button size="sm" variant="ghost" onClick={handleConnect} disabled={connecting}>
-              <RefreshCw size={12} className="mr-1" /> Refresh QR
+      {/* QR code image area */}
+      {isQRPending && qrImage && (
+        <div className="mt-2 w-full flex flex-col items-center gap-3">
+          <div className="p-2 bg-white rounded-xl shadow-sm border border-[var(--vz-border)] inline-block">
+            <img src={qrImage} alt="WhatsApp QR Code" className="w-32 h-32" />
+          </div>
+          <p className="text-[10px] text-[var(--vz-text-muted)] italic">QR expires in ~60s</p>
+          <Button size="sm" variant="ghost" onClick={handleConnect} disabled={connecting} className="w-full text-[10px]">
+            <RefreshCw size={12} className="mr-1" /> Refresh QR
+          </Button>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {!isQRPending && (
+        <div className="w-full mt-2">
+          {isConnected ? (
+            <Button size="sm" variant="outline" onClick={() => setDisconnectConfirm(true)} disabled={disconnecting} className="w-full text-danger border-danger/30 hover:bg-danger/10">
+              {disconnecting ? <Loader2 size={13} className="animate-spin mr-1" /> : <LogOut size={13} className="mr-1" />}
+              Disconnect
             </Button>
-          </div>
-        )}
+          ) : (
+            <Button size="sm" onClick={handleConnect} disabled={isConnecting} className="w-full">
+              {isConnecting ? <><Loader2 size={13} className="animate-spin mr-1" /> Starting...</> : <><QrCode size={13} className="mr-1" /> Connect</>}
+            </Button>
+          )}
+        </div>
+      )}
 
-        {/* Connecting spinner */}
-        {isConnecting && !qrImage && (
-          <div className="border-t border-[var(--vz-border)] p-6 flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Loader2 size={24} className="text-primary animate-spin" />
-            </div>
-            <p className="text-sm text-[var(--vz-text-muted)]">Preparing QR code, please wait...</p>
-          </div>
-        )}
-
-        <ConfirmModal
-          isOpen={disconnectConfirm}
-          title="Disconnect WhatsApp?"
-          message="Are you sure you want to disconnect your WhatsApp from this CRM?"
-          confirmText="Disconnect"
-          variant="danger"
-          loading={disconnecting}
-          onConfirm={handleDisconnect}
-          onCancel={() => setDisconnectConfirm(false)}
-        />
-      </Card>
-    </div>
+      <ConfirmModal
+        isOpen={disconnectConfirm}
+        title="Disconnect WhatsApp?"
+        message="Are you sure you want to disconnect your WhatsApp from this CRM?"
+        confirmText="Disconnect"
+        variant="danger"
+        loading={disconnecting}
+        onConfirm={handleDisconnect}
+        onCancel={() => setDisconnectConfirm(false)}
+      />
+    </Card>
   )
 }
 
+function WhatsAppSidebar({ setActiveTab, tenantMode, user }) {
+  const { data: statsData, isLoading } = useGetWhatsAppStatsQuery(undefined, {
+    refetchOnMountOrArgChange: true
+  });
+  
+  const stats = statsData?.data || { used: 0, total: 2000, resetDate: new Date() };
+  const used = stats.used;
+  const total = stats.total;
+  const percentage = total > 0 ? Math.round((used / total) * 100) : 0;
+  const remaining = Math.max(0, total - used);
+  
+  const resetDateString = new Date(stats.resetDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  
+  return (
+    <div className="lg:col-span-1 flex flex-col gap-4 overflow-y-auto">
+      {/* 1. Connection Card */}
+      {tenantMode === 'qr' && user?._id && (
+        <QRConnectPanel />
+      )}
+
+      {/* 2. Usage Card */}
+      <Card className="p-4">
+        <div className="flex justify-between items-center mb-6">
+          <p className="text-[11px] font-bold text-[var(--vz-heading)]">WhatsApp Usage</p>
+          <div className="px-2 py-1 text-[10px] font-medium bg-[var(--vz-input-bg)] rounded text-[var(--vz-heading)] flex items-center gap-1 cursor-pointer">
+            This Month <ChevronDown size={10} />
+          </div>
+        </div>
+        
+        {/* Gauge */}
+        <div className="relative w-40 h-20 mx-auto flex justify-center overflow-hidden mb-2">
+          <svg className="w-full h-full absolute top-0 left-0" viewBox="0 0 200 100">
+            <path d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="currentColor" strokeWidth="16" strokeLinecap="round" className="text-[var(--vz-border)]" />
+            <path d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="currentColor" strokeWidth="16" strokeLinecap="round" className="text-emerald-500 transition-all duration-1000 ease-out" 
+              strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * percentage) / 100} />
+          </svg>
+          <div className="absolute bottom-0 text-center w-full">
+            <p className="text-2xl font-bold text-[var(--vz-heading)] leading-none">{used.toLocaleString()}</p>
+            <p className="text-[9px] text-[var(--vz-text-muted)] mt-1 font-medium">of {total.toLocaleString()} messages</p>
+          </div>
+        </div>
+        
+        <div className="flex justify-center mb-4">
+          <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{percentage}% used</span>
+        </div>
+        
+        <div className="bg-primary/5 rounded-lg border border-primary/10 p-2.5 flex items-center justify-center gap-2 mb-3">
+          <MessageSquare size={12} className="text-primary" />
+          <span className="text-[11px] font-semibold text-primary">{remaining.toLocaleString()} messages remaining</span>
+        </div>
+        
+        <div className="flex items-center justify-center gap-1 text-[10px] text-[var(--vz-text-muted)]">
+          Resets on {resetDateString} <Info size={10} />
+        </div>
+      </Card>
+
+    </div>
+  )
+}
 
 // ── Helper: detect {{N}} variables in body text ──────────────────────────────
 function parseVariables(bodyText) {
@@ -399,7 +438,7 @@ export default function WhatsApp() {
   const toast = useToast()
   const location = useLocation()
   const dispatch = useDispatch()
-  const { user, token } = useSelector((s) => s.auth)
+  const { user } = useSelector((s) => s.auth)
   const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -439,7 +478,7 @@ export default function WhatsApp() {
     pollingInterval: 10000, // Socket.IO is primary; polling is the consistency fallback
     skipPollingIfUnfocused: true,
   })
-  const { data: templatesData, isFetching: isTemplatesFetching } = useGetTemplatesQuery(undefined, {
+  const { data: templatesData } = useGetTemplatesQuery(undefined, {
     skip: activeTab !== 'templates',
   })
   const { data: approvedTemplatesData, isFetching: isApprovedFetching } = useGetApprovedTemplatesQuery(undefined, {
@@ -724,12 +763,7 @@ export default function WhatsApp() {
 
       {activeTab === 'chat' && (
         <>
-          {/* QR mode: show connect panel above the chat grid */}
-          {tenantMode === 'qr' && user?._id && (
-            <QRConnectPanel />
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ height: tenantMode === 'qr' ? 'calc(100vh - 340px)' : 'calc(100vh - 250px)' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4" style={{ height: 'calc(100vh - 210px)' }}>
           {/* Contact List */}
           <Card noPadding className="lg:col-span-1 flex flex-col overflow-hidden">
             <div className="p-3 border-b border-[var(--vz-border)]">
@@ -775,7 +809,6 @@ export default function WhatsApp() {
               <EmptyState icon={MessageSquare} title="Select a contact" description="Choose a lead from the list to start chatting" />
             ) : (() => {
               const lead = selectedLeadData?.data || leads.find(l => l._id === selectedLead)
-              const selectedTemplateObj = approvedTemplates.find(t => t._id === selectedTemplate)
               return (
                 <>
                   {/* Chat header */}
@@ -943,6 +976,9 @@ export default function WhatsApp() {
               )
             })()}
           </Card>
+
+          {/* Right Sidebar */}
+          <WhatsAppSidebar setActiveTab={setActiveTab} tenantMode={tenantMode} user={user} />
         </div>
         </>
       )}

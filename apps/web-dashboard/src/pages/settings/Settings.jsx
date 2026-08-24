@@ -40,7 +40,6 @@ import {
   useGetGoogleSpreadsheetsQuery,
   useLazyGetGoogleWorksheetsQuery,
   useLazyPreviewGoogleSheetQuery,
-  useTestGoogleFormMutation,
   useDisconnectGoogleIntegrationMutation,
 } from '../../features/leads/leadApi'
 import { 
@@ -258,7 +257,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (reminderSettingsResp?.data) {
-      setReminderForm(reminderSettingsResp.data.defaultReminders)
+      setTimeout(() => setReminderForm(reminderSettingsResp.data.defaultReminders), 0)
     }
   }, [reminderSettingsResp])
 
@@ -315,7 +314,7 @@ export default function Settings() {
   const [showEditUser, setShowEditUser] = useState(false)
   const [editUserForm, setEditUserForm] = useState(null)
   const [showAddField, setShowAddField] = useState(false)
-  const [fieldForm, setFieldForm] = useState({ name: '', apiName: '', type: 'text', required: false, entity: 'Lead', options: [{ id: Date.now().toString(), label: '', value: '' }], defaultValue: '', helpText: '', placeholder: '' })
+  const [fieldForm, setFieldForm] = useState(() => ({ name: '', apiName: '', type: 'text', required: false, entity: 'Lead', options: [{ id: Date.now().toString(), label: '', value: '' }], defaultValue: '', helpText: '', placeholder: '' }))
   const [fieldFilter, setFieldFilter] = useState('Lead')
   const [pipelineDraft, setPipelineDraft] = useState([])
   const [dispositionsDraft, setDispositionsDraft] = useState([])
@@ -1983,14 +1982,6 @@ export default function Settings() {
                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pt-4">
                    {/* Left Col - Settings */}
                    <div className="xl:col-span-2 space-y-6">
-                     <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-4 flex gap-3 text-sm text-indigo-700">
-                       <Info size={18} className="shrink-0 mt-0.5" />
-                       <div>
-                         <p className="font-bold mb-1 text-indigo-900">Default Activity Reminders</p>
-                         <p>These reminders are automatically selected when creating new activities.<br/><span className="opacity-80">Users can change the reminder for individual activities when needed.</span></p>
-                       </div>
-                     </div>
-
                      <div>
                        <div className="space-y-3">
                          {remindersLoading ? (
