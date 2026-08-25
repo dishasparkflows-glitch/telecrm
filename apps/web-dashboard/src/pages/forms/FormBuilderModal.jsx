@@ -214,7 +214,7 @@ export default function FormBuilderModal({ editingForm, setEditingForm, handleSa
                           value={f.crmField || ''} 
                           onChange={v => {
                             const newFields = [...editingForm.fields];
-                            newFields[i].crmField = v;
+                            newFields[i] = { ...newFields[i], crmField: v };
                             setEditingForm({...editingForm, fields: newFields});
                           }}
                           options={[

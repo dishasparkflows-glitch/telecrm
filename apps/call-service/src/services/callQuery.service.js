@@ -36,6 +36,17 @@ const getEnrichedCallLogs = async (filter, skip, limit, tenantId) => {
 
     // 4. Create lookup maps
     const leadMap = new Map(leads.map(lead => [String(lead._id), lead]));
+    
+    // Resolve avatars for users in parallel
+    await Promise.all(users.map(async user => {
+        if (user?.contact?.avatar && !user.contact.avatar.startsWith('http')) {
+            try {
+                user.contact.avatar = await getPresignedDownloadUrl(user.contact.avatar);
+            } catch (err) {
+            }
+        }
+    }));
+    
     const userMap = new Map(users.map(user => [String(user._id), user]));
     const branchMap = new Map(branches.map(branch => [String(branch._id), branch]));
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { useGetAllUsersListQuery } from '../../features/users/userApi';
 import { useListRolesCompactQuery } from '../../features/roles/roleApi';
 import { useGetCustomFieldsQuery } from '../../features/custom-fields/customFieldApi';
@@ -36,7 +37,8 @@ export default function AutomationBuilder() {
     const toast = useToast();
 
     // Queries
-    const { data: usersData } = useGetAllUsersListQuery();
+    const { activeBranchId } = useSelector(state => state.auth);
+    const { data: usersData } = useGetAllUsersListQuery({ branchId: activeBranchId });
     const { data: rolesData } = useListRolesCompactQuery();
     const { data: customFieldsData } = useGetCustomFieldsQuery({ module: 'leads' });
     const { data: existingRules } = useGetRulesQuery({ limit: 100 }, { skip: !id });

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { X, Send, Paperclip, Clock, Video, User, Download, MessageSquare, FileText, CheckCircle, Ban, Edit, Calendar, MapPin, ArrowLeft, MoreVertical, Share2, CheckSquare } from 'lucide-react'
+import { X, Send, Paperclip, Clock, Video, Download, FileText, Edit, Calendar, MapPin, ArrowLeft, MoreVertical, Share2, CheckSquare } from 'lucide-react'
 import { useAddCommentMutation, useAddAttachmentMutation, useGetMeetingQuery, useCompleteMeetingMutation, useUpdateMeetingMutation } from '../../features/meetings/meetingApi'
 import { useGetUploadUrlMutation } from '../../features/uploads/uploadApi'
 import { useGetAllUsersListQuery } from '../../features/users/userApi'
@@ -18,7 +18,7 @@ export default function MeetingDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
-  const { user } = useSelector(state => state.auth)
+  const { user, activeBranchId } = useSelector(state => state.auth)
 
   const [showCompleteModal, setShowCompleteModal] = useState(false)
   const [completeData, setCompleteData] = useState({ outcome: '', notes: '', nextFollowUpDate: '', nextFollowUpTime: '', followUpNotes: '', createTask: false, scheduleNext: false, taskAssignedTo: '' })
@@ -29,7 +29,7 @@ export default function MeetingDetail() {
   const [showAddParticipant, setShowAddParticipant] = useState(false)
   const fileInputRef = useRef(null)
   
-  const { data: usersData } = useGetAllUsersListQuery()
+  const { data: usersData } = useGetAllUsersListQuery({ branchId: activeBranchId })
   const { data: meetingResp, isLoading } = useGetMeetingQuery(id)
   
   const [addAttachment, { isLoading: addingFile }] = useAddAttachmentMutation()
@@ -51,20 +51,19 @@ export default function MeetingDetail() {
       ...(meeting.attachments || []).map(a => ({ ...a, type: 'attachment', createdAt: a.uploadedAt || a.createdAt || new Date() }))
   ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
 
+  const getCleanMeeting = (updates = {}) => {
+      if (!meeting.meeting) return updates;
+      const { ...cleanMeeting } = meeting.meeting;
+      return { ...cleanMeeting, ...updates };
+  };
+
   const handleAddParticipant = async (userId) => {
     try {
       const newAttendees = [...(meeting.attendees || []), { userId, role: 'participant', status: 'invited' }]
-      await updateMeeting({ id: meeting._id, meeting: { ...meeting.meeting, attendees: newAttendees } }).unwrap()
+      await updateMeeting({ id: meeting._id, attendees: newAttendees }).unwrap()
       setShowAddParticipant(false)
       toast('Participant added', 'success')
     } catch { toast('Failed to add participant', 'error') }
-  }
-
-  const handleStatusChange = async (status) => {
-    try {
-      await updateMeeting({ id: meeting._id, meeting: { ...meeting.meeting, status } }).unwrap()
-      toast(`Meeting marked as ${status.replace('_', ' ')}`, 'success')
-    } catch { toast('Failed to update status', 'error') }
   }
 
   const handleFileUpload = async (e) => {
@@ -80,7 +79,7 @@ export default function MeetingDetail() {
 
   const handleSaveNotes = async () => {
     try {
-      await updateMeeting({ id: meeting._id, meeting: { ...meeting.meeting, notes: tempNotes } }).unwrap()
+      await updateMeeting({ id: meeting._id, meeting: getCleanMeeting({ notes: tempNotes }) }).unwrap()
       setShowNotesEdit(false)
       toast('Notes updated', 'success')
     } catch { toast('Failed to update notes', 'error') }
@@ -130,16 +129,6 @@ export default function MeetingDetail() {
     } catch { toast('Failed to complete meeting', 'error') }
   }
 
-  const toggleAgendaItem = async (agendaIdx) => {
-      if (!meeting.meeting?.agenda) return
-      const newAgenda = [...meeting.meeting.agenda]
-      newAgenda[agendaIdx] = { ...newAgenda[agendaIdx], completed: !newAgenda[agendaIdx].completed }
-      try {
-          await updateMeeting({ id: meeting._id, meeting: { ...meeting.meeting, agenda: newAgenda } }).unwrap()
-      } catch {
-          toast('Failed to update agenda', 'error')
-      }
-  }
 
   // Lifecycle status
   const statuses = ['scheduled', 'confirmed', 'in_progress', 'completed']
@@ -467,7 +456,12 @@ export default function MeetingDetail() {
                     onChange={val => setCompleteData({...completeData, taskAssignedTo: val})}
                     options={[
                       { value: '', label: 'Assign to me' },
-                      ...(usersData?.data || []).map(u => ({ value: u._id, label: u.name || u.email }))
+                      ...(usersData?.data || []).map(u => ({ 
+                          value: u._id, 
+                          label: u.name || u.email,
+                          avatar: u.avatar,
+                          avatarPlaceholder: !u.avatar && (u.name || u.email) ? (u.name || u.email).charAt(0).toUpperCase() : null
+                      }))
                     ]}
                   />
                 </div>

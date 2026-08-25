@@ -24,16 +24,20 @@ export default function Select({
   const selectedOption = !multiple ? options.find((opt) => opt.value === value) : null
   
   let displayValue = placeholder
+  let displayAvatar = null
   if (multiple) {
     if (Array.isArray(value) && value.length > 0) {
       if (value.length === 1) {
-        displayValue = options.find(opt => opt.value === value[0])?.label || value[0]
+        const opt = options.find(opt => opt.value === value[0])
+        displayValue = opt?.label || value[0]
+        displayAvatar = opt?.avatar
       } else {
         displayValue = `${value.length} selected`
       }
     }
   } else {
     displayValue = selectedOption ? selectedOption.label : placeholder
+    displayAvatar = selectedOption?.avatar || null
   }
 
   const updatePosition = () => {
@@ -119,9 +123,14 @@ export default function Select({
             ${disabled ? 'opacity-50 cursor-not-allowed bg-[var(--vz-input-bg)]' : 'bg-[var(--vz-input-bg)] hover:border-[var(--vz-border)]'}
             text-[var(--vz-heading)]`}
         >
-          <span className={`${!selectedOption ? 'text-[var(--vz-text-muted)]' : 'truncate'}`}>
-            {displayValue}
-          </span>
+          <div className="flex items-center gap-2 overflow-hidden">
+            {displayAvatar && (
+              <img src={displayAvatar} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
+            )}
+            <span className={`${!selectedOption ? 'text-[var(--vz-text-muted)]' : 'truncate'}`}>
+              {displayValue}
+            </span>
+          </div>
           <ChevronDown
             size={16}
             className={`text-[var(--vz-text-muted)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
@@ -158,8 +167,17 @@ export default function Select({
                           className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors
                             ${isSelected ? 'bg-primary/10 text-primary font-medium' : 'text-[var(--vz-heading)] hover:bg-primary/10 hover:text-primary'}`}
                         >
-                          <span className="truncate">{option.label}</span>
-                          {isSelected && <Check size={14} className="text-primary flex-shrink-0" />}
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            {option.avatar ? (
+                              <img src={option.avatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                            ) : option.avatarPlaceholder ? (
+                              <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                {option.avatarPlaceholder}
+                              </div>
+                            ) : null}
+                            <span className="truncate">{option.label}</span>
+                          </div>
+                          {isSelected && <Check size={14} className="text-primary flex-shrink-0 ml-2" />}
                         </li>
                       )
                     })

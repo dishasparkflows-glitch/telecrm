@@ -183,7 +183,12 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
                     <Select
                         value={form.assignedUserId}
                         onChange={(val) => setForm(prev => ({ ...prev, assignedUserId: val }))}
-                        options={users.map(u => ({ value: u._id, label: u.name }))}
+                        options={users.map(u => ({ 
+                            value: u._id, 
+                            label: u.name,
+                            avatar: u.avatar,
+                            avatarPlaceholder: !u.avatar && u.name ? u.name.charAt(0).toUpperCase() : null
+                        }))}
                         required
                     />
                 </div>

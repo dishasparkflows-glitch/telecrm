@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useParams, useNavigate } from 'react-router-dom'
 import { openDialer } from '../../slices/uiSlice'
 import { useGetLeadQuery, useGetLeadTimelineQuery, useUpdateLeadMutation, useAddNoteMutation, useAssignLeadMutation } from '../../features/leads/leadApi'
@@ -44,10 +44,11 @@ export default function LeadDetail() {
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState(null)
   const { canEdit } = usePermission('leads')
+  const { activeBranchId } = useSelector(state => state.auth)
 
   const { data, isLoading } = useGetLeadQuery(id)
   const { data: timelineData, isFetching: timelineFetching } = useGetLeadTimelineQuery({ id, limit: 100 }, { skip: activeTab !== 'timeline' })
-  const { data: usersData } = useGetAllUsersListQuery()
+  const { data: usersData } = useGetAllUsersListQuery({ branchId: activeBranchId })
   const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Lead' })
   const { data: profileData } = useGetProfileQuery()
   const { data: whatsappChatData, isFetching: whatsappFetching } = useGetChatQuery(id, { skip: activeTab !== 'whatsapp' })

@@ -363,7 +363,12 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
                         onChange={val => setFormData({...formData, assignedTo: val})}
                         options={[
                             { value: '', label: 'Select User' },
-                            ...users.map(u => ({ value: u._id, label: u.name }))
+                            ...users.map(u => ({ 
+                                value: u._id, 
+                                label: u.name,
+                                avatar: u.avatar,
+                                avatarPlaceholder: !u.avatar && u.name ? u.name.charAt(0).toUpperCase() : null
+                            }))
                         ]}
                     />
                 </div>

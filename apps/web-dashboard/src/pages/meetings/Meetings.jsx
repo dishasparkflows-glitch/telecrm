@@ -23,7 +23,7 @@ import { useNavigate } from 'react-router-dom'
 export default function Meetings() {
   const toast = useToast()
   const navigate = useNavigate()
-  const { user } = useSelector(state => state.auth)
+  const { user, activeBranchId } = useSelector(state => state.auth)
   const [activeTab, setActiveTab] = useState('all')
   const [showSchedule, setShowSchedule] = useState(false)
   const [showCreateLink, setShowCreateLink] = useState(false)
@@ -59,7 +59,7 @@ export default function Meetings() {
   const { data: statsData } = useGetMeetingStatsQuery()
   const { data: meetingsData, isLoading } = useGetMeetingsQuery(queryParams, { skip: activeTab === 'links' })
   const { data: linksData, isFetching: isFetchingLinks } = useGetBookingLinksQuery(undefined, { skip: activeTab !== 'links' })
-  const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery(undefined, { skip: !showSchedule && !showCreateLink })
+  const { data: usersData, isFetching: isFetchingUsers } = useGetAllUsersListQuery({ branchId: activeBranchId }, { skip: !showSchedule && !showCreateLink })
   const { data: leadsData } = useGetActiveLeadsQuery({ page: 1, limit: 100 }, { skip: !showSchedule })
   const { data: fieldsData } = useGetCustomFieldsQuery({ entity: 'Meeting' }, { skip: !showSchedule })
   const { data: googleStatusResp, isFetching: googleStatusLoading } = meetingApi.endpoints.getGoogleAuthStatus.useQuery(undefined, { skip: !showSchedule })
@@ -433,7 +433,12 @@ export default function Meetings() {
                   className="w-48 text-xs border-0 shadow-none focus:ring-0"
                   options={[
                   { value: '', label: isFetchingUsers ? 'Loading...' : '+ Add Participant' },
-                  ...(usersData?.data || []).map(u => ({ value: u._id, label: u.name || u.email }))
+                  ...(usersData?.data || []).map(u => ({ 
+                      value: u._id, 
+                      label: u.name || u.email,
+                      avatar: u.avatar,
+                      avatarPlaceholder: !u.avatar && (u.name || u.email) ? (u.name || u.email).charAt(0).toUpperCase() : null
+                  }))
                   ]}
                />
             </div>
