@@ -44,11 +44,26 @@ const getEnrichedCallLogs = async (filter, skip, limit, tenantId) => {
         dbLogs.map(async log => {
             const obj = log.toObject();
             let playbackUrl = obj.recording?.url || null;
+            let downloadUrl = playbackUrl;
             if (obj.recording?.objectKey) {
                 try {
                     playbackUrl = await getPresignedDownloadUrl(obj.recording.objectKey);
+                    
+                    const lead = leadMap.get(String(obj.leadId));
+                    const leadName = lead ? `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim() : '';
+                    let dateStr = '';
+                    if (obj.audit?.createdAt) {
+                        const date = new Date(obj.audit.createdAt);
+                        dateStr = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
+                    }
+                    let downloadFilename = `${leadName}_${dateStr}`.replace(/[\s\/]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+                    if (!downloadFilename) downloadFilename = 'recording';
+                    downloadFilename += '.mp3';
+                    
+                    downloadUrl = await getPresignedDownloadUrl(obj.recording.objectKey, 86400, downloadFilename);
                 } catch {
                     playbackUrl = obj.recording?.url || null;
+                    downloadUrl = playbackUrl;
                 }
             }
             
@@ -71,6 +86,7 @@ const getEnrichedCallLogs = async (filter, skip, limit, tenantId) => {
                     mimeType: obj.recording?.mimeType,
                     duration: obj.recording?.duration,
                     playbackUrl,
+                    downloadUrl,
                 },
                 disposition: obj.disposition,
                 audit: { createdAt: obj.audit?.createdAt },

@@ -4,6 +4,7 @@ import Input from '../../../components/ui/Input'
 import Select from '../../../components/ui/Select'
 import Button from '../../../components/ui/Button'
 import { useGetAllUsersListQuery } from '../../../features/users/userApi'
+import { useGetActiveLeadsQuery } from '../../../features/leads/leadApi'
 import { useScheduleFollowUpMutation } from '../../../features/leads/followUpApi'
 import { useToast } from '../../../components/ui/Toast'
 import { useSelector } from 'react-redux'
@@ -14,6 +15,9 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
     const { activeBranchId } = useSelector(state => state.auth)
     const { data: usersData } = useGetAllUsersListQuery({ branchId: activeBranchId })
     const users = usersData?.data || []
+
+    const { data: leadsData } = useGetActiveLeadsQuery({ limit: 100 }, { skip: !!lead || !isOpen })
+    const activeLeads = leadsData?.data || []
 
     const [scheduleFollowUp, { isLoading }] = useScheduleFollowUpMutation()
     const { data: reminderSettingsResp } = useGetReminderSettingsQuery(undefined, { skip: !isOpen })
@@ -26,6 +30,7 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
     }
 
     const [form, setForm] = useState({
+        leadId: lead?._id || '',
         type: 'call',
         scheduledDate: '',
         scheduledTime: '',
@@ -35,14 +40,17 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
     })
 
     // Update form when defaults load if the form hasn't been modified yet
-    React.useEffect(() => {
-        if (isOpen && reminderSettingsResp?.data) {
-            setForm(prev => ({ ...prev, reminderMinutesBefore: defaultReminder }));
-        }
-    }, [reminderSettingsResp, isOpen]);
+    const [prevSettingsData, setPrevSettingsData] = useState(null);
+    if (isOpen && reminderSettingsResp?.data && reminderSettingsResp.data !== prevSettingsData) {
+        setPrevSettingsData(reminderSettingsResp.data);
+        setForm(prev => ({ ...prev, reminderMinutesBefore: defaultReminder }));
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (!form.leadId) {
+            return addToast('Please select a lead', 'error')
+        }
         if (!form.scheduledDate || !form.scheduledTime) {
             return addToast('Please select a date and time', 'error')
         }
@@ -51,7 +59,7 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
 
         try {
             await scheduleFollowUp({
-                leadId: lead._id,
+                leadId: form.leadId,
                 type: form.type,
                 scheduledAt,
                 assignedUserId: form.assignedUserId,
@@ -69,9 +77,19 @@ const ScheduleFollowUpModal = ({ isOpen, onClose, lead }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Schedule Follow-up" size="md">
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="bg-primary/5 p-3 -mx-6 -mt-4 mb-4 border-b border-[var(--vz-border)]">
-                    <p className="text-sm font-semibold text-primary">Lead: {lead?.fullName || lead?.contact?.name || 'Unknown'}</p>
-                </div>
+                {lead ? (
+                    <div className="bg-primary/5 p-3 -mx-6 -mt-4 mb-4 border-b border-[var(--vz-border)]">
+                        <p className="text-sm font-semibold text-primary">Lead: {lead?.fullName || lead?.contact?.name || 'Unknown'}</p>
+                    </div>
+                ) : (
+                    <Select
+                        label="Lead"
+                        value={form.leadId}
+                        onChange={(val) => setForm(prev => ({ ...prev, leadId: val }))}
+                        options={activeLeads.map(l => ({ value: l._id, label: l.fullName || l.contact?.name || 'Unknown' }))}
+                        required
+                    />
+                )}
                 
                 <Select
                     label="Type"

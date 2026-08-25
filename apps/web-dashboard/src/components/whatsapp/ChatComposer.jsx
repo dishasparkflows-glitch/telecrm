@@ -16,7 +16,26 @@ const mediaTypeFor = (mimeType) => {
 export default function ChatComposer({ leadId, value, onChange, onSendText, onSendMedia, sending, disabled, toast, placeholder = 'Type a message…' }) {
   const inputRef = useRef(null)
   const fileRef = useRef(null)
+  const emojiRef = useRef(null)
+  const emojiButtonRef = useRef(null)
   const [showEmoji, setShowEmoji] = useState(false)
+  
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        emojiRef.current && !emojiRef.current.contains(event.target) &&
+        emojiButtonRef.current && !emojiButtonRef.current.contains(event.target)
+      ) {
+        setShowEmoji(false)
+      }
+    }
+    if (showEmoji) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showEmoji])
   const [selectedFile, setSelectedFile] = useState(null)
   const [getUploadUrl, { isLoading: uploading }] = useGetUploadUrlMutation()
   const imagePreview = useMemo(() => selectedFile?.type.startsWith('image/') ? URL.createObjectURL(selectedFile) : null, [selectedFile])
@@ -83,7 +102,7 @@ export default function ChatComposer({ leadId, value, onChange, onSendText, onSe
   return (
     <div className="relative">
       {showEmoji && (
-        <div className="absolute bottom-full left-0 mb-2 z-30 shadow-2xl rounded-xl overflow-hidden">
+        <div ref={emojiRef} className="absolute bottom-full left-0 mb-2 z-30 shadow-2xl rounded-xl overflow-hidden">
           <Suspense fallback={<div className="w-[350px] h-[420px] bg-[var(--vz-card-bg)] flex items-center justify-center"><Loader2 className="animate-spin" /></div>}>
             <EmojiPicker
               theme="auto"
@@ -110,7 +129,7 @@ export default function ChatComposer({ leadId, value, onChange, onSendText, onSe
         </div>
       )}
       <div className="flex items-end gap-2">
-        <button type="button" onClick={() => setShowEmoji((open) => !open)} disabled={busy || disabled} title="Add emoji"
+        <button ref={emojiButtonRef} type="button" onClick={() => setShowEmoji((open) => !open)} disabled={busy || disabled} title="Add emoji"
           className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--vz-text-muted)] hover:bg-[var(--vz-input-bg)] disabled:opacity-40"><Smile size={18} /></button>
         <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || disabled} title="Attach file"
           className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--vz-text-muted)] hover:bg-[var(--vz-input-bg)] disabled:opacity-40"><Paperclip size={18} /></button>

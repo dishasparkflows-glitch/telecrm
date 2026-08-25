@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Phone, MessageSquare, Mail, CalendarDays, CheckCircle, Clock, Search, Filter } from 'lucide-react'
+import { Calendar, Phone, MessageSquare, Mail, CalendarDays, CheckCircle, Clock, Search, Filter, Plus } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
+import ScheduleFollowUpModal from '../leads/components/ScheduleFollowUpModal'
 import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
@@ -23,6 +24,7 @@ const FollowUpsList = () => {
         type: '',
         assignedUserId: ''
     })
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
 
     const { data: statsData } = useGetFollowUpStatsQuery()
     const { data: followUpsData, isLoading } = useGetFollowUpsQuery({ 
@@ -61,6 +63,12 @@ const FollowUpsList = () => {
                     { label: 'CRM', path: '/dashboard' },
                     { label: 'Follow-ups' }
                 ]}
+                action={
+                    <Button onClick={() => setIsScheduleModalOpen(true)} className="flex items-center gap-2">
+                        <Plus size={16} />
+                        Add Follow-up
+                    </Button>
+                }
             />
 
             {/* Counters */}
@@ -230,6 +238,11 @@ const FollowUpsList = () => {
                     />
                 )}
             </Card>
+            
+            <ScheduleFollowUpModal 
+                isOpen={isScheduleModalOpen} 
+                onClose={() => setIsScheduleModalOpen(false)} 
+            />
         </div>
     )
 }

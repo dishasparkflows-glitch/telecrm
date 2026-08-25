@@ -17,7 +17,7 @@ const statusColors = { completed: 'success', missed: 'danger', busy: 'warning', 
 
 const SPEEDS = [0.5, 1, 1.5, 2]
 
-function MiniAudioPlayer({ src }) {
+function MiniAudioPlayer({ src, downloadUrl, downloadName = 'recording.mp3' }) {
   const audioRef = useRef(null)
   const menuRef = useRef(null)
   const [playing, setPlaying] = useState(false)
@@ -50,13 +50,23 @@ function MiniAudioPlayer({ src }) {
 
   const handleDownload = async () => {
     setMenuOpen(false)
+    if (downloadUrl) {
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = downloadName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      return
+    }
+    
     try {
       const res = await fetch(src)
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'recording.mp3'
+      a.download = downloadName
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -260,7 +270,11 @@ export default function CallLogs() {
                       </td>
                       <td className="px-4 py-3 text-[var(--vz-text)]">
                         {log.recording?.playbackUrl ? (
-                          <MiniAudioPlayer src={log.recording.playbackUrl} />
+                          <MiniAudioPlayer 
+                            src={log.recording.playbackUrl} 
+                            downloadUrl={log.recording.downloadUrl}
+                            downloadName={`${`${log.leadId?.contact?.firstName || ''} ${log.leadId?.contact?.lastName || ''}`.trim()}_${new Date(log.audit?.createdAt || new Date()).toLocaleDateString().replace(/\//g, '-')}.mp3`.replace(/\s+/g, '_')}
+                          />
                         ) : log.recording?.status === 'processing' ? (
                           <span className="text-xs text-[var(--vz-text-muted)] italic">⏳ Recording processing...</span>
                         ) : (

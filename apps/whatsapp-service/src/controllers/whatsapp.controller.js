@@ -807,7 +807,7 @@ const deleteChatbotRule = asyncHandler(async (req, res) => {
 
 // ─── Usage Stats ──
 const getUsageStats = asyncHandler(async (req, res) => {
-    const tenantId = req.tenant.id;
+    const tenantId = req.headers['x-tenant-id'];
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);

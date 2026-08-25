@@ -390,6 +390,8 @@ const setupProxies = (app) => {
         const proxy = createProxyMiddleware({
             target: config.target,
             changeOrigin: true,
+            proxyTimeout: 30000,
+            timeout: 30000,
             // pathFilter matches requests that start with this prefix exactly or as sub-path
             pathFilter: (reqPath) => isPathMatch(reqPath, path),
             on: {
@@ -419,15 +421,17 @@ const setupProxies = (app) => {
                     console.error(`❌ Proxy error for ${path}:`, err.message);
                     if (res && typeof res.status === 'function') {
                         if (!res.headersSent) {
-                            res.status(502).json({
+                            res.status(503).json({
                                 success: false,
-                                message: `Service at ${path} is currently unavailable`,
-                                error: env.isDev ? err.message : undefined,
+                                error: {
+                                    code: 'SERVICE_UNAVAILABLE',
+                                    message: `${audience} is temporarily unavailable`
+                                }
                             });
                         }
                     } else if (res && typeof res.end === 'function') {
                         // Handles WebSocket upgrade requests where 'res' is a socket
-                        res.end('HTTP/1.1 502 Bad Gateway\r\n\r\n');
+                        res.end('HTTP/1.1 503 Service Unavailable\r\n\r\n');
                     }
                 },
             },
