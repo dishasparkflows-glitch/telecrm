@@ -80,11 +80,11 @@ const whatsappMessageSchema = new mongoose.Schema(
             failedAt: { type: Date, default: null },
         },
         queue: {
-            deliveryPayload: { type: mongoose.Schema.Types.Mixed, default: {} },
-            sendAttempts: { type: Number, default: 0 },
-            processingAt: { type: Date, default: null },
-            nextAttemptAt: { type: Date, default: null },
-            lastError: { type: String, default: '' },
+            deliveryPayload: { type: mongoose.Schema.Types.Mixed },
+            sendAttempts: { type: Number },
+            processingAt: { type: Date },
+            nextAttemptAt: { type: Date },
+            lastError: { type: String },
             pendingEvents: { type: [mongoose.Schema.Types.Mixed] },
         },
         automation: {

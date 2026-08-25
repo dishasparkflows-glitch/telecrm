@@ -324,11 +324,29 @@ const createSession = async (tenantId, userId, options = {}) => {
             ];
             const [messageType, mediaMessage] = mediaEntries.find(([, value]) => value) || ['text', null];
             const caption = mediaMessage?.caption || '';
-            const content =
+            let content =
                 actualMsg?.conversation ||
                 actualMsg?.extendedTextMessage?.text ||
                 caption ||
-                (messageType !== 'text' ? `[${messageType[0].toUpperCase()}${messageType.slice(1)}]` : '[Message]');
+                '';
+
+            if (!content) {
+                if (actualMsg?.locationMessage) {
+                    content = '[Location]';
+                } else if (actualMsg?.contactMessage || actualMsg?.contactsArrayMessage) {
+                    content = '[Contact]';
+                } else if (actualMsg?.stickerMessage) {
+                    content = '[Sticker]';
+                } else if (actualMsg?.pollCreationMessage) {
+                    content = '[Poll]';
+                } else if (messageType !== 'text') {
+                    content = `[${messageType[0].toUpperCase()}${messageType.slice(1)}]`;
+                }
+            }
+
+            if (!content && messageType === 'text') {
+                continue; // Skip protocol messages (e.g., senderKeyDistributionMessage, messageContextInfo)
+            }
 
             try {
                 // ── Resolve phone → leadId via direct DB query ──────────────

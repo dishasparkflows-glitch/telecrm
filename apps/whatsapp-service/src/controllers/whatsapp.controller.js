@@ -226,10 +226,20 @@ const persistOutboundAction = async ({ identity, source, to, outbound, result, a
         result.deliveryUncertain = false;
     }
     const safeUserId = mongoose.Types.ObjectId.isValid(identity.userId) ? identity.userId : null;
+
+    let targetLeadId = source.leadId || null;
+    let targetBranchId = source.branchId || identity.branchId;
+    if (action === 'forward') {
+        const { findLeadByPhone } = require('../services/leadLookup.service');
+        const targetLead = await findLeadByPhone(identity.tenantId, to);
+        targetLeadId = targetLead?._id || null;
+        targetBranchId = targetLead?.branchId || identity.branchId;
+    }
+
     const message = await WhatsappMessage.create({
         tenantId: identity.tenantId,
-        branchId: source.branchId || identity.branchId,
-        leadId: source.leadId || null,
+        branchId: targetBranchId,
+        leadId: targetLeadId,
         userId: safeUserId,
         message: {
             direction: 'outbound',
@@ -401,9 +411,9 @@ const getChat = asyncHandler(async (req, res) => {
 
     if (phoneList.length) {
         // Inbound: `message.from` = lead's number (no leadId, no userId scope)
-        conditions.push({ tenantId, 'message.from': { $in: phoneList } });
+        conditions.push({ tenantId, 'message.direction': 'inbound', 'message.from': { $in: phoneList } });
         // Outbound without scope: `message.to` = lead's number
-        conditions.push({ tenantId, 'message.to': { $in: phoneList } });
+        conditions.push({ tenantId, 'message.direction': 'outbound', 'message.to': { $in: phoneList } });
     }
 
     const filter = conditions.length === 1 ? conditions[0] : { $or: conditions };

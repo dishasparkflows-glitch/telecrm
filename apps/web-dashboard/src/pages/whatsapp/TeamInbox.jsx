@@ -43,26 +43,32 @@ function MessageBubble({ msg, contacts, onReply, toast }) {
   return (
     <div id={`wa-inbox-message-${msg._id}`} className={`group flex ${isOut ? 'justify-end' : 'justify-start'} mb-2`}>
       <div
-        className={`relative max-w-[72%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+        className={`relative max-w-[72%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
           isOut
-            ? 'bg-[#dcf8c6] text-gray-800 rounded-br-sm'
-            : 'bg-[var(--vz-card-bg)] text-[var(--vz-heading)] rounded-bl-sm border border-[var(--vz-border)]'
+            ? 'bg-primary text-white rounded-br-md'
+            : 'bg-[var(--vz-card-bg)] text-[var(--vz-heading)] rounded-bl-md border border-[var(--vz-border)]'
         }`}
       >
-        <MessageActions message={msg} contacts={contacts} onReply={onReply} toast={toast} />
-        {msg.isForwarded && <p className="text-[10px] italic text-gray-500 mb-1">Forwarded</p>}
-        {msg.replyTo?.snapshot && <div className="border-l-2 border-emerald-500 bg-black/5 rounded px-2 py-1.5 mb-1.5 text-xs truncate">{msg.replyTo.snapshot.content || msg.replyTo.snapshot.mediaName || msg.replyTo.snapshot.type}</div>}
+        <MessageActions message={msg} outgoing={isOut} contacts={contacts} onReply={onReply} toast={toast} />
+        {msg.isForwarded && <p className={`text-[10px] italic mb-1 ${isOut ? 'text-white/60' : 'text-[var(--vz-text-muted)]'}`}>Forwarded</p>}
+        {msg.replyTo?.snapshot && (
+          <button type="button" onClick={() => document.getElementById(`wa-inbox-message-${msg.replyTo.messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+            className={`w-full text-left border-l-2 px-2 py-1.5 mb-1.5 rounded ${isOut ? 'border-white/60 bg-white/10' : 'border-primary bg-primary/5'}`}>
+            <span className="block text-[10px] opacity-70">Reply</span>
+            <span className="block text-xs truncate">{msg.replyTo.snapshot.content || msg.replyTo.snapshot.mediaName || msg.replyTo.snapshot.type}</span>
+          </button>
+        )}
         {['image', 'video', 'audio', 'document'].includes(msg.type) && <MessageMedia message={msg} outgoing={isOut} />}
         {msg.content && <p className={`break-words ${msg.type !== 'text' ? 'mt-1.5' : ''}`}>{msg.content}</p>}
         {msg.reactions?.length > 0 && <div className="flex flex-wrap gap-1 mt-1">{msg.reactions.map((reaction, index) => <span key={`${reaction.emoji}-${index}`} className="px-1.5 py-0.5 rounded-full bg-black/10">{reaction.emoji}</span>)}</div>}
-        <div className={`flex items-center gap-1 mt-1 ${isOut ? 'justify-end' : 'justify-start'}`}>
-          <span className="text-[10px] text-gray-500">{formatTime(msg.meta?.createdAt)}</span>
+        <div className={`flex items-center gap-1 mt-1 ${isOut ? 'justify-end text-white/60' : 'justify-start text-[var(--vz-text-muted)]'}`}>
+          <span className="text-[10px]">{formatTime(msg.meta?.createdAt)}</span>
           {isOut && (
-            msg.status === 'read'
-              ? <CheckCheck size={12} className="text-blue-500" />
-              : msg.status === 'delivered'
-              ? <CheckCheck size={12} className="text-gray-400" />
-              : <Check size={12} className="text-gray-400" />
+            (msg.status === 'read' || msg.isRead || msg.whatsappReadAt)
+              ? <span className="flex" title="Read"><Check size={11} className="text-blue-300" /><Check size={11} className="text-blue-300 -ml-[5px]" /></span>
+              : (msg.status === 'delivered' || msg.deliveredAt)
+              ? <span className="flex" title="Delivered"><Check size={11} className="text-white/70" /><Check size={11} className="text-white/70 -ml-[5px]" /></span>
+              : <Check size={11} className="text-white/70" title="Sent" />
           )}
         </div>
       </div>
@@ -320,11 +326,7 @@ export default function TeamInbox() {
               {/* Messages area */}
               <div
                 className="flex-1 overflow-y-auto p-4 space-y-3"
-                style={{
-                  backgroundColor: 'var(--vz-body-bg)',
-                  backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.03) 1px, transparent 1px)',
-                  backgroundSize: '20px 20px',
-                }}
+                style={{ background: 'var(--vz-body-bg)' }}
               >
                 {chatLoading ? (
                   <div className="flex items-center justify-center h-full">

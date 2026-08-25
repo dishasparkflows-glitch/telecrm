@@ -857,11 +857,11 @@ export default function WhatsApp() {
                       displayedMessages.map((msg) => {
                         const isOut = msg.direction === 'outbound'
                         // WhatsApp-style status ticks
-                        const statusIcon = msg.status === 'read'
+                        const statusIcon = (msg.status === 'read' || msg.isRead || msg.whatsappReadAt)
                           ? <span className="flex" title="Read"><Check size={11} className="text-blue-300" /><Check size={11} className="text-blue-300 -ml-[5px]" /></span>
-                          : msg.status === 'delivered'
+                          : (msg.status === 'delivered' || msg.deliveredAt)
                           ? <span className="flex" title="Delivered"><Check size={11} className="text-white/70" /><Check size={11} className="text-white/70 -ml-[5px]" /></span>
-                          : msg.status === 'sent'
+                          : (msg.status === 'sent' || msg.sentAt)
                           ? <Check size={11} className="text-white/70" title="Sent" />
                           : msg.status === 'queued'
                           ? <Clock size={11} className="text-white/50" title="Queued — WhatsApp not configured" />
