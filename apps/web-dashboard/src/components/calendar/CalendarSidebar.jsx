@@ -71,7 +71,6 @@ export default function CalendarSidebar({
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex-1">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-slate-900">Upcoming Meetings</h3>
-                    <button className="text-xs text-primary font-medium hover:underline">View all</button>
                 </div>
                 <div className="space-y-4">
                     {upcomingEvents && upcomingEvents.length > 0 ? (

@@ -10,7 +10,7 @@ const getNotifications = asyncHandler(async (req, res) => {
     const { page = 1, limit = 25, isRead } = req.query;
 
     const filter = { tenantId, userId };
-    if (branchId) {
+    if (branchId && branchId !== 'all') {
         filter.$or = [{ branchId }, { branchId: null }];
     }
     if (isRead !== undefined) filter['readState.isRead'] = isRead === 'true';
@@ -46,7 +46,7 @@ const markAllRead = asyncHandler(async (req, res) => {
     const branchId = req.headers['x-branch-id'] || req.headers['x-user-branch-id'];
 
     const filter = { tenantId, userId, 'readState.isRead': false };
-    if (branchId) {
+    if (branchId && branchId !== 'all') {
         filter.$or = [{ branchId }, { branchId: null }];
     }
 

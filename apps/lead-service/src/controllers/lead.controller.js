@@ -34,7 +34,7 @@ const createLead = asyncHandler(async (req, res) => {
         source: leadData.source || 'manual',
         sourceDetails: leadData.sourceDetails || '',
         leadData,
-        assignedTo: leadData.assignedTo !== undefined ? leadData.assignedTo : null,
+        assignedTo: leadData.assignedTo || userId,
         createdBy: userId,
         actorId: userId,
         actorType: 'user',

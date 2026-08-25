@@ -40,7 +40,7 @@ export const tasksApi = baseApi.injectEndpoints({
       query: ({ id, status }) => ({
         url: `/tasks/${id}/status`,
         method: 'PATCH',
-        body: { status },
+        body: { details: { status } },
       }),
       invalidatesTags: ['Task', 'TaskStats', 'LeadActivities'],
     }),

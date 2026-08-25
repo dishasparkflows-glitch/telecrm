@@ -92,7 +92,7 @@ export function useCalendarEvents(dateRange) {
 
                 result.push({
                     id: `followup-${f._id}`,
-                    title: `Follow-up: ${f.leadId?.name || 'Lead'}`,
+                    title: f.leadId?.name || 'Lead',
                     start: start,
                     end: end,
                     backgroundColor: '#fffbeb', // amber-50

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Search, X, Paperclip, FileText, ClipboardList, Eye, Download, Trash2, File as FileIcon, Image as ImageIcon, FileSpreadsheet, FileArchive, Video, FileAudio } from 'lucide-react'
+import { Search, X, Paperclip, FileText, ClipboardList, Eye, Download, Trash2, File as FileIcon, Image as ImageIcon, FileSpreadsheet, FileArchive, Video, FileAudio, Upload } from 'lucide-react'
 import Modal from '../../../components/ui/Modal'
 import Input from '../../../components/ui/Input'
 import Select from '../../../components/ui/Select'
@@ -8,14 +8,7 @@ import { useCreateTaskMutation, useUpdateTaskMutation } from '../../../features/
 import { useGetActiveLeadsQuery } from '../../../features/leads/leadApi'
 import { useGetUploadUrlMutation, useGetDownloadUrlMutation } from '../../../features/uploads/uploadApi'
 import { useGetReminderSettingsQuery } from '../../../features/notifications/notificationApi'
-import { REMINDER_OPTIONS } from '../../../utils/constants'
 import { useToast } from '../../../components/ui/Toast'
-
-const SectionTitle = ({ children, number }) => (
-    <h3 className="text-sm font-semibold text-primary mb-3 flex gap-1">
-        <span>{number}.</span> <span>{children}</span>
-    </h3>
-)
 
 const formatBytes = (bytes) => {
     if (bytes === undefined || bytes === null) return null;
@@ -90,7 +83,7 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
             dueTime: '',
             reminder: defaultReminder,
             attachments: [],
-            internalNote: ''
+            noDueDate: false
         };
         const dateObj = task.dueDate ? new Date(task.dueDate) : null;
         
@@ -118,7 +111,7 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
             dueTime: dateObj ? dateObj.toISOString().slice(11, 16) : '',
             reminder: existingReminder,
             attachments: task.attachments || [],
-            internalNote: task.internalNote || ''
+            noDueDate: !dateObj
         };
     };
 
@@ -130,7 +123,6 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
     const { data: leadsData } = useGetActiveLeadsQuery({ search: leadSearchTerm, limit: 10 })
     const leads = leadsData?.data?.leads || leadsData?.data || []
 
-    // Sync form when taskToEdit changes (e.g. modal re-used for different task)
     const prevTaskId = useRef(taskToEdit?._id)
     useEffect(() => {
         if (taskToEdit?._id !== prevTaskId.current) {
@@ -192,10 +184,14 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
         e.preventDefault()
         try {
             const rawSubmitData = { ...formData }
-            if (rawSubmitData.dueDate && rawSubmitData.dueTime) {
-                rawSubmitData.dueDate = new Date(`${rawSubmitData.dueDate}T${rawSubmitData.dueTime}`).toISOString()
-            } else if (rawSubmitData.dueDate) {
-                rawSubmitData.dueDate = new Date(`${rawSubmitData.dueDate}T00:00:00`).toISOString()
+            
+            let finalDueDate = null;
+            if (!rawSubmitData.noDueDate) {
+                if (rawSubmitData.dueDate && rawSubmitData.dueTime) {
+                    finalDueDate = new Date(`${rawSubmitData.dueDate}T${rawSubmitData.dueTime}`).toISOString()
+                } else if (rawSubmitData.dueDate) {
+                    finalDueDate = new Date(`${rawSubmitData.dueDate}T00:00:00`).toISOString()
+                }
             }
 
             const submitData = {
@@ -205,13 +201,11 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
                     taskType: rawSubmitData.taskType,
                     status: rawSubmitData.status,
                     priority: rawSubmitData.priority,
-                    reminder: rawSubmitData.reminder !== null ? { enabled: true, offsetMinutes: Number(rawSubmitData.reminder) } : { enabled: false },
                 },
                 leadId: rawSubmitData.leadId || null,
                 assignedTo: rawSubmitData.assignedTo,
-                dueDate: rawSubmitData.dueDate,
+                dueDate: finalDueDate,
                 attachments: rawSubmitData.attachments,
-                internalNote: rawSubmitData.internalNote
             }
 
             if (taskToEdit) {
@@ -227,8 +221,6 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
         }
     }
 
-
-
     const selectedLead = leads.find(l => l._id === formData.leadId) || (taskToEdit?.leadId === formData.leadId ? { _id: taskToEdit.leadId, leadNumber: taskToEdit.leadNumber, contact: { name: leadSearchTerm } } : null)
 
     return (
@@ -236,354 +228,302 @@ export default function TaskModal({ isOpen, onClose, taskToEdit, users, prefille
             isOpen={isOpen} 
             onClose={onClose} 
             title={
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <ClipboardList size={18} />
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <ClipboardList size={20} />
                     </div>
                     <div>
-                        <div className="font-semibold text-[var(--vz-heading)]">{taskToEdit ? "Edit Task" : "Add New Task"}</div>
-                        <div className="text-xs text-[var(--vz-text-muted)] font-normal">Create a task and assign it to the right person</div>
+                        <div className="text-lg font-semibold text-slate-900">{taskToEdit ? "Edit Task" : "Add New Task"}</div>
+                        <div className="text-xs text-slate-500 font-normal">Create a new task and assign it to the right person</div>
                     </div>
                 </div>
             }
             size="xl"
         >
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Left Column */}
-                    <div className="space-y-6">
-                        <div>
-                            <SectionTitle number="1">Task Information</SectionTitle>
-                            <div className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5 px-1 pb-2">
+                
+                {/* Row 1 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <Input
+                        label="Task Title *"
+                        required
+                        value={formData.title}
+                        onChange={e => setFormData({...formData, title: e.target.value})}
+                        placeholder="Enter task title..."
+                    />
+                    <Select
+                        label={
+                            <div className="flex items-center gap-1">
+                                Status <span className="text-slate-400">ⓘ</span>
+                            </div>
+                        }
+                        value={formData.status}
+                        onChange={val => setFormData({...formData, status: val})}
+                        options={[
+                            { value: 'PENDING', label: 'Pending' },
+                            { value: 'IN_PROGRESS', label: 'In Progress' },
+                            { value: 'COMPLETED', label: 'Completed' },
+                            { value: 'CANCELLED', label: 'Cancelled' },
+                        ]}
+                    />
+                </div>
+
+                {/* Row 2 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <Select
+                        label="Task Type *"
+                        required
+                        value={formData.taskType}
+                        onChange={val => setFormData({...formData, taskType: val})}
+                        options={[
+                            { value: 'Follow-up', label: 'Follow-up' },
+                            { value: 'Call', label: 'Call' },
+                            { value: 'Meeting', label: 'Meeting' },
+                            { value: 'Email', label: 'Email' },
+                            { value: 'Other', label: 'Other' },
+                        ]}
+                    />
+                    <Select
+                        label="Priority *"
+                        required
+                        value={formData.priority}
+                        onChange={val => setFormData({...formData, priority: val})}
+                        options={[
+                            { value: 'LOW', label: 'Low' },
+                            { value: 'MEDIUM', label: 'Medium' },
+                            { value: 'HIGH', label: 'High' },
+                            { value: 'URGENT', label: 'Urgent' },
+                        ]}
+                    />
+                </div>
+
+                {/* Row 3: Related To */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <Select
+                        label="Related To"
+                        value="Lead"
+                        onChange={() => {}}
+                        options={[{ value: 'Lead', label: 'Lead' }]}
+                    />
+                    {!prefilledLeadId ? (
+                        <div className="relative pt-[22px]">
+                            <div className="relative">
                                 <Input
-                                    label="Task Title *"
-                                    required
-                                    value={formData.title}
-                                    onChange={e => setFormData({...formData, title: e.target.value})}
-                                    placeholder="Enter task title"
+                                    placeholder="Search and select lead..."
+                                    value={leadSearchTerm}
+                                    onChange={e => {
+                                        setLeadSearchTerm(e.target.value)
+                                        setIsDropdownOpen(true)
+                                    }}
+                                    onFocus={() => setIsDropdownOpen(true)}
+                                    onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
                                 />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Select
-                                        label="Task Type *"
-                                        required
-                                        value={formData.taskType}
-                                        onChange={val => setFormData({...formData, taskType: val})}
-                                        options={[
-                                            { value: 'Follow-up', label: 'Follow-up' },
-                                            { value: 'Call', label: 'Call' },
-                                            { value: 'Meeting', label: 'Meeting' },
-                                            { value: 'Email', label: 'Email' },
-                                            { value: 'Other', label: 'Other' },
-                                        ]}
-                                    />
-                                    <Select
-                                        label="Priority *"
-                                        required
-                                        value={formData.priority}
-                                        onChange={val => setFormData({...formData, priority: val})}
-                                        options={[
-                                            { value: 'LOW', label: 'Low' },
-                                            { value: 'MEDIUM', label: 'Medium' },
-                                            { value: 'HIGH', label: 'High' },
-                                            { value: 'URGENT', label: 'Urgent' },
-                                        ]}
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1">
-                                        Description
-                                    </label>
-                                    <textarea
-                                        className="w-full rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] px-3 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 min-h-[120px] resize-none"
-                                        value={formData.description}
-                                        onChange={e => setFormData({...formData, description: e.target.value})}
-                                        placeholder="Describe the task in detail..."
-                                    />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                    <Search size={16} />
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column */}
-                    <div className="space-y-6">
-                        <div>
-                            <SectionTitle number="2">Related To</SectionTitle>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Select
-                                        label="Related To *"
-                                        value="Lead"
-                                        onChange={() => {}}
-                                        options={[{ value: 'Lead', label: 'Lead' }]}
-                                    />
-                                    {!prefilledLeadId && (
-                                        <div className="space-y-1 pt-[22px]">
-                                            <div className="relative">
-                                                <div className="relative">
-                                                    <Input
-                                                        placeholder="Search lead..."
-                                                        value={leadSearchTerm}
-                                                        onChange={e => {
-                                                            setLeadSearchTerm(e.target.value)
-                                                            setIsDropdownOpen(true)
-                                                        }}
-                                                        onFocus={() => setIsDropdownOpen(true)}
-                                                        onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                                    />
-                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)] pointer-events-none">
-                                                        <Search size={16} />
-                                                    </div>
+                            {isDropdownOpen && leads.length > 0 && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-xl max-h-48 overflow-y-auto">
+                                    {leads.map(lead => (
+                                        <div 
+                                            key={lead._id}
+                                            onClick={() => {
+                                                setFormData({...formData, leadId: lead._id})
+                                                setLeadSearchTerm(`${lead.leadNumber || ''} - ${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim())
+                                                setIsDropdownOpen(false)
+                                            }}
+                                            className="px-3 py-2 cursor-pointer hover:bg-slate-50 border-b border-slate-100 last:border-0 flex justify-between items-center"
+                                        >
+                                            <div className="font-medium text-slate-800">{lead.contact?.name || `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim() || 'Unknown Lead'}</div>
+                                            {lead.leadNumber && (
+                                                <div className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                                    {lead.leadNumber}
                                                 </div>
-                                                {isDropdownOpen && leads.length > 0 && (
-                                                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-md shadow-xl max-h-48 overflow-y-auto">
-                                                        {leads.map(lead => (
-                                                            <div 
-                                                                key={lead._id}
-                                                                onClick={() => {
-                                                                    setFormData({...formData, leadId: lead._id})
-                                                                    setLeadSearchTerm(`${lead.leadNumber || ''} - ${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim())
-                                                                    setIsDropdownOpen(false)
-                                                                }}
-                                                                className="px-3 py-2 cursor-pointer hover:bg-[var(--vz-bg-light)] border-b border-[var(--vz-border)] last:border-0 flex justify-between items-center"
-                                                            >
-                                                                <div className="font-medium text-[var(--vz-heading)]">{lead.contact?.name || `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim() || 'Unknown Lead'}</div>
-                                                                {lead.leadNumber && (
-                                                                    <div className="text-xs text-[var(--vz-text-muted)] bg-[var(--vz-bg-light)] px-1.5 py-0.5 rounded border border-[var(--vz-border)]">
-                                                                        {lead.leadNumber}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                                
-                                {/* Selected Lead Chip */}
-                                {formData.leadId && selectedLead && (
-                                    <div className="flex items-center gap-3 p-3 bg-white dark:bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-md shadow-sm">
-                                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
-                                            {selectedLead.contact?.name ? selectedLead.contact.name.substring(0,2).toUpperCase() : 'LD'}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="text-sm font-medium text-[var(--vz-heading)]">{selectedLead.contact?.name || 'Unknown'}</div>
-                                            <div className="text-xs text-[var(--vz-text-muted)] mt-0.5 flex gap-2">
-                                                <span className="text-primary bg-primary/10 px-1.5 rounded">{selectedLead.leadNumber}</span>
-                                            </div>
-                                        </div>
-                                        <button type="button" onClick={() => { setFormData({...formData, leadId: ''}) }}>
-                                            <X size={16} className="text-[var(--vz-text-muted)] hover:text-danger" />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div>
-                            <SectionTitle number="3">Assignment</SectionTitle>
-                            <div className="grid grid-cols-1 gap-4">
-                                <Select
-                                    label="Assign To *"
-                                    required
-                                    value={formData.assignedTo}
-                                    onChange={val => setFormData({...formData, assignedTo: val})}
-                                    options={[
-                                        { value: '', label: 'Select User' },
-                                        ...users.map(u => ({ value: u._id, label: u.name }))
-                                    ]}
-                                />
-                                {taskToEdit && (
-                                    <div className="mt-2 flex items-center gap-3">
-                                        {(() => {
-                                            const creator = users.find(u => u._id === taskToEdit.createdBy);
-                                            const date = taskToEdit.meta?.createdAt || taskToEdit.createdAt;
-                                            return (
-                                                <>
-                                                    {creator?.avatarUrl || creator?.profilePic ? (
-                                                        <img src={creator.avatarUrl || creator.profilePic} alt={creator.name} className="w-8 h-8 rounded-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-8 h-8 rounded-full bg-[var(--vz-bg-light)] text-[var(--vz-text-muted)] flex items-center justify-center font-medium text-xs border border-[var(--vz-border)]">
-                                                            {creator?.name ? creator.name.substring(0,2).toUpperCase() : 'U'}
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-[var(--vz-heading)]">
-                                                            Created By: <span className="font-normal text-[var(--vz-text-muted)]">{creator?.name || 'Unknown User'}</span>
-                                                        </div>
-                                                        <div className="text-xs text-[var(--vz-text-muted)] mt-0.5">
-                                                            {date ? formatDate(date) : ''}
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Schedule */}
-                <div>
-                    <SectionTitle number="4">Schedule</SectionTitle>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input
-                            type="date"
-                            label="Due Date *"
-                            required
-                            value={formData.dueDate}
-                            onChange={e => setFormData({...formData, dueDate: e.target.value})}
-                            minDate={new Date()}
-                        />
-                        <Input
-                            type="time"
-                            label="Due Time *"
-                            required
-                            value={formData.dueTime}
-                            onChange={e => setFormData({...formData, dueTime: e.target.value})}
-                        />
-                    </div>
-                </div>
-
-                {/* Additional Details */}
-                <div>
-                    <SectionTitle number="5">Additional Details (Optional)</SectionTitle>
-                    <div className="flex flex-col md:flex-row gap-4 items-start">
-                        {/* Attachment */}
-                        <div className="flex-1 w-full">
-                            <input 
-                                type="file" 
-                                multiple 
-                                ref={fileInputRef} 
-                                className="hidden" 
-                                onChange={handleAttachmentUpload} 
-                                accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.avi,.mkv,.pdf,.txt,.doc,.docx,.mp3,.aac,.ogg,.wav,.webm,.3gp,image/*,video/*,audio/*,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            />
-                            <div 
-                                onClick={() => fileInputRef.current?.click()}
-                                className={`border border-[var(--vz-border)] rounded-md p-4 flex items-center justify-between cursor-pointer hover:bg-[var(--vz-bg-light)] transition-colors ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="text-primary bg-primary/10 p-2 rounded-full">
-                                        <Paperclip size={18} />
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-semibold text-[var(--vz-heading)]">Attachment</div>
-                                        <div className="text-xs text-[var(--vz-text-muted)]">{isUploading ? 'Uploading...' : 'Add files or documents'}</div>
-                                    </div>
-                                </div>
-                                <span className="text-primary text-xl font-light">+</span>
-                            </div>
-                            {/* Uploaded attachments list */}
-                            {formData.attachments.length > 0 && (
-                                <div className="mt-4 space-y-2">
-                                    {formData.attachments.map((att, idx) => {
-                                        const isObject = typeof att === 'object' && att !== null;
-                                        const key = isObject ? att.key : att;
-                                        const name = isObject ? att.name : att.split('/').pop();
-                                        const size = isObject ? att.size : null;
-                                        const type = isObject ? att.type : '';
-                                        
-                                        let uploadedAt = isObject ? att.uploadedAt : null;
-                                        if (!isObject) {
-                                            const timestampStr = name.split('-')[0];
-                                            const timestamp = parseInt(timestampStr, 10);
-                                            if (!isNaN(timestamp) && timestamp > 1600000000000) {
-                                                uploadedAt = new Date(timestamp).toISOString();
-                                            }
-                                        }
-                                        
-                                        const { Icon, color, border } = getFileIconAndColor(name, type);
-                                        const formattedSize = formatBytes(size);
-                                        const formattedDate = formatDate(uploadedAt);
-                                        
-                                        return (
-                                        <div key={idx} className={`flex items-center justify-between p-3 bg-white dark:bg-[var(--vz-card-bg)] border border-[var(--vz-border)] rounded-md shadow-sm group transition-colors ${border}`}>
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 ${color}`}>
-                                                    <Icon size={20} />
-                                                </div>
-                                                <div className="flex flex-col truncate">
-                                                    <span className="text-sm font-medium text-[var(--vz-heading)] truncate">{name}</span>
-                                                    <span className="text-xs text-[var(--vz-text-muted)]">
-                                                        {formattedSize ? `${formattedSize} • ` : ''} 
-                                                        {formattedDate ? `Uploaded on ${formattedDate}` : 'Uploaded file'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                                <button 
-                                                    type="button"
-                                                    onClick={async () => {
-                                                        try {
-                                                            const res = await getDownloadUrl({ key }).unwrap();
-                                                            window.open(res.data.downloadUrl, '_blank');
-                                                        } catch (e) {
-                                                            toast('Failed to view file', 'error');
-                                                        }
-                                                    }}
-                                                    className="p-1.5 rounded border border-[var(--vz-border)] hover:border-primary hover:text-primary bg-[var(--vz-bg-light)] text-[var(--vz-text-muted)] transition-colors"
-                                                    title="View"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={async () => {
-                                                        try {
-                                                            const res = await getDownloadUrl({ key, downloadFilename: name }).unwrap();
-                                                            const a = document.createElement('a');
-                                                            a.href = res.data.downloadUrl;
-                                                            a.download = name;
-                                                            document.body.appendChild(a);
-                                                            a.click();
-                                                            document.body.removeChild(a);
-                                                        } catch (e) {
-                                                            toast('Failed to download file', 'error');
-                                                        }
-                                                    }}
-                                                    className="p-1.5 rounded border border-[var(--vz-border)] hover:border-primary hover:text-primary bg-[var(--vz-bg-light)] text-[var(--vz-text-muted)] transition-colors"
-                                                    title="Download"
-                                                >
-                                                    <Download size={16} />
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setFormData(prev => ({...prev, attachments: prev.attachments.filter((_, i) => i !== idx)}))}
-                                                    className="p-1.5 rounded border border-[var(--vz-border)] hover:border-danger hover:text-danger bg-[var(--vz-bg-light)] text-[var(--vz-text-muted)] transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )})}
-                                    <div className="text-xs text-[var(--vz-text-muted)] mt-2 pl-1 font-medium">{formData.attachments.length} file{formData.attachments.length !== 1 ? 's' : ''} attached</div>
+                                    ))}
                                 </div>
                             )}
                         </div>
+                    ) : (
+                        <div className="pt-[22px]">
+                            <Input value={leadSearchTerm} disabled />
+                        </div>
+                    )}
+                </div>
 
-                        {/* Internal Note */}
-                        <div className="flex-1 w-full">
-                            <div className="w-full">
-                                <label className="block text-sm font-medium text-[var(--vz-heading)] mb-1">Internal Note</label>
-                                <textarea
-                                    className="w-full rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)] px-3 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 min-h-[80px] resize-none"
-                                    value={formData.internalNote}
-                                    onChange={e => setFormData({...formData, internalNote: e.target.value})}
-                                    placeholder="Add internal note here..."
+                {/* Selected Lead UI logic is hidden now because search input acts as the display */}
+
+                {/* Row 4: Assign To */}
+                <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Assign To <span className="text-red-500">*</span></label>
+                    <Select
+                        required
+                        value={formData.assignedTo}
+                        onChange={val => setFormData({...formData, assignedTo: val})}
+                        options={[
+                            { value: '', label: 'Select User' },
+                            ...users.map(u => ({ value: u._id, label: u.name }))
+                        ]}
+                    />
+                </div>
+
+                {/* Row 5: Due Date */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="block text-xs font-semibold text-slate-700">Due Date</label>
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1">
+                                <Input
+                                    type="date"
+                                    value={formData.dueDate}
+                                    onChange={e => setFormData({...formData, dueDate: e.target.value})}
+                                    minDate={new Date()}
+                                    disabled={formData.noDueDate}
                                 />
                             </div>
+                            <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                                <input 
+                                    type="checkbox" 
+                                    className="rounded text-primary border-slate-300 focus:ring-primary h-4 w-4"
+                                    checked={formData.noDueDate}
+                                    onChange={(e) => setFormData({...formData, noDueDate: e.target.checked})}
+                                />
+                                <span className="text-sm font-medium text-slate-700">No due date</span>
+                            </label>
                         </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Due Time</label>
+                        <Input
+                            type="time"
+                            value={formData.dueTime}
+                            onChange={e => setFormData({...formData, dueTime: e.target.value})}
+                            disabled={formData.noDueDate}
+                        />
                     </div>
                 </div>
 
-                <div className="pt-4 flex justify-end gap-3 mt-6">
-                    <Button variant="ghost" type="button" onClick={onClose} className="px-6 py-2">Cancel</Button>
-                    <Button type="submit" disabled={isCreating || isUpdating} className="px-6 py-2">
+                {/* Row 6: Description */}
+                <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Description (Optional)</label>
+                    <div className="relative">
+                        <textarea
+                            className="w-full text-sm rounded-lg border border-slate-200 bg-white text-slate-800 px-3 py-2 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all min-h-[100px] resize-none"
+                            maxLength={500}
+                            placeholder="Describe the task in detail..."
+                            value={formData.description}
+                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                        />
+                        <span className="absolute bottom-2 right-3 text-[10px] text-slate-400 font-medium">
+                            {formData.description.length} / 500
+                        </span>
+                    </div>
+                </div>
+
+                {/* Row 7: Attach files */}
+                <div>
+                    <input 
+                        type="file" 
+                        multiple 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        onChange={handleAttachmentUpload} 
+                        accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.avi,.mkv,.pdf,.txt,.doc,.docx,.mp3,.aac,.ogg,.wav,.webm,.3gp,image/*,video/*,audio/*,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    />
+                    <div className={`border border-slate-200 rounded-lg p-4 flex items-center justify-between transition-colors bg-white hover:bg-slate-50 ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <div className="flex items-center gap-3">
+                            <div className="text-indigo-600 bg-indigo-50 p-2.5 rounded-full shrink-0">
+                                <Paperclip size={20} />
+                            </div>
+                            <div>
+                                <div className="text-sm font-semibold text-slate-800">Attach files (Optional)</div>
+                                <div className="text-xs text-slate-500 mt-0.5">{isUploading ? 'Uploading...' : 'Upload documents or images (Max. 10 MB)'}</div>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-2 border border-slate-200 rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                        >
+                            <Upload size={16} className="text-indigo-600" /> Choose File
+                        </button>
+                    </div>
+
+                    {/* Uploaded attachments list */}
+                    {formData.attachments.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                            {formData.attachments.map((att, idx) => {
+                                const isObject = typeof att === 'object' && att !== null;
+                                const key = isObject ? att.key : att;
+                                const name = isObject ? att.name : att.split('/').pop();
+                                const size = isObject ? att.size : null;
+                                const type = isObject ? att.type : '';
+                                
+                                let uploadedAt = isObject ? att.uploadedAt : null;
+                                if (!isObject) {
+                                    const timestampStr = name.split('-')[0];
+                                    const timestamp = parseInt(timestampStr, 10);
+                                    if (!isNaN(timestamp) && timestamp > 1600000000000) {
+                                        uploadedAt = new Date(timestamp).toISOString();
+                                    }
+                                }
+                                
+                                const { Icon, color, border } = getFileIconAndColor(name, type);
+                                const formattedSize = formatBytes(size);
+                                const formattedDate = formatDate(uploadedAt);
+                                
+                                return (
+                                <div key={idx} className={`flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm group transition-colors ${border}`}>
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 ${color}`}>
+                                            <Icon size={20} />
+                                        </div>
+                                        <div className="flex flex-col truncate">
+                                            <span className="text-sm font-medium text-slate-800 truncate">{name}</span>
+                                            <span className="text-xs text-slate-500">
+                                                {formattedSize ? `${formattedSize} • ` : ''} 
+                                                {formattedDate ? `Uploaded on ${formattedDate}` : 'Uploaded file'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                        <button 
+                                            type="button"
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await getDownloadUrl({ key }).unwrap();
+                                                    window.open(res.data.downloadUrl, '_blank');
+                                                } catch (e) {
+                                                    toast('Failed to view file', 'error');
+                                                }
+                                            }}
+                                            className="p-1.5 rounded border border-slate-200 hover:border-indigo-600 hover:text-indigo-600 bg-white text-slate-400 transition-colors"
+                                            title="View"
+                                        >
+                                            <Eye size={16} />
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({...prev, attachments: prev.attachments.filter((_, i) => i !== idx)}))}
+                                            className="p-1.5 rounded border border-slate-200 hover:border-red-500 hover:text-red-500 bg-white text-slate-400 transition-colors"
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )})}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
+                    <Button variant="secondary" type="button" onClick={onClose} className="px-6 py-2 bg-white hover:bg-slate-50 text-slate-700 border-slate-200">
+                        Cancel
+                    </Button>
+                    <Button variant="primary" type="submit" disabled={isCreating || isUpdating} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700">
                         {taskToEdit ? 'Update Task' : 'Create Task'}
                     </Button>
                 </div>

@@ -138,7 +138,9 @@ import {
   ChevronDown,
   Settings as SettingsIcon,
   HelpCircle,
-  Link2
+  Link2,
+  ArrowLeft,
+  ChevronUp
 } from 'lucide-react'
 
 // Tab Item Component for Vertical Sidebar
@@ -888,9 +890,6 @@ export default function Settings() {
                     <Bell size={18} className={activeTab === 'notifications_reminders' ? 'text-primary' : 'text-[var(--vz-text-muted)]'} />
                     <span>Notifications & Reminders</span>
                   </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">
-                    NEW
-                  </span>
                 </button>
               </div>
             </Card>
@@ -2429,21 +2428,31 @@ function WhatsAppSetupTab({ toast }) {
   const [managePool] = useManagePhonePoolMutation()
 
   const existing = configResp?.data
+  
+  // view: 'overview' or 'config'
+  const [view, setView] = useState('overview')
   const [selectedMode, setSelectedMode] = useState(existing?.mode || null)
+  
   const [form, setForm] = useState({
     wabaId: '', accessToken: '', appId: '', appSecret: '', verifyToken: '',
     sharedPhoneNumberId: '', sharedPhoneDisplay: '',
   })
   const [showTokens, setShowTokens] = useState({})
   const [testResult, setTestResult] = useState(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Phone pool management
   const [newPhone, setNewPhone] = useState({ phoneNumberId: '', phoneDisplay: '' })
 
+  const [prevExisting, setPrevExisting] = useState(null)
+
   // Sync form when existing config loads
-  useState(() => {
+  if (existing !== prevExisting) {
+    setPrevExisting(existing)
     if (existing) {
-      setSelectedMode(existing.mode)
+      if (!selectedMode) {
+        setSelectedMode(existing.mode)
+      }
       setForm({
         wabaId: existing.wabaId || '',
         accessToken: existing.accessToken || '',
@@ -2453,12 +2462,11 @@ function WhatsAppSetupTab({ toast }) {
         sharedPhoneNumberId: existing.sharedPhoneNumberId || '',
         sharedPhoneDisplay: existing.sharedPhoneDisplay || '',
       })
-      // Show existing test result immediately so user can see if token is expired
       if (existing.testStatus && existing.testStatus !== 'untested') {
         setTestResult({ testStatus: existing.testStatus, testMessage: existing.testMessage })
       }
     }
-  }, [existing])
+  }
 
   const handleSave = async () => {
     if (!selectedMode) return toast('Please select a connection mode', 'error')
@@ -2487,6 +2495,7 @@ function WhatsAppSetupTab({ toast }) {
       await deleteConfig().unwrap()
       setSelectedMode(null)
       setForm({ wabaId: '', accessToken: '', appId: '', appSecret: '', verifyToken: '', sharedPhoneNumberId: '', sharedPhoneDisplay: '' })
+      setView('overview')
       toast('WhatsApp configuration removed', 'success')
     } catch {
       toast('Failed to remove configuration', 'error')
@@ -2511,32 +2520,179 @@ function WhatsAppSetupTab({ toast }) {
     } catch { toast('Failed to remove number', 'error') }
   }
 
+  const handleConfigure = (modeId) => {
+    setSelectedMode(modeId)
+    setView('config')
+  }
+
   const inputCls = 'w-full px-3 py-2.5 text-sm rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)] text-[var(--vz-heading)] outline-none focus:border-primary transition-colors'
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 size={32} className="animate-spin text-primary" /></div>
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h5 className="text-base font-bold text-[var(--vz-heading)]">WhatsApp Connection Setup</h5>
-          <p className="text-xs text-[var(--vz-text-muted)] mt-0.5">Choose how your team sends WhatsApp messages to customers</p>
+  const activeModeDetails = MODE_OPTIONS.find(m => m.id === selectedMode)
+
+  if (view === 'overview') {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-300">
+        {/* Page Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-[var(--vz-heading)] tracking-tight">WhatsApp Setup</h2>
+            <p className="text-sm text-[var(--vz-text-muted)] mt-1 max-w-2xl">
+              Connect your team's WhatsApp accounts and manage how conversations are handled in SparkCRM.
+            </p>
+          </div>
+          <div className="flex items-center">
+            {existing ? (
+              existing.testStatus === 'failed' ? (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  Needs Attention
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Active
+                </span>
+              )
+            ) : (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                Not Connected
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Connected Accounts Section */}
         {existing && (
-          <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${existing.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-              {existing.isActive ? '● Active' : '○ Inactive'}
-            </span>
+          <div className="mb-8">
+            <h3 className="text-sm font-bold text-[var(--vz-heading)] mb-3">Connected Account</h3>
+            <div className="p-5 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-card-bg)] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-primary/30">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <MessageCircle size={24} className="text-emerald-600" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base font-bold text-[var(--vz-heading)]">
+                      {existing.mode === 'qr' ? 'Personal QR Connection' : (existing.sharedPhoneDisplay || 'WhatsApp Business API')}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Connected</span>
+                  </div>
+                  <p className="text-xs text-[var(--vz-text-muted)]">
+                    {MODE_OPTIONS.find(m => m.id === existing.mode)?.title || 'Custom Connection'}
+                    {existing.phonePool?.length > 0 && ` • ${existing.phonePool.length} agents`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => handleConfigure(existing.mode)}>Manage</Button>
+                <Button variant="ghost" size="sm" className="text-danger hover:bg-danger/10" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? <Loader2 size={14} className="animate-spin" /> : 'Disconnect'}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
+
+        {/* Connection Methods */}
+        <div>
+          <h3 className="text-sm font-bold text-[var(--vz-heading)] mb-3">{existing ? 'Other Connection Methods' : 'Choose a Connection Method'}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {MODE_OPTIONS.map((opt) => {
+              const Icon = opt.icon
+              const isRecommended = opt.id === 'meta_shared'
+              return (
+                <div key={opt.id} className="flex flex-col p-5 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-card-bg)] shadow-sm hover:shadow-md transition-all h-full relative overflow-hidden group">
+                  {isRecommended && (
+                    <div className="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">
+                      Recommended
+                    </div>
+                  )}
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 transition-transform group-hover:scale-110" style={{ background: `${opt.color}15`, color: opt.color }}>
+                    <Icon size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-col items-start gap-1.5 mb-2">
+                      <h4 className="text-sm font-bold text-[var(--vz-heading)] leading-tight">{opt.title}</h4>
+                      {opt.id === 'qr' ? (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">⚠️ Unofficial / Personal</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">Official Meta API</span>
+                      )}
+                    </div>
+                    
+                    {/* Visual Features List */}
+                    <ul className="space-y-1.5 text-xs text-[var(--vz-text-muted)] mt-4 mb-6">
+                      {opt.id === 'meta_shared' && (
+                        <>
+                          <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Shared team inbox</li>
+                          <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Suitable for automation</li>
+                          <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Multiple agents</li>
+                        </>
+                      )}
+                      {opt.id === 'meta_per_agent' && (
+                        <>
+                          <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Individual agent numbers</li>
+                          <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Separate conversations</li>
+                          <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Admin management</li>
+                        </>
+                      )}
+                      {opt.id === 'qr' && (
+                        <>
+                          <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Existing WhatsApp accounts</li>
+                          <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-500" /> Direct QR scan setup</li>
+                        </>
+                      )}
+                    </ul>
+                  </div>
+                  
+                  <div className="mt-auto pt-4 border-t border-[var(--vz-border)]">
+                    <Button 
+                      className="w-full justify-center shadow-sm" 
+                      variant={isRecommended ? 'primary' : 'outline'}
+                      onClick={() => handleConfigure(opt.id)}
+                    >
+                      {opt.id === 'qr' ? 'Connect with QR' : 'Configure'}
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // --- CONFIG VIEW ---
+  return (
+    <div className="space-y-6 max-w-4xl animate-in fade-in slide-in-from-right-4 duration-300">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 mb-2">
+        <button onClick={() => setView('overview')} className="flex items-center text-sm font-medium text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] transition-colors">
+          <ArrowLeft size={16} className="mr-1.5" /> Back to connection methods
+        </button>
+      </div>
+      
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm" style={{ background: `${activeModeDetails?.color || '#25D366'}15`, color: activeModeDetails?.color || '#25D366' }}>
+          {activeModeDetails ? <activeModeDetails.icon size={24} /> : <MessageCircle size={24} />}
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-[var(--vz-heading)] tracking-tight">WhatsApp Setup / {activeModeDetails?.title || 'Configuration'}</h2>
+          <p className="text-sm text-[var(--vz-text-muted)] mt-0.5">
+            {activeModeDetails?.id === 'qr' ? 'Connect your personal WhatsApp number by scanning a QR code.' : 'Connect your official WhatsApp Business account to send and receive customer messages directly from SparkCRM.'}
+          </p>
+        </div>
       </div>
 
-      {/* ⚠️ Token Expired / Connection Failed Banner — shown when Meta API is returning errors */}
-      {existing && existing.testStatus === 'failed' && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-red-300 bg-red-50">
+      {/* ⚠️ Token Expired Banner */}
+      {existing && existing.testStatus === 'failed' && selectedMode !== 'qr' && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border-2 border-red-300 bg-red-50 shadow-sm">
           <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
             <WifiOff size={18} className="text-red-600" />
           </div>
@@ -2553,218 +2709,202 @@ function WhatsAppSetupTab({ toast }) {
                 <li>Go to <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="underline font-medium">Meta Developer Console</a></li>
                 <li>Select your app → WhatsApp → API Setup</li>
                 <li>Under <strong>"Access Tokens"</strong>, click <strong>"Generate Access Token"</strong></li>
-                <li>OR go to <strong>Business Settings → System Users → [your user] → Generate Token</strong> (set expiry to <strong>Never</strong>)</li>
+                <li>OR go to <strong>Business Settings → System Users → [your user] → Generate Token</strong></li>
                 <li>Copy the new token and paste it in the <strong>Access Token</strong> field below</li>
-                <li>Click <strong>"Update Configuration"</strong>, then <strong>"Test Connection"</strong></li>
+                <li>Click <strong>"Save Connection"</strong>, then <strong>"Test Connection"</strong></li>
               </ol>
             </div>
           </div>
         </div>
       )}
 
-      {/* Step 1: Mode Selection */}
-      <Card>
-        <Card.Header>
-          <Card.Title>Step 1 — Choose Connection Mode</Card.Title>
-          <p className="text-xs text-[var(--vz-text-muted)]">Select the WhatsApp method for your entire organization. You can change this later.</p>
-        </Card.Header>
-        <div className="grid grid-cols-1 gap-3">
-          {MODE_OPTIONS.map((opt) => {
-            const Icon = opt.icon
-            const isSelected = selectedMode === opt.id
-            return (
-              <button
-                key={opt.id}
-                onClick={() => setSelectedMode(opt.id)}
-                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                  isSelected
-                    ? 'border-primary bg-primary/5'
-                    : 'border-[var(--vz-border)] hover:border-primary/40 hover:bg-[var(--vz-body-bg)]'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${opt.color}15` }}>
-                    <Icon size={20} style={{ color: opt.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-bold text-[var(--vz-heading)]">{opt.title}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${opt.badgeColor}`}>{opt.badge}</span>
-                    </div>
-                    <p className="text-xs text-[var(--vz-text-muted)] leading-relaxed">{opt.desc}</p>
-                  </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${isSelected ? 'border-primary bg-primary' : 'border-[var(--vz-border)]'}`}>
-                    {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </Card>
-
-      {/* Step 2: Credentials (only for Meta modes) */}
+      {/* Meta Configuration Layout */}
       {selectedMode && selectedMode !== 'qr' && (
-        <Card>
-          <Card.Header>
-            <Card.Title>Step 2 — Meta API Credentials</Card.Title>
-            <p className="text-xs text-[var(--vz-text-muted)]">
-              Get these from{' '}
-              <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="text-primary underline">
-                Meta Developer Console <ExternalLink size={10} className="inline" />
-              </a>
-            </p>
+        <Card className="overflow-hidden shadow-sm border border-[var(--vz-border)]">
+          <Card.Header className="bg-[var(--vz-body-bg)] border-b border-[var(--vz-border)] p-5">
+            <Card.Title className="text-lg">Connection Details</Card.Title>
+            <p className="text-xs text-[var(--vz-text-muted)] mt-1">Configure your Meta API credentials. <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="text-primary hover:underline">Open Meta Console <ExternalLink size={10} className="inline" /></a></p>
           </Card.Header>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">WABA ID <span className="text-danger">*</span></label>
-              <input className={inputCls} placeholder="WhatsApp Business Account ID" value={form.wabaId} onChange={e => setForm({...form, wabaId: e.target.value})} />
-              <p className="text-[10px] text-[var(--vz-text-muted)]">Found in Meta Business Manager → WhatsApp Accounts</p>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Meta App ID</label>
-              <input className={inputCls} placeholder="App ID from Meta Developer Console" value={form.appId} onChange={e => setForm({...form, appId: e.target.value})} />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Access Token <span className="text-danger">*</span></label>
-              <div className="relative">
-                <input
-                  type={showTokens.accessToken ? 'text' : 'password'}
-                  className={`${inputCls} pr-10`}
-                  placeholder="Permanent access token from System User"
-                  value={form.accessToken}
-                  onChange={e => setForm({...form, accessToken: e.target.value})}
-                />
-                <button onClick={() => setShowTokens(p => ({...p, accessToken: !p.accessToken}))} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]">
-                  {showTokens.accessToken ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-[var(--vz-heading)]">WhatsApp Business Account ID <span className="text-danger">*</span></label>
+                <input className={inputCls} placeholder="e.g. 101234567890" value={form.wabaId} onChange={e => setForm({...form, wabaId: e.target.value})} />
               </div>
-              <p className="text-[10px] text-[var(--vz-text-muted)]">Go to Meta Business Settings → System Users → Create a system user → Generate Token with whatsapp_business_messaging permission</p>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">App Secret</label>
-              <div className="relative">
-                <input type={showTokens.appSecret ? 'text' : 'password'} className={`${inputCls} pr-10`} placeholder="Meta App Secret" value={form.appSecret} onChange={e => setForm({...form, appSecret: e.target.value})} />
-                <button onClick={() => setShowTokens(p => ({...p, appSecret: !p.appSecret}))} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]">
-                  {showTokens.appSecret ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-[var(--vz-heading)]">Access Token <span className="text-danger">*</span></label>
+                <div className="relative">
+                  <input
+                    type={showTokens.accessToken ? 'text' : 'password'}
+                    className={`${inputCls} pr-10`}
+                    placeholder="Permanent access token"
+                    value={form.accessToken}
+                    onChange={e => setForm({...form, accessToken: e.target.value})}
+                  />
+                  <button onClick={() => setShowTokens(p => ({...p, accessToken: !p.accessToken}))} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] transition-colors">
+                    {showTokens.accessToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[var(--vz-heading)]">Webhook Verify Token</label>
-              <input className={inputCls} placeholder="Any random string (e.g. mytoken123)" value={form.verifyToken} onChange={e => setForm({...form, verifyToken: e.target.value})} />
+
+              {selectedMode === 'meta_shared' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-[var(--vz-heading)]">Phone Number ID <span className="text-danger">*</span></label>
+                    <input className={inputCls} placeholder="e.g. 104567890123" value={form.sharedPhoneNumberId} onChange={e => setForm({...form, sharedPhoneNumberId: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-[var(--vz-heading)]">Display Number</label>
+                    <input className={inputCls} placeholder="+91 22 1234 5678" value={form.sharedPhoneDisplay} onChange={e => setForm({...form, sharedPhoneDisplay: e.target.value})} />
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* Shared mode: one phone number */}
-            {selectedMode === 'meta_shared' && (
-              <>
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-[var(--vz-heading)]">Phone Number ID <span className="text-danger">*</span></label>
-                  <input className={inputCls} placeholder="Phone Number ID from Meta" value={form.sharedPhoneNumberId} onChange={e => setForm({...form, sharedPhoneNumberId: e.target.value})} />
-                  <p className="text-[10px] text-[var(--vz-text-muted)]">Meta Developer Console → WhatsApp → Phone Numbers → Phone Number ID</p>
+            {/* Advanced Configuration Collapsible */}
+            <div className="mt-8 pt-6 border-t border-[var(--vz-border)]">
+              <button 
+                onClick={() => setShowAdvanced(!showAdvanced)} 
+                className="flex items-center justify-between w-full text-left font-semibold text-sm text-[var(--vz-heading)] hover:text-primary transition-colors"
+              >
+                <span>Advanced Configuration</span>
+                {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              
+              {showAdvanced && (
+                <div className="mt-4 p-5 bg-[var(--vz-body-bg)] rounded-xl border border-[var(--vz-border)] grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-[var(--vz-heading)]">Meta App ID</label>
+                    <input className={inputCls} placeholder="App ID" value={form.appId} onChange={e => setForm({...form, appId: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-[var(--vz-heading)]">Webhook Verify Token</label>
+                    <input className={inputCls} placeholder="Custom string for webhook verification" value={form.verifyToken} onChange={e => setForm({...form, verifyToken: e.target.value})} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="block text-sm font-semibold text-[var(--vz-heading)]">App Secret</label>
+                    <div className="relative">
+                      <input type={showTokens.appSecret ? 'text' : 'password'} className={`${inputCls} pr-10`} placeholder="Meta App Secret" value={form.appSecret} onChange={e => setForm({...form, appSecret: e.target.value})} />
+                      <button onClick={() => setShowTokens(p => ({...p, appSecret: !p.appSecret}))} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)]">
+                        {showTokens.appSecret ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-[var(--vz-heading)]">Display Number</label>
-                  <input className={inputCls} placeholder="+91 22 1234 5678" value={form.sharedPhoneDisplay} onChange={e => setForm({...form, sharedPhoneDisplay: e.target.value})} />
-                </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </Card>
       )}
 
       {/* Step 2: Phone Pool for meta_per_agent */}
       {selectedMode === 'meta_per_agent' && existing?.mode === 'meta_per_agent' && (
-        <Card>
-          <Card.Header className="flex items-center justify-between">
-            <div>
-              <Card.Title>Phone Number Pool</Card.Title>
-              <p className="text-xs text-[var(--vz-text-muted)]">Add business phone numbers and assign one to each agent</p>
-            </div>
+        <Card className="shadow-sm border border-[var(--vz-border)]">
+          <Card.Header className="bg-[var(--vz-body-bg)] border-b border-[var(--vz-border)] p-5">
+            <Card.Title className="text-lg">Phone Number Pool</Card.Title>
+            <p className="text-xs text-[var(--vz-text-muted)] mt-1">Add business phone numbers and assign one to each agent.</p>
           </Card.Header>
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row items-end gap-3 mb-6 p-4 bg-[var(--vz-body-bg)] rounded-xl border border-dashed border-[var(--vz-border)]">
+              <div className="flex-1 w-full space-y-2">
+                <label className="text-xs font-semibold text-[var(--vz-heading)]">Phone Number ID</label>
+                <input className={inputCls} placeholder="e.g. 1234567890123456" value={newPhone.phoneNumberId} onChange={e => setNewPhone(p => ({...p, phoneNumberId: e.target.value}))} />
+              </div>
+              <div className="flex-1 w-full space-y-2">
+                <label className="text-xs font-semibold text-[var(--vz-heading)]">Display Number</label>
+                <input className={inputCls} placeholder="+91 98765 43210" value={newPhone.phoneDisplay} onChange={e => setNewPhone(p => ({...p, phoneDisplay: e.target.value}))} />
+              </div>
+              <Button onClick={handleAddPhone} className="h-[42px] w-full md:w-auto"><Hash size={14} className="mr-1.5" /> Add Number</Button>
+            </div>
 
-          {/* Add new number */}
-          <div className="flex items-end gap-3 mb-4 p-3 bg-[var(--vz-body-bg)] rounded-lg border border-dashed border-[var(--vz-border)]">
-            <div className="flex-1 space-y-1">
-              <label className="text-xs font-medium text-[var(--vz-heading)]">Phone Number ID</label>
-              <input className={inputCls} placeholder="e.g. 1234567890123456" value={newPhone.phoneNumberId} onChange={e => setNewPhone(p => ({...p, phoneNumberId: e.target.value}))} />
-            </div>
-            <div className="flex-1 space-y-1">
-              <label className="text-xs font-medium text-[var(--vz-heading)]">Display Number</label>
-              <input className={inputCls} placeholder="+91 98765 43210" value={newPhone.phoneDisplay} onChange={e => setNewPhone(p => ({...p, phoneDisplay: e.target.value}))} />
-            </div>
-            <Button size="sm" onClick={handleAddPhone}><Hash size={13} className="mr-1" /> Add Number</Button>
+            {existing?.phonePool?.length > 0 ? (
+              <div className="space-y-3">
+                {existing.phonePool.map(entry => (
+                  <div key={entry._id} className="flex items-center justify-between p-4 rounded-xl border border-[var(--vz-border)] bg-[var(--vz-card-bg)] shadow-sm hover:border-primary/30 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <Phone size={16} className="text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-[var(--vz-heading)]">{entry.phoneDisplay || entry.phoneNumberId}</p>
+                        <p className="text-[11px] text-[var(--vz-text-muted)] mt-0.5">ID: {entry.phoneNumberId}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {entry.assignedUserId ? (
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold flex items-center gap-1.5 shadow-sm">
+                          <UserCheck size={12} /> {entry.assignedUserName || 'Assigned'}
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 font-medium">Unassigned</span>
+                      )}
+                      <button onClick={() => handleRemovePhone(entry.phoneNumberId)} className="p-2 text-danger hover:bg-danger/10 rounded-lg transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-sm text-[var(--vz-text-muted)]">No phone numbers in pool yet. Add numbers above.</div>
+            )}
           </div>
-
-          {/* Existing pool */}
-          {existing?.phonePool?.length > 0 ? (
-            <div className="space-y-2">
-              {existing.phonePool.map(entry => (
-                <div key={entry._id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--vz-border)] bg-[var(--vz-card-bg)]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Phone size={14} className="text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--vz-heading)]">{entry.phoneDisplay || entry.phoneNumberId}</p>
-                      <p className="text-[10px] text-[var(--vz-text-muted)]">ID: {entry.phoneNumberId}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {entry.assignedUserId ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium flex items-center gap-1">
-                        <UserCheck size={11} /> {entry.assignedUserName || 'Assigned'}
-                      </span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Unassigned</span>
-                    )}
-                    <button onClick={() => handleRemovePhone(entry.phoneNumberId)} className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors">
-                      <X size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-center text-[var(--vz-text-muted)] py-6">No phone numbers in pool yet. Add numbers above.</p>
-          )}
         </Card>
       )}
 
-      {/* Step 2: QR Mode info */}
+      {/* QR Mode info (visual redesign) */}
       {selectedMode === 'qr' && (
-        <Card>
-          <Card.Header>
-            <Card.Title>Step 2 — QR Code Connection</Card.Title>
+        <Card className="shadow-sm border border-[var(--vz-border)]">
+          <Card.Header className="bg-[var(--vz-body-bg)] border-b border-[var(--vz-border)] p-5">
+            <Card.Title className="text-lg">Connect via QR Code</Card.Title>
+            <p className="text-xs text-[var(--vz-text-muted)] mt-1">Allow agents to use their personal numbers.</p>
           </Card.Header>
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 mb-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-bold text-amber-800 mb-1">Unofficial API — Use Responsibly</p>
-                <p className="text-xs text-amber-700 leading-relaxed">QR mode uses WhatsApp Web protocol (Baileys). Meta does not officially support this. Accounts that send too many automated messages may be restricted. For reasonable CRM volumes (up to ~100 msgs/day per agent), it works well in practice — just like TeleCRM and similar tools.</p>
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+              {/* Prominent QR Area visually mocked */}
+              <div className="w-full max-w-sm flex flex-col items-center">
+                <div className="w-64 h-64 border-2 border-dashed border-[var(--vz-border)] rounded-2xl flex flex-col items-center justify-center bg-gray-50/50 relative overflow-hidden">
+                  <QrCode size={64} className="text-gray-300 mb-4" />
+                  <p className="text-sm font-semibold text-gray-400">Available in WhatsApp Tab</p>
+                  <div className="absolute inset-x-0 bottom-0 p-3 bg-white/80 backdrop-blur-sm border-t border-[var(--vz-border)] text-center text-xs font-medium text-[var(--vz-text-muted)]">
+                    Agent scans to connect
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex-1 space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--vz-heading)] mb-4 flex items-center gap-2">
+                    <Smartphone size={16} className="text-primary" /> Setup Instructions
+                  </h4>
+                  <ol className="space-y-4 relative before:absolute before:inset-y-0 before:left-[11px] before:w-0.5 before:bg-[var(--vz-border)] pl-8">
+                    <li className="relative">
+                      <span className="absolute -left-8 flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold ring-4 ring-[var(--vz-card-bg)]">1</span>
+                      <p className="text-sm text-[var(--vz-heading)]">Agent opens <strong className="font-semibold">WhatsApp</strong> section in the CRM sidebar</p>
+                    </li>
+                    <li className="relative">
+                      <span className="absolute -left-8 flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold ring-4 ring-[var(--vz-card-bg)]">2</span>
+                      <p className="text-sm text-[var(--vz-heading)]">Clicks <strong className="font-semibold">Connect My WhatsApp</strong> button</p>
+                    </li>
+                    <li className="relative">
+                      <span className="absolute -left-8 flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold ring-4 ring-[var(--vz-card-bg)]">3</span>
+                      <p className="text-sm text-[var(--vz-heading)]">Scans the QR code with their personal phone (WhatsApp → Linked Devices)</p>
+                    </li>
+                  </ol>
+                  <div className="p-3 mt-6 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-700 flex gap-2 items-start">
+                    <Info size={14} className="flex-shrink-0 mt-0.5" />
+                    <span>The actual QR code connection happens in the <b>WhatsApp</b> module. Enabling this mode simply permits agents to connect.</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="p-4 rounded-xl bg-[var(--vz-body-bg)] border border-[var(--vz-border)]">
-            <div className="flex items-center gap-2 mb-3">
-              <QrCode size={16} className="text-primary" />
-              <span className="text-sm font-semibold text-[var(--vz-heading)]">How it works for agents</span>
-            </div>
-            <ol className="space-y-2 text-xs text-[var(--vz-text-muted)] list-decimal list-inside">
-              <li>Agent opens WhatsApp section in the CRM</li>
-              <li>Clicks "Connect My WhatsApp" button</li>
-              <li>Scans the QR code with their personal phone → WhatsApp → Linked Devices</li>
-              <li>Connection is established — they send messages from their own number</li>
-            </ol>
-            <p className="text-[11px] text-[var(--vz-text-muted)] mt-3 italic">Note: QR connection feature will be available in the WhatsApp section after saving this mode.</p>
           </div>
         </Card>
       )}
 
       {/* Test Result */}
-      {testResult && (
-        <div className={`flex items-start gap-3 p-4 rounded-xl border ${testResult.testStatus === 'success' ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+      {testResult && selectedMode !== 'qr' && (
+        <div className={`flex items-start gap-3 p-4 rounded-xl border shadow-sm mt-6 ${testResult.testStatus === 'success' ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
           {testResult.testStatus === 'success'
             ? <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0 mt-0.5" />
             : <WifiOff size={18} className="text-red-600 flex-shrink-0 mt-0.5" />}
@@ -2772,38 +2912,36 @@ function WhatsAppSetupTab({ toast }) {
             <p className={`text-sm font-bold ${testResult.testStatus === 'success' ? 'text-emerald-800' : 'text-red-800'}`}>
               {testResult.testStatus === 'success' ? 'Connection Successful' : 'Connection Failed'}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: testResult.testStatus === 'success' ? '#065f46' : '#991b1b' }}>
+            <p className="text-xs mt-1" style={{ color: testResult.testStatus === 'success' ? '#065f46' : '#991b1b' }}>
               {testResult.testMessage}
             </p>
           </div>
         </div>
       )}
 
-      {/* Action Buttons */}
-      {selectedMode && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {existing && (
-              <Button variant="ghost" size="sm" onClick={handleDelete} disabled={deleting} className="text-danger hover:bg-danger/10">
-                {deleting ? <Loader2 size={13} className="animate-spin mr-1" /> : <X size={13} className="mr-1" />}
-                Remove Config
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {selectedMode !== 'qr' && existing?.isActive && (
-              <Button variant="soft-primary" size="sm" onClick={handleTest} disabled={testing}>
-                {testing ? <Loader2 size={13} className="animate-spin mr-1" /> : <TestTube2 size={13} className="mr-1" />}
-                Test Connection
-              </Button>
-            )}
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 size={13} className="animate-spin mr-1" /> : <Save size={13} className="mr-1" />}
-              {existing ? 'Update Configuration' : 'Save Configuration'}
+      {/* Form Actions */}
+      <div className="flex items-center justify-between pt-4 pb-12">
+        <div>
+          {existing && existing.mode === selectedMode && (
+            <Button variant="ghost" className="text-danger hover:bg-danger/10 hover:text-danger" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <Loader2 size={14} className="animate-spin mr-2" /> : <Trash2 size={14} className="mr-2" />}
+              Remove Connection
             </Button>
-          </div>
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-3">
+          {selectedMode !== 'qr' && (
+            <Button variant="outline" onClick={handleTest} disabled={testing || !existing}>
+              {testing ? <Loader2 size={14} className="animate-spin mr-2" /> : <TestTube2 size={14} className="mr-2" />}
+              Test Connection
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={saving} className="px-6 shadow-sm">
+            {saving ? <Loader2 size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
+            {existing?.mode === selectedMode ? 'Save Connection' : 'Enable Connection'}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

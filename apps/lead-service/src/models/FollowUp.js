@@ -4,13 +4,13 @@ const followUpSchema = new mongoose.Schema(
     {
         tenantId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
         branchId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
-        leadId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+        leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', required: true, index: true },
         assignedUserId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
         createdBy: { type: mongoose.Schema.Types.ObjectId, required: true },
         
         type: {
             type: String,
-            enum: ['call', 'whatsapp', 'email', 'other'],
+            enum: ['call', 'whatsapp', 'email', 'meeting', 'other'],
             default: 'call',
         },
         

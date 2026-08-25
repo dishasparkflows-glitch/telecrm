@@ -85,10 +85,17 @@ const getCalendarFollowUps = asyncHandler(async (req, res) => {
 
     const followUps = await FollowUp.find(filter)
         .select('_id scheduledAt leadId assignedUserId type')
-        .populate('leadId', 'name')
+        .populate('leadId', 'contact.firstName contact.lastName') 
         .lean();
 
-    ApiResponse.success(res, followUps);
+    const formattedFollowUps = followUps.map(f => {
+        if (f.leadId && f.leadId.contact) {
+            f.leadId.name = `${f.leadId.contact.firstName || ''} ${f.leadId.contact.lastName || ''}`.trim();
+        }
+        return f;
+    });
+
+    ApiResponse.success(res, formattedFollowUps);
 });
 
 /**
