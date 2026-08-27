@@ -3,6 +3,8 @@ const Lead = require('../models/Lead');
 const { ApiError } = require('@sparkcrm/shared-utils');
 const { ACTIVITY_TYPES, recordLeadActivity } = require('./leadActivity.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
+const { checkTaskOverlap } = require('./serviceClients/task.client');
+const { checkMeetingOverlap } = require('./serviceClients/meeting.client');
 
 /**
  * Recalculates and syncs the next follow-up for a lead.
@@ -56,6 +58,31 @@ const syncNextFollowUp = async (tenantId, leadId) => {
 const createFollowUp = async (tenantId, leadId, userId, data) => {
     const lead = await Lead.findOne({ _id: leadId, tenantId }).lean();
     if (!lead) throw ApiError.notFound('Lead not found');
+
+    if (data.scheduledAt) {
+        const scheduledAtObj = new Date(data.scheduledAt);
+        const assignedUser = data.assignedUserId || userId;
+
+        const existingFollowup = await FollowUp.exists({
+            tenantId,
+            assignedUserId: assignedUser,
+            scheduledAt: scheduledAtObj,
+            status: { $nin: ['completed', 'cancelled', 'missed'] }
+        });
+        if (existingFollowup) {
+            throw ApiError.badRequest('You already have a follow-up scheduled at this time.');
+        }
+
+        const existingTask = await checkTaskOverlap(tenantId, assignedUser, scheduledAtObj);
+        if (existingTask) {
+            throw ApiError.badRequest('You already have a task scheduled at this time.');
+        }
+
+        const isMeetingOverlap = await checkMeetingOverlap(tenantId, assignedUser, scheduledAtObj);
+        if (isMeetingOverlap) {
+            throw ApiError.badRequest('You already have a meeting scheduled at this time.');
+        }
+    }
 
     const followUp = await FollowUp.create({
         tenantId,
@@ -136,6 +163,31 @@ const rescheduleFollowUp = async (tenantId, followUpId, userId, data) => {
     followUp.cancelledAt = new Date();
     followUp.cancelledBy = userId;
     await followUp.save();
+
+    if (data.scheduledAt) {
+        const scheduledAtObj = new Date(data.scheduledAt);
+        const assignedUser = data.assignedUserId || followUp.assignedUserId;
+
+        const existingFollowup = await FollowUp.exists({
+            tenantId,
+            assignedUserId: assignedUser,
+            scheduledAt: scheduledAtObj,
+            status: { $nin: ['completed', 'cancelled', 'missed'] }
+        });
+        if (existingFollowup) {
+            throw ApiError.badRequest('You already have a follow-up scheduled at this time.');
+        }
+
+        const existingTask = await checkTaskOverlap(tenantId, assignedUser, scheduledAtObj);
+        if (existingTask) {
+            throw ApiError.badRequest('You already have a task scheduled at this time.');
+        }
+
+        const isMeetingOverlap = await checkMeetingOverlap(tenantId, assignedUser, scheduledAtObj);
+        if (isMeetingOverlap) {
+            throw ApiError.badRequest('You already have a meeting scheduled at this time.');
+        }
+    }
 
     // Create new
     const newFollowUp = await FollowUp.create({

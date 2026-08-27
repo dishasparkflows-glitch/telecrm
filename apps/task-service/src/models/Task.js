@@ -24,7 +24,11 @@ const taskSchema = new mongoose.Schema(
             reminder: { type: String, default: null }
         },
         
-        leadId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
+        // Polymorphic reference replacing leadId
+        relatedEntity: {
+            entityType: { type: String, enum: ['lead', 'meeting', 'call', 'other'], default: 'lead', index: true },
+            entityId: { type: mongoose.Schema.Types.ObjectId, index: true, default: null }
+        },
         
         assignedTo: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
         
@@ -51,7 +55,7 @@ const taskSchema = new mongoose.Schema(
 
 // Indexes for performance
 taskSchema.index({ tenantId: 1, assignedTo: 1, 'details.status': 1, dueDate: 1 });
-taskSchema.index({ tenantId: 1, leadId: 1 });
+taskSchema.index({ tenantId: 1, 'relatedEntity.entityType': 1, 'relatedEntity.entityId': 1 });
 
 const Task = mongoose.model('Task', taskSchema);
 module.exports = Task;

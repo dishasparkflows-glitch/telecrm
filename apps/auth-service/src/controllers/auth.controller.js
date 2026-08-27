@@ -155,8 +155,14 @@ const sendOtp = asyncHandler(async (req, res) => {
 
     // Send OTP via SMS (in production)
     if (!IS_DEV) {
-        // TODO: Integrate SMS gateway (MSG91, Twilio, etc.)
-        console.warn('⚠️ SMS OTP delivery is not configured');
+        try {
+            await publishEvent(EVENTS.SEND_SMS, {
+                to: phone,
+                message: `Your SparkCRM verification code is: ${phoneOtp}`,
+            });
+        } catch (err) {
+            console.error('⚠️ Failed to send SMS OTP:', err.message);
+        }
     } else {
         console.log(`🔐 [DEV] OTP for ${email}: Email=${emailOtp}, Phone=${phoneOtp}`);
     }
@@ -247,8 +253,9 @@ const registerTenant = asyncHandler(async (req, res) => {
     const phoneCheck = validatePhone(userPhone);
     if (!phoneCheck.valid) throw ApiError.badRequest(phoneCheck.reason);
 
-    // Verify OTP was completed
-    const otpRecord = await OTP.findOne({
+    // Verify OTP was completed AND atomically claim it to prevent race conditions
+    // from multiple concurrent requests (like double-clicks on the submit button).
+    const otpRecord = await OTP.findOneAndDelete({
         email: userEmail.toLowerCase(),
         phone: userPhone.replace(/[\s-]/g, ''),
         emailVerified: true,
@@ -256,7 +263,7 @@ const registerTenant = asyncHandler(async (req, res) => {
         expiresAt: { $gt: new Date() },
     });
     if (!otpRecord) {
-        throw ApiError.badRequest('Please verify your email and phone OTP before registering.');
+        throw ApiError.badRequest('OTP expired, invalid, or already used. Please request a new OTP.');
     }
 
     // Check if email already exists globally
@@ -306,9 +313,6 @@ const registerTenant = asyncHandler(async (req, res) => {
         roleId: tenantData.superAdminRoleId || null,
         branchId: tenantData.defaultBranchId || null,
     });
-
-    // Clean up OTP record
-    await OTP.deleteMany({ email: userEmail.toLowerCase() });
 
     const { permissions, modules, branches, features, plan, subscription, roleSlug } = await fetchUserPermissions(user);
 

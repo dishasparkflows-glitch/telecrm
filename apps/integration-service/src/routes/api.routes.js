@@ -2,6 +2,8 @@ const express = require('express');
 const IntegrationConnection = require('../models/IntegrationConnection');
 const IntegrationAccount = require('../models/IntegrationAccount');
 const { disconnectIntegration } = require('../services/integration.service');
+const { listForms, getFormFields } = require('../providers/google/google.forms');
+const { listSpreadsheets, listWorksheets, previewSheet } = require('../providers/google/google.sheets');
 
 const router = express.Router();
 
@@ -145,6 +147,116 @@ router.delete('/:connectionId', async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
+});
+
+/**
+ * GET /api/integrations/google/forms
+ */
+router.get('/google/forms', async (req, res) => {
+    try {
+        const tenantId = req.headers['x-tenant-id'];
+        const userId = req.headers['x-user-id'];
+        
+        const connection = await IntegrationConnection.findOne({
+            tenantId,
+            integrationType: 'GOOGLE_FORMS',
+            status: 'CONNECTED',
+            $or: [{ ownerType: 'TENANT', ownerId: tenantId }, { ownerType: 'USER', ownerId: userId }],
+        }).populate('accountId');
+
+        if (!connection) return res.status(401).json({ success: false, message: 'Google Forms not connected' });
+
+        const forms = await listForms(connection.accountId, tenantId);
+        res.json({ success: true, data: forms });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+/**
+ * GET /api/integrations/google/forms/:formId/fields
+ */
+router.get('/google/forms/:formId/fields', async (req, res) => {
+    try {
+        const tenantId = req.headers['x-tenant-id'];
+        const userId = req.headers['x-user-id'];
+        
+        const connection = await IntegrationConnection.findOne({
+            tenantId,
+            integrationType: 'GOOGLE_FORMS',
+            status: 'CONNECTED',
+            $or: [{ ownerType: 'TENANT', ownerId: tenantId }, { ownerType: 'USER', ownerId: userId }],
+        }).populate('accountId');
+
+        if (!connection) return res.status(401).json({ success: false, message: 'Google Forms not connected' });
+
+        const fields = await getFormFields(connection.accountId, tenantId, req.params.formId);
+        res.json({ success: true, data: fields });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+/**
+ * GET /api/integrations/google/sheets
+ */
+router.get('/google/sheets', async (req, res) => {
+    try {
+        const tenantId = req.headers['x-tenant-id'];
+        const userId = req.headers['x-user-id'];
+        
+        const connection = await IntegrationConnection.findOne({
+            tenantId,
+            integrationType: 'GOOGLE_SHEETS',
+            status: 'CONNECTED',
+            $or: [{ ownerType: 'TENANT', ownerId: tenantId }, { ownerType: 'USER', ownerId: userId }],
+        }).populate('accountId');
+
+        if (!connection) return res.status(401).json({ success: false, message: 'Google Sheets not connected' });
+
+        const sheets = await listSpreadsheets(connection.accountId, tenantId);
+        res.json({ success: true, data: sheets });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+/**
+ * GET /api/integrations/google/sheets/:spreadsheetId/worksheets
+ */
+router.get('/google/sheets/:spreadsheetId/worksheets', async (req, res) => {
+    try {
+        const tenantId = req.headers['x-tenant-id'];
+        const userId = req.headers['x-user-id'];
+        
+        const connection = await IntegrationConnection.findOne({
+            tenantId,
+            integrationType: 'GOOGLE_SHEETS',
+            status: 'CONNECTED',
+            $or: [{ ownerType: 'TENANT', ownerId: tenantId }, { ownerType: 'USER', ownerId: userId }],
+        }).populate('accountId');
+
+        if (!connection) return res.status(401).json({ success: false, message: 'Google Sheets not connected' });
+
+        const worksheets = await listWorksheets(connection.accountId, tenantId, req.params.spreadsheetId);
+        res.json({ success: true, data: worksheets });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+/**
+ * GET /api/integrations/google/sheets/:spreadsheetId/:worksheetName/preview
+ */
+router.get('/google/sheets/:spreadsheetId/:worksheetName/preview', async (req, res) => {
+    try {
+        const tenantId = req.headers['x-tenant-id'];
+        const userId = req.headers['x-user-id'];
+        
+        const connection = await IntegrationConnection.findOne({
+            tenantId,
+            integrationType: 'GOOGLE_SHEETS',
+            status: 'CONNECTED',
+            $or: [{ ownerType: 'TENANT', ownerId: tenantId }, { ownerType: 'USER', ownerId: userId }],
+        }).populate('accountId');
+
+        if (!connection) return res.status(401).json({ success: false, message: 'Google Sheets not connected' });
+
+        const preview = await previewSheet(connection.accountId, tenantId, req.params.spreadsheetId, req.params.worksheetName);
+        res.json({ success: true, data: preview });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 module.exports = router;

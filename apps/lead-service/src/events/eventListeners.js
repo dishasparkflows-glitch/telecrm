@@ -371,6 +371,62 @@ const registerEventListeners = async () => {
     }
 
     console.log('✅ lead-service: Event listeners registered');
+
+    // ─── task.created → Track task creation ───
+    await subscribeToEvents(EVENTS.TASK_CREATED, async (_channel, data) => {
+        try {
+            const { tenantId, relatedEntity, title } = data;
+            if (!relatedEntity || relatedEntity.entityType !== 'lead' || !relatedEntity.entityId) return;
+            const leadId = relatedEntity.entityId;
+
+            const lead = await Lead.findOne({ _id: leadId, tenantId }).select('_id branchId');
+            if (!lead) return;
+
+            await recordLeadActivity({
+                tenantId,
+                branchId: lead.branchId,
+                leadId,
+                type: ACTIVITY_TYPES.TASK_CREATED,
+                title: 'Task created',
+                description: `Task created: ${title}`,
+                metadata: data,
+            });
+        } catch (err) { console.error('❌ task.created handler error:', err.message); }
+    });
+
+    // ─── task.updated / task.completed / task.deleted / task.assigned ───
+    const taskEventsMap = [
+        ['task.updated', ACTIVITY_TYPES.TASK_STATUS_CHANGED, 'Task status changed'],
+        [EVENTS.TASK_COMPLETED, ACTIVITY_TYPES.TASK_COMPLETED, 'Task completed'],
+        ['task.deleted', ACTIVITY_TYPES.TASK_DELETED, 'Task deleted'],
+        [EVENTS.TASK_ASSIGNED, ACTIVITY_TYPES.TASK_ASSIGNED, 'Task assigned']
+    ];
+
+    for (const [event, type, defaultTitle] of taskEventsMap) {
+        await subscribeToEvents(event, async (_channel, data) => {
+            try {
+                const { tenantId, relatedEntity, title, status } = data;
+                if (!relatedEntity || relatedEntity.entityType !== 'lead' || !relatedEntity.entityId) return;
+                const leadId = relatedEntity.entityId;
+                
+                const lead = await Lead.findOne({ _id: leadId, tenantId }).select('_id branchId');
+                if (!lead) return;
+                
+                let desc = `${defaultTitle}: ${title}`;
+                if (event === 'task.updated' && status) desc = `Task "${title}" status changed to ${status}`;
+                
+                await recordLeadActivity({
+                    tenantId,
+                    branchId: lead.branchId,
+                    leadId,
+                    type,
+                    title: defaultTitle,
+                    description: desc,
+                    metadata: data,
+                });
+            } catch (err) { console.error(`❌ ${event} handler error:`, err.message); }
+        });
+    }
 };
 
 module.exports = { registerEventListeners };

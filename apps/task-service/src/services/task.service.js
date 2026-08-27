@@ -1,68 +1,60 @@
 const Task = require('../models/Task');
-const Lead = require('../models/Lead');
 const { ApiError, deleteMedia } = require('@sparkcrm/shared-utils');
-const { ACTIVITY_TYPES, recordLeadActivity } = require('./leadActivity.service');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 
+// Optionally, we could call an API to validate meeting overlap, 
+// but for now we'll rely on the existing event publishing pattern.
+
 /**
- * Creates a new task and records an activity if associated with a lead.
+ * Creates a new task.
  */
 const createTask = async (tenantId, userId, data) => {
-    let leadNumber = null;
-    let branchId = null;
+    let branchId = data.branchId || null;
 
     if (!data.assignedTo) {
         throw ApiError.badRequest('Assigned User is required');
     }
 
+    // Convert leadId to relatedEntity if sent by older frontend
     if (data.leadId) {
-        const lead = await Lead.findOne({ _id: data.leadId, tenantId }).lean();
-        if (!lead) throw ApiError.notFound('Lead not found');
-        leadNumber = lead.leadNumber;
-        branchId = lead.branchId;
+        data.relatedEntity = {
+            entityType: 'lead',
+            entityId: data.leadId
+        };
+        delete data.leadId;
     }
 
+    // Minimal validation for relatedEntity if needed can be added here (e.g., via service clients)
+    
+    // We skip synchronous meeting overlap checks here unless we import the meeting client
+    // For a pure microservice, we could check via API, but let's assume it's moved to frontend or handled async.
+    
     const task = await Task.create({
         ...data,
         tenantId,
-        branchId: branchId || data.branchId || null,
-        leadNumber,
+        branchId,
         meta: {
             ...(data.meta || {}),
             createdBy: userId
         }
     });
 
-    if (task.leadId) {
-        await recordLeadActivity({
-            tenantId,
-            branchId: task.branchId,
-            leadId: task.leadId,
-            actorId: userId,
-            actorType: 'user',
-            type: ACTIVITY_TYPES.TASK_CREATED,
-            title: 'Task created',
-            description: `Task created: ${task.details?.title}`
-        });
-    }
-
     await publishEvent(EVENTS.TASK_CREATED, {
         tenantId,
         taskId: task._id,
         assignedTo: task.assignedTo || null,
-        leadId: task.leadId,
+        relatedEntity: task.relatedEntity,
         title: task.details?.title,
         dueDate: task.dueDate,
         reminder: task.details?.reminder
     });
 
-    // Publish event for notifications (assigned user)
     if (task.assignedTo) {
         await publishEvent(EVENTS.TASK_ASSIGNED, {
             tenantId,
             taskId: task._id,
             assignedTo: task.assignedTo,
-            leadId: task.leadId,
+            relatedEntity: task.relatedEntity,
             title: task.details?.title,
             dueDate: task.dueDate,
             reminder: task.details?.reminder
@@ -87,11 +79,19 @@ const updateTask = async (tenantId, taskId, userId, data) => {
         throw ApiError.badRequest('Assigned User is required');
     }
 
+    // Convert leadId for backward compatibility
+    if (data.leadId) {
+        data.relatedEntity = {
+            entityType: 'lead',
+            entityId: data.leadId
+        };
+        delete data.leadId;
+    }
+
     // Remove protected fields from update data
     delete data.tenantId;
     delete data.createdBy;
-    delete data.leadId; // Lead connection shouldn't change
-    delete data.leadNumber;
+    delete data.relatedEntity; // Usually shouldn't change entity link
 
     if (data.details?.status === 'COMPLETED' && task.details?.status !== 'COMPLETED') {
         data.details.completedAt = new Date();
@@ -118,39 +118,13 @@ const updateTask = async (tenantId, taskId, userId, data) => {
         }
     }
 
-    if (task.leadId) {
-        if (data.details?.status && data.details?.status !== previousStatus) {
-            const isCompleted = task.details?.status === 'COMPLETED';
-            await recordLeadActivity({
-                tenantId,
-                branchId: task.branchId,
-                leadId: task.leadId,
-                actorId: userId,
-                actorType: 'user',
-                type: isCompleted ? ACTIVITY_TYPES.TASK_COMPLETED : ACTIVITY_TYPES.TASK_STATUS_CHANGED,
-                title: isCompleted ? 'Task completed' : 'Task status changed',
-                description: isCompleted ? `Completed task: ${task.details?.title}` : `Task "${task.details?.title}" status changed to ${task.details?.status}`
-            });
-
-            await publishEvent(isCompleted ? EVENTS.TASK_COMPLETED : 'task.updated', {
-                tenantId,
-                taskId: task._id,
-                assignedTo: task.assignedTo || null,
-                leadId: task.leadId,
-                title: task.details?.title,
-                status: task.details?.status,
-                dueDate: task.dueDate,
-                reminder: task.details?.reminder
-            });
-        }
-    } else if (data.details?.status && data.details?.status !== previousStatus) {
-        // If not attached to a lead, still publish the task event
+    if (data.details?.status && data.details?.status !== previousStatus) {
         const isCompleted = task.details?.status === 'COMPLETED';
         await publishEvent(isCompleted ? EVENTS.TASK_COMPLETED : 'task.updated', {
             tenantId,
             taskId: task._id,
             assignedTo: task.assignedTo || null,
-            leadId: null,
+            relatedEntity: task.relatedEntity,
             title: task.details?.title,
             status: task.details?.status,
             dueDate: task.dueDate,
@@ -160,24 +134,11 @@ const updateTask = async (tenantId, taskId, userId, data) => {
 
     // Notify new assignee if changed
     if (data.assignedTo && data.assignedTo !== previousAssignee) {
-        if (task.leadId) {
-            await recordLeadActivity({
-                tenantId,
-                branchId: task.branchId,
-                leadId: task.leadId,
-                actorId: userId,
-                actorType: 'user',
-                type: ACTIVITY_TYPES.TASK_ASSIGNED,
-                title: 'Task reassigned',
-                description: `Task "${task.details?.title}" was reassigned`
-            });
-        }
-
         await publishEvent(EVENTS.TASK_ASSIGNED, {
             tenantId,
             taskId: task._id,
             assignedTo: task.assignedTo,
-            leadId: task.leadId,
+            relatedEntity: task.relatedEntity,
             title: task.details?.title,
             dueDate: task.dueDate,
             reminder: task.details?.reminder
@@ -203,18 +164,12 @@ const deleteTask = async (tenantId, taskId, userId) => {
         }
     }
 
-    if (task.leadId) {
-        await recordLeadActivity({
-            tenantId,
-            branchId: task.branchId,
-            leadId: task.leadId,
-            actorId: userId,
-            actorType: 'user',
-            type: ACTIVITY_TYPES.TASK_DELETED,
-            title: 'Task deleted',
-            description: `Deleted task: ${task.details?.title}`
-        });
-    }
+    await publishEvent('task.deleted', {
+        tenantId,
+        taskId: task._id,
+        relatedEntity: task.relatedEntity,
+        title: task.details?.title
+    });
 
     return task;
 };

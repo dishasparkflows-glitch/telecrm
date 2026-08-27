@@ -61,7 +61,7 @@ const SERVICE_ROUTES = {
         feature: 'lead_management',
     },
     '/api/tasks': {
-        target: env.SERVICES.LEAD,
+        target: env.SERVICES.TASK,
         module: 'tasks',
         feature: 'task_management',
     },
@@ -197,6 +197,7 @@ const TARGET_AUDIENCES = new Map([
     [env.SERVICES.MEETING, 'meeting-service'],
     [env.SERVICES.UPLOAD, 'upload-service'],
     [env.SERVICES.INTEGRATION, 'integration-service'],
+    [env.SERVICES.TASK, 'task-service'],
 ]);
 
 /**

@@ -4,6 +4,7 @@ const ReminderSettings = require('../models/ReminderSettings');
 const { sendInApp } = require('../channels/inApp.channel');
 const { sendTemplateEmail } = require('../channels/email.channel');
 const { sendPushToUser } = require('../channels/push.channel');
+const { sendSms } = require('../channels/sms.channel');
 
 const getReminderOffset = async (tenantId, userId, activityType, customReminder) => {
     let offsetMinutes = activityType === 'meeting' ? 60 : activityType === 'followUp' ? 15 : 30;
@@ -55,6 +56,18 @@ const registerEventListeners = async () => {
             console.log(`📧 Email sent → ${to} (template: ${template})`);
         } catch (err) {
             console.error('❌ notification.email handler error:', err.message);
+        }
+    });
+
+    // ─── SMS notification ───
+    await subscribeToEvents(EVENTS.SEND_SMS, async (_channel, data) => {
+        try {
+            const { to, message } = data;
+            if (to && message) {
+                await sendSms(to, message);
+            }
+        } catch (err) {
+            console.error('❌ notification.sms handler error:', err.message);
         }
     });
 

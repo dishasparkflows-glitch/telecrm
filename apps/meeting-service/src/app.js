@@ -35,6 +35,25 @@ app.get('/internal/meetings/count', requireInternalCaller, async (req, res) => {
   }
 });
 
+app.get('/internal/meetings/check-overlap', requireInternalCaller, async (req, res) => {
+  try {
+    const { tenantId, userId, date } = req.query;
+    if (!tenantId || !userId || !date) return res.json({ success: true, overlap: false });
+    
+    const targetDate = new Date(date);
+    const overlap = await Meeting.exists({
+      tenantId: new mongoose.Types.ObjectId(tenantId),
+      hostId: new mongoose.Types.ObjectId(userId),
+      'meeting.scheduledAt': targetDate,
+      'meeting.status': { $nin: ['cancelled', 'no_show'] }
+    });
+    
+    res.json({ success: true, overlap: !!overlap });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.use(errorHandler);
 
 module.exports = app;

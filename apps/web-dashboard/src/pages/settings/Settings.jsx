@@ -1924,7 +1924,7 @@ export default function Settings() {
                           </tr>
                         </thead>
                         <tbody>
-                          {refStats.recentReferrals?.length > 0 ? (
+                          {refStats.recentReferrals?.length > 0 && (
                             refStats.recentReferrals.map((ref, idx) => (
                               <tr key={idx} className="border-b border-gray-50 last:border-0">
                                 <td className="py-3 text-gray-900 font-medium">{ref.email}</td>
@@ -1937,17 +1937,6 @@ export default function Settings() {
                                 <td className="py-3 text-gray-500">{ref.reward || '-'}</td>
                               </tr>
                             ))
-                          ) : (
-                            <tr className="border-b border-gray-50 last:border-0">
-                              <td className="py-3 text-gray-900 font-medium">john@example.com</td>
-                              <td className="py-3 text-gray-500">19 Aug 2024</td>
-                              <td className="py-3">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-orange-50 text-orange-600">
-                                  Pending
-                                </span>
-                              </td>
-                              <td className="py-3 text-gray-500">-</td>
-                            </tr>
                           )}
                         </tbody>
                       </table>

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import DatePicker from './DatePicker'
 import TimePicker from './TimePicker'
 
@@ -5,6 +7,10 @@ export default function Input({
   label, type = 'text', placeholder, value, onChange, error, className = '',
   icon: Icon, disabled = false, ...props
 }) {
+  const [showPassword, setShowPassword] = useState(false)
+  const isPassword = type === 'password'
+  const inputType = isPassword ? (showPassword ? 'text' : 'password') : type
+
   return (
     <div className={`space-y-1.5 ${className}`}>
       {label && (
@@ -35,21 +41,34 @@ export default function Input({
             disabled={disabled}
           />
         ) : (
-          <input
-            type={type}
-            placeholder={placeholder}
-            value={value}
-            onChange={onChange}
-            disabled={disabled}
-            className={`w-full rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)]
-              text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)]
-              px-3 py-2 outline-none transition-all duration-200
-              focus:border-primary focus:ring-1 focus:ring-primary/30
-              disabled:opacity-50 disabled:cursor-not-allowed
-              ${Icon ? 'pl-9' : ''}
-              ${error ? 'border-danger focus:border-danger focus:ring-danger/30' : ''}`}
-            {...props}
-          />
+          <>
+            <input
+              type={inputType}
+              placeholder={placeholder}
+              value={value}
+              onChange={onChange}
+              disabled={disabled}
+              className={`w-full rounded-md border border-[var(--vz-input-border)] bg-[var(--vz-input-bg)]
+                text-sm text-[var(--vz-heading)] placeholder:text-[var(--vz-text-muted)]
+                px-3 py-2 outline-none transition-all duration-200
+                focus:border-primary focus:ring-1 focus:ring-primary/30
+                disabled:opacity-50 disabled:cursor-not-allowed
+                ${Icon ? 'pl-9' : ''}
+                ${isPassword ? 'pr-9' : ''}
+                ${error ? 'border-danger focus:border-danger focus:ring-danger/30' : ''}`}
+              {...props}
+            />
+            {isPassword && (
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--vz-text-muted)] hover:text-[var(--vz-heading)] transition-colors"
+                tabIndex="-1"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            )}
+          </>
         )}
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}

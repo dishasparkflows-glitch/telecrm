@@ -12,7 +12,7 @@ const {
 const { ApiResponse, ApiError, asyncHandler, buildScopeFilter, canAccessRecord, getPresignedDownloadUrl } = require('@sparkcrm/shared-utils');
 const { publishEvent, EVENTS } = require('@sparkcrm/shared-events');
 const { getUsersBulk } = require('../services/serviceClients/user.client');
-const { createOrFindLead, getLeadsBulk } = require('../services/serviceClients/lead.client');
+const { createOrFindLead, getLeadsBulk, checkTaskFollowUpOverlap } = require('../services/serviceClients/lead.client');
 const { validateCustomFields } = require('../utils/customFieldValidator');
 const { resolveBookingHost } = require('../services/assignmentResolver.service');
 
@@ -64,6 +64,24 @@ const scheduleMeeting = asyncHandler(async (req, res) => {
     
     if (meetingData.customFields) {
         await validateCustomFields(scope.tenantId, 'Meeting', meetingData.customFields);
+    }
+    
+    if (meetingData.meeting?.scheduledAt) {
+        const scheduledAtDate = new Date(meetingData.meeting.scheduledAt);
+        const existingMeeting = await Meeting.exists({
+            tenantId: scope.tenantId,
+            hostId: userId,
+            'meeting.scheduledAt': scheduledAtDate,
+            'meeting.status': { $nin: ['cancelled', 'no_show'] }
+        });
+        if (existingMeeting) {
+            throw ApiError.badRequest('You already have a meeting scheduled at this time.');
+        }
+
+        const isOverlap = await checkTaskFollowUpOverlap(scope.tenantId, userId, scheduledAtDate);
+        if (isOverlap) {
+            throw ApiError.badRequest('You already have a task or follow-up scheduled at this time.');
+        }
     }
     
     let conference = undefined;

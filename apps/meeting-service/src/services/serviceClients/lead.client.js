@@ -48,4 +48,28 @@ const getLeadsBulk = async (tenantId, ids) => {
     }
 };
 
-module.exports = { createOrFindLead, getLeadsBulk };
+const checkTaskFollowUpOverlap = async (tenantId, userId, date) => {
+    if (!tenantId || !userId || !date) return false;
+    try {
+        const queryParams = new URLSearchParams({ tenantId, userId, date: date.toISOString() });
+        const path = `/internal/tasks-followups/check-overlap?${queryParams.toString()}`;
+        const headers = createServiceHeaders({
+            issuer: 'meeting-service',
+            audience: 'lead-service',
+            method: 'GET',
+            path,
+            identity: { tenantId: String(tenantId) },
+        });
+
+        const response = await axios.get(
+            `${env.SERVICES.LEAD}${path}`,
+            { headers, timeout: 5000 }
+        );
+        return response.data?.overlap || false;
+    } catch (error) {
+        console.error(`Task/FollowUp overlap check failed:`, error.response?.data || error.message);
+        return false;
+    }
+};
+
+module.exports = { createOrFindLead, getLeadsBulk, checkTaskFollowUpOverlap };

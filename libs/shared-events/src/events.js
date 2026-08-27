@@ -64,6 +64,7 @@ const EVENTS = {
     SEND_NOTIFICATION: 'notification.send',
     SEND_EMAIL: 'notification.email',
     SEND_PUSH: 'notification.push',
+    SEND_SMS: 'notification.sms',
 };
 
 module.exports = { EVENTS };

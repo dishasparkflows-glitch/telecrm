@@ -50,6 +50,7 @@ const env = {
         MEETING: parseInt(process.env.PORT_MEETING || '8011', 10),
         UPLOAD: parseInt(process.env.PORT_UPLOAD || '8012', 10),
         INTEGRATION: parseInt(process.env.PORT_INTEGRATION || '8013', 10),
+        TASK: parseInt(process.env.PORT_TASK || '8014', 10),
     },
 
     // Service URLs (for gateway proxy)
@@ -67,6 +68,7 @@ const env = {
         MEETING: process.env.MEETING_SERVICE_URL || 'http://localhost:8011',
         UPLOAD: process.env.UPLOAD_SERVICE_URL || 'http://localhost:8012',
         INTEGRATION: process.env.INTEGRATION_SERVICE_URL || 'http://localhost:8013',
+        TASK: process.env.TASK_SERVICE_URL || 'http://localhost:8014',
     },
 
     // MongoDB URIs
@@ -83,6 +85,7 @@ const env = {
         FORM: process.env.MONGO_URI_FORMS || 'mongodb://localhost:27017/sparkcrm_forms',
         MEETING: process.env.MONGO_URI_MEETINGS || 'mongodb://localhost:27017/sparkcrm_meetings',
         INTEGRATION: process.env.MONGO_URI_INTEGRATIONS || 'mongodb://localhost:27017/sparkcrm_integrations',
+        TASK: process.env.MONGO_URI_TASKS || 'mongodb://localhost:27017/sparkcrm_tasks',
     },
 
     // External APIs

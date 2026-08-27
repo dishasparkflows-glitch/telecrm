@@ -254,7 +254,7 @@ const TasksList = () => {
                                                         onClick={() => navigate(`/leads/${task.leadId}`)} 
                                                         className="text-primary hover:underline cursor-pointer font-medium"
                                                     >
-                                                        {task.leadNumber || 'View Lead'}
+                                                        {task.leadName || task.leadNumber || 'View Lead'}
                                                     </span>
                                                 ) : (
                                                     <span className="text-[var(--vz-text-muted)] text-sm">-</span>

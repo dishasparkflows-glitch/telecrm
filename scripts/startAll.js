@@ -19,6 +19,7 @@ const SERVICES = [
     { name: 'meeting-service', port: 8011 },
     { name: 'upload-service', port: 8012 },
     { name: 'integration-service', port: 8013 },
+    { name: 'task-service', port: 8014 },
 ];
 
 const processes = new Map();

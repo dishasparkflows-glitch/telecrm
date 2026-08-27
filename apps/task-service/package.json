@@ -1,5 +1,5 @@
 {
-  "name": "@sparkcrm/notification-service",
+  "name": "@sparkcrm/task-service",
   "version": "1.0.0",
   "private": true,
   "main": "src/main.js",
@@ -12,16 +12,11 @@
     "@sparkcrm/shared-events": "*",
     "@sparkcrm/shared-middleware": "*",
     "@sparkcrm/shared-utils": "*",
-    "axios": "^1.20.0",
-    "bullmq": "^5.0.0",
+    "axios": "^1.13.5",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "helmet": "^8.0.0",
-    "ioredis": "^5.6.0",
-    "mongoose": "^8.9.0",
-    "nodemailer": "9.0.3",
-    "socket.io": "^4.8.3",
-    "twilio": "^6.1.0"
+    "mongoose": "^8.9.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

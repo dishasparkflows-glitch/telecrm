@@ -1,11 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const FollowUp = require('./models/FollowUp');
 const { createCorsOptions, errorHandler, requestLogger, contextMiddleware } = require('@sparkcrm/shared-middleware');
 
 const leadRoutes = require('./routes/lead.routes');
 const followupRoutes = require('./routes/followup.routes');
-const taskRoutes = require('./routes/task.routes');
 const leadController = require('./controllers/lead.controller');
 const { requireVerifiedUser, requireInternalService } = require('./middleware/security');
 
@@ -55,7 +55,6 @@ app.get('/health', (req, res) => {
 app.use('/api/leads/google', requireProtectedLeadRequest, require('./routes/googleIntegration.routes'));
 app.use('/api/leads', requireProtectedLeadRequest, leadRoutes);
 app.use('/api/follow-ups', requireProtectedLeadRequest, followupRoutes);
-app.use('/api/tasks', requireProtectedLeadRequest, taskRoutes);
 
 // Internal endpoints (service-to-service, no auth)
 const Lead = require('./models/Lead');
@@ -69,6 +68,26 @@ app.get('/internal/leads/count', requireInternalCaller, async (req, res) => {
     const filter = tenantId ? { tenantId: new mongoose.Types.ObjectId(tenantId) } : {};
     const count = await Lead.countDocuments(filter);
     res.json({ success: true, data: { count } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get('/internal/tasks-followups/check-overlap', requireInternalCaller, async (req, res) => {
+  try {
+    const { tenantId, userId, date } = req.query;
+    if (!tenantId || !userId || !date) return res.json({ success: true, overlap: false });
+    
+    const targetDate = new Date(date);
+    
+    const followupOverlap = await FollowUp.exists({
+      tenantId: new mongoose.Types.ObjectId(tenantId),
+      assignedUserId: new mongoose.Types.ObjectId(userId),
+      scheduledAt: targetDate,
+      status: { $nin: ['completed', 'cancelled', 'missed'] }
+    });
+    
+    res.json({ success: true, overlap: !!followupOverlap });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

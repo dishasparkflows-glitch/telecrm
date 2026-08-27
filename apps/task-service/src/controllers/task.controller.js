@@ -1,21 +1,31 @@
 const Task = require('../models/Task');
 const { ApiResponse, asyncHandler, buildScopeFilter } = require('@sparkcrm/shared-utils');
 const taskService = require('../services/task.service');
-const { getUsersBulk } = require('../services/serviceClients/user.client');
+
+// Note: getUsersBulk might need to be imported via service client if we want populated tasks
+// We will mock/require it here assuming we have a user client available or create it.
+// const { getUsersBulk } = require('../services/serviceClients/user.client');
+const { getLeadsBulk } = require('../services/serviceClients/lead.client');
 
 /**
  * GET /api/tasks
  */
 const getTasks = asyncHandler(async (req, res) => {
     const { page = 1, limit = 50, status, priority, assignedTo, leadId, source, dueDate, search } = req.query;
-    const tenantId = req.headers['x-tenant-id'];
+    // const tenantId = req.headers['x-tenant-id'];
 
     const filter = buildScopeFilter(req, { ownerField: 'assignedTo', module: 'tasks' });
     
     if (status) filter['details.status'] = status;
     if (priority) filter['details.priority'] = priority;
     if (assignedTo) filter.assignedTo = assignedTo;
-    if (leadId) filter.leadId = leadId;
+    
+    // Backward compatibility for leadId
+    if (leadId) {
+        filter['relatedEntity.entityId'] = leadId;
+        filter['relatedEntity.entityType'] = 'lead';
+    }
+    
     if (source) filter.source = source;
     
     if (dueDate) {
@@ -40,8 +50,7 @@ const getTasks = asyncHandler(async (req, res) => {
     if (search) {
         filter.$or = [
             { 'details.title': { $regex: search, $options: 'i' } },
-            { 'details.description': { $regex: search, $options: 'i' } },
-            { leadNumber: { $regex: search, $options: 'i' } }
+            { 'details.description': { $regex: search, $options: 'i' } }
         ];
     }
 
@@ -61,21 +70,33 @@ const getTasks = asyncHandler(async (req, res) => {
         Task.countDocuments(filter)
     ]);
 
-    // Populate user references
-    const userIds = [...new Set(tasks.map(t => t.assignedTo).filter(Boolean).map(String))];
-    const users = userIds.length > 0 ? await getUsersBulk(tenantId, userIds) : [];
-    const userMap = new Map(users.map(u => [String(u._id), u]));
+    // Fetch lead details for tasks related to leads
+    const leadIds = [...new Set(tasks.map(t => t.relatedEntity?.entityType === 'lead' ? t.relatedEntity.entityId : null).filter(Boolean))];
+    let leadsMap = {};
+    if (leadIds.length > 0) {
+        const tenantId = req.headers['x-tenant-id'];
+        const leads = await getLeadsBulk(tenantId, leadIds);
+        leadsMap = leads.reduce((acc, lead) => {
+            acc[lead._id] = lead;
+            return acc;
+        }, {});
+    }
 
-    const populatedTasks = tasks.map(t => {
-        const user = userMap.get(String(t.assignedTo));
-        return {
-            ...t,
-            assignedUser: user ? { _id: user._id, name: user.contact?.name || 'Unknown User', avatarUrl: user.avatarUrl } : null
-        };
+    // Inject leadName into tasks
+    const mappedTasks = tasks.map(t => {
+        if (t.relatedEntity && t.relatedEntity.entityType === 'lead') {
+            t.leadId = t.relatedEntity.entityId;
+            if (leadsMap[t.leadId]) {
+                const lead = leadsMap[t.leadId];
+                t.leadName = lead.fullName || `${lead.contact?.firstName || ''} ${lead.contact?.lastName || ''}`.trim() || lead.leadNumber;
+                t.leadNumber = lead.leadNumber;
+            }
+        }
+        return t;
     });
-
+    
     ApiResponse.success(res, {
-        tasks: populatedTasks,
+        tasks: mappedTasks,
         pagination: {
             total,
             page: parseInt(page),
@@ -108,13 +129,18 @@ const getCalendarTasks = asyncHandler(async (req, res) => {
     }
 
     const tasks = await Task.find(filter)
-        .select('_id dueDate details.title leadId')
+        .select('_id dueDate details.title relatedEntity')
         .lean();
-
-    // The calendar only needs `leadId` as a string/ObjectId for navigation, but we can populate if needed.
-    // For now, returning the selected fields as requested.
     
-    ApiResponse.success(res, { tasks });
+    // Backward compatibility: inject leadId for older frontend
+    const mappedTasks = tasks.map(t => {
+        if (t.relatedEntity && t.relatedEntity.entityType === 'lead') {
+            t.leadId = t.relatedEntity.entityId;
+        }
+        return t;
+    });
+
+    ApiResponse.success(res, { tasks: mappedTasks });
 });
 
 /**
@@ -152,8 +178,6 @@ const createTask = asyncHandler(async (req, res) => {
     if (!req.body.branchId && branchId && branchId !== 'all') {
         req.body.branchId = branchId;
     }
-    
-    // Authorization check is handled by route middleware (requirePermission('tasks', 'create'))
     
     const task = await taskService.createTask(tenantId, userId, req.body);
     ApiResponse.success(res, task, 'Task created successfully', 201);

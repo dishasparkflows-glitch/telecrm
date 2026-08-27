@@ -308,16 +308,9 @@ const importSheet = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-    checkAuth,
-    listForms,
-    getFormFields,
-    testForm,
     activateForm,
     pauseForm,
     syncForm,
     formWebhook,
-    listSpreadsheets,
-    listWorksheets,
-    previewSheet,
     importSheet
 };
